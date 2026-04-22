@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>小年糕机</title>
+    
+    <!-- 基本配置 -->
+    <!-- 【关键修改】：删除写死的 theme-color，让 iOS 自动穿透显示你的壁纸 -->
+    
+    <!-- iOS全屏配置 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Theme Studio">
+    <!-- 新增：PWA 主题色 -->
+    <meta name="theme-color" content="#FFFFFF">
+    
+    <!-- 优化视口配置：viewport-fit=cover 是延伸到刘海和底部的核心 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <!-- 图标配置 -->
+    <link rel="apple-touch-icon" href="https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png">
+    <link rel="icon" type="image/jpeg" href="https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png">
+        
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- 引入外部 CSS 文件 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="iphone" id="iphone-container">
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="time">21:40</div>
+        <div class="status-right">
+            <div>5G</div>
+            <div class="battery"><div class="battery-level"></div></div>
+        </div>
+    </div>
+
+    <!-- 桌面区域 -->
+    <div class="home-screen">
+        <div class="widget-container">
+            <div class="widget-top-bar">
+                <div class="widget-btn icon-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#666" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <div class="widget-btn" contenteditable="true" spellcheck="false">#记录你有关的萌点</div>
+            </div>
+            <div class="widget-music">
+                <div class="music-cover uploadable-img"></div>
+                <div class="music-info">
+                    <div class="music-title" contenteditable="true" spellcheck="false">DorisWorld</div>
+                    <div class="music-sub" contenteditable="true" spellcheck="false">Doris<br>Music</div>
+                </div>
+            </div>
+            <div class="widget-search">
+                <span contenteditable="true" spellcheck="false">索菲亚公主的午后芭蕾茶话会</span>
+                <span style="background:#888; color:#fff; border-radius:50%; width:20px; height:20px; text-align:center; line-height:20px;">↑</span>
+            </div>
+            <div class="widget-gallery">
+                <div class="gallery-item-widget uploadable-img">love</div>
+                <div class="gallery-item-widget uploadable-img">Cherish</div>
+                <div class="gallery-item-widget uploadable-img">|||||||</div>
+            </div>
+        </div>
+
+        <!-- 4个 APP -->
+        <div class="app-item" onclick="openThemePanel()">
+            <div class="app-icon" id="icon-app1">
+                <svg viewBox="0 0 24 24" width="28" height="28"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <div class="app-name" id="name-app1">theme</div>
+        </div>
+        <div class="app-item" onclick="openSettingsPanel()">
+            <div class="app-icon" id="icon-app2">
+                <svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+            <div class="app-name" id="name-app2">settings</div>
+        </div>
+        <div class="app-item" onclick="openWorldbookPanel()">
+            <div class="app-icon" id="icon-app3">
+                <svg viewBox="0 0 24 24" width="28" height="28"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            </div>
+            <div class="app-name" id="name-app3">worldbook</div>
+        </div>
+        <div class="app-item" onclick="openChatPanel()">
+            <div class="app-icon" id="icon-app4">
+                <svg viewBox="0 0 24 24" width="28" height="28"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="app-name" id="name-app4">chat</div>
+        </div>
+    </div>
+
+    <!-- 新增：Dock 底栏 -->
+    <div class="dock-container">
+        <div class="dock-bg"></div>
+        <div class="dock-apps">
+            <div class="app-item" onclick="openCharLibraryPanel()">
+                <div class="app-icon" id="icon-app-dock1" style="border-radius: 18px;">
+                    <svg viewBox="0 0 24 24" width="28" height="28"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div class="app-name" id="name-app-dock1" style="display: none;">Chars</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主题美化全屏面板 -->
+    <div class="theme-panel" id="themePanel">
+        <div class="panel-header">
+            <div class="header-dots" onclick="toggleThemePopup()" style="cursor: pointer; position: relative;">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                
+                <!-- 桌面数据导入导出弹窗 -->
+                <div class="preset-popup" id="themePopup">
+                    <div class="preset-popup-arrow" id="themePopupArrow" style="left: 18px; transform: rotate(45deg);"></div>
+                    <div class="preset-list">
+                        <div class="preset-item" onclick="exportThemeData(event)">
+                            <span class="preset-item-name">导出桌面美化数据</span>
+                        </div>
+                        <div class="preset-item" onclick="importThemeData(event)">
+                            <span class="preset-item-name">导入桌面美化数据</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-title-wrapper">
+                <div class="header-title" onclick="togglePresetPopup()">Searching for you</div>
+                
+                <!-- 预设列表气泡弹窗 -->
+                <div class="preset-popup" id="presetPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-header">
+                        <span style="font-weight: bold; color: #333;">预设库</span>
+                        <span class="preset-edit-btn" id="presetEditBtn" onclick="togglePresetEditMode()">Edit</span>
+                    </div>
+                    <div class="preset-list" id="presetList">
+                        <!-- 动态生成的预设列表将放在这里 -->
+                    </div>
+                    <div class="preset-footer" onclick="showSavePresetModal()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        保存当前为预设
+                    </div>
+                </div>
+            </div>
+            <div class="header-close" onclick="closeThemePanel()">Done</div>
+        </div>
+
+        <!-- 保存预设时的命名弹窗 (黑白灰风格) -->
+        <div class="preset-modal-overlay" id="presetModalOverlay">
+            <div class="preset-modal">
+                <div class="preset-modal-title">保存预设</div>
+                <div class="preset-modal-desc">请输入预设名称，将保存当前的字体和APP图标。</div>
+                <input type="text" class="preset-modal-input" id="presetNameInput" placeholder="例如：极简黑白风" maxlength="12">
+                <div class="preset-modal-actions">
+                    <div class="preset-btn-cancel" onclick="hideSavePresetModal()">取消</div>
+                    <div class="preset-btn-confirm" onclick="confirmSavePreset()">保存</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel-content">
+            
+            <!-- 顶部区域：左侧头像骨架 + 右侧字体面板 -->
+            <div class="panel-top-row">
+                <!-- 左侧：点击上传壁纸，但不改变自身背景 -->
+                <div class="left-profile-col">
+                    <div class="circle-avatar-wrapper" id="profileAvatarBtn">
+                        <div class="circle-avatar">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        </div>
+                        <div class="avatar-camera-badge">
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <!-- 新增：五角星与上传壁纸字样 -->
+                    <div class="upload-wallpaper-text">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        上传壁纸
+                    </div>
+                    <!-- 恢复默认按钮 -->
+                    <div class="reset-default-btn" onclick="confirmResetDefault()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                        <span>Recover</span>
+                    </div>
+                </div>
+
+                <!-- 右侧：字体面板 -->
+                <div class="right-font-col">
+                    <div class="font-section-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                        GLOBAL FONT
+                    </div>
+                    <input type="text" class="font-url-input" id="fontUrlInput" placeholder="输入字体 URL 后回车应用">
+                    
+                    <!-- 新增：字体大小调节 -->
+                    <div style="margin-top: 5px; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888; font-weight: bold;">
+                            <span>A-</span><span>字体大小</span><span>A+</span>
+                        </div>
+                        <input type="range" id="globalFontSizeSlider" min="10" max="20" value="14" step="1" style="width: 100%; accent-color: #111;">
+                    </div>
+
+                    <div class="dashed-divider"></div>
+                    
+                    <div class="local-font-area" id="localFontBtn">
+                        <div class="local-icon-box">
+                            TT
+                            <div class="local-icon-plus">+</div>
+                        </div>
+                        <div class="local-text-box">
+                            <div class="local-text-main" id="localFontText">上传本地字体</div>
+                            <div class="local-text-sub">支持 TTF / WOFF / OTF 格式</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中部区域：APP设置面板 -->
+            <div class="app-settings-box">
+                <div class="app-setting-item">
+                    <div class="app-icon-upload" data-target="icon-app1">
+                        <svg class="placeholder-svg" viewBox="0 0 24 24" width="24" height="24" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div class="camera-badge">
+                            <svg viewBox="0 0 24 24" width="10" height="10" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <div class="app-input-group">
+                        <input type="text" class="app-name-input" data-target="name-app1" value="theme">
+                        <div class="skeleton-subline"></div>
+                    </div>
+                    <div class="item-deco">theme <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d0d0d0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                </div>
+                <div class="app-setting-item">
+                    <div class="app-icon-upload" data-target="icon-app2">
+                        <svg class="placeholder-svg" viewBox="0 0 24 24" width="24" height="24" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div class="camera-badge">
+                            <svg viewBox="0 0 24 24" width="10" height="10" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <div class="app-input-group">
+                        <input type="text" class="app-name-input" data-target="name-app2" value="settings">
+                        <div class="skeleton-subline"></div>
+                    </div>
+                    <div class="item-deco">settings <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d0d0d0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                </div>
+                <div class="app-setting-item">
+                    <div class="app-icon-upload" data-target="icon-app3">
+                        <svg class="placeholder-svg" viewBox="0 0 24 24" width="24" height="24" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div class="camera-badge">
+                            <svg viewBox="0 0 24 24" width="10" height="10" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <div class="app-input-group">
+                        <input type="text" class="app-name-input" data-target="name-app3" value="worldbook">
+                        <div class="skeleton-subline"></div>
+                    </div>
+                    <div class="item-deco">worldbook <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d0d0d0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                </div>
+                <div class="app-setting-item">
+                    <div class="app-icon-upload" data-target="icon-app4">
+                        <svg class="placeholder-svg" viewBox="0 0 24 24" width="24" height="24" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div class="camera-badge">
+                            <svg viewBox="0 0 24 24" width="10" height="10" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <div class="app-input-group">
+                        <input type="text" class="app-name-input" data-target="name-app4" value="chat">
+                        <div class="skeleton-subline"></div>
+                    </div>
+                    <div class="item-deco">chat <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d0d0d0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                </div>
+                <div class="app-setting-item">
+                    <div class="app-icon-upload" data-target="icon-app-dock1">
+                        <svg class="placeholder-svg" viewBox="0 0 24 24" width="24" height="24" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div class="camera-badge">
+                            <svg viewBox="0 0 24 24" width="10" height="10" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <div class="app-input-group">
+                        <input type="text" class="app-name-input" data-target="name-app-dock1" value="Chars">
+                        <div class="skeleton-subline"></div>
+                    </div>
+                    <div class="item-deco">dock <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d0d0d0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                </div>
+            </div>
+
+            <!-- 底部区域：壁纸库面板 -->
+            <div class="wallpaper-gallery-box" id="galleryBox">
+                <div class="gallery-header">
+                    <span>壁纸库</span>
+                    <span class="edit-btn" id="editGalleryBtn">Edit</span>
+                </div>
+                <div class="gallery-grid" id="wallpaperGrid">
+                    <!-- 动态添加的壁纸会插在这里 -->
+                </div>
+                <!-- 新增：无壁纸时的提示文字 -->
+                <div class="gallery-empty-text" id="galleryEmptyText">当前暂无上传的壁纸</div>
+            </div>
+
+        </div>
+    </div>
+    <!-- 1. 全屏设置页面 (复刻图片UI) -->
+    <div class="theme-panel" id="settingsFullScreenPanel">
+        <div class="panel-header">
+            <div class="header-dots" onclick="toggleSettingsPopup()" style="cursor: pointer; position: relative;">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                
+                <!-- 备份导出弹窗 (向右下方展开，防止溢出) -->
+                <div class="preset-popup" id="settingsPopup">
+                    <div class="preset-popup-arrow" id="settingsPopupArrow"></div>
+                    <div class="preset-list">
+                        <div class="preset-item" onclick="exportAllData(event)">
+                            <span class="preset-item-name">导出所有数据</span>
+                        </div>
+                        <div class="preset-item" onclick="importAllData(event)">
+                            <span class="preset-item-name">导入所有数据</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-title-wrapper">
+                <!-- 恢复悬浮胶囊样式 -->
+                <div class="header-title" style="cursor: default;">Settings</div>
+            </div>
+            <div class="header-close" onclick="closeSettingsFullScreenPanel()">Back</div>
+        </div>
+
+        <!-- 调整对齐方式，使其靠上对齐，与主题页面保持一致 -->
+        <div class="panel-content" style="align-items: center; justify-content: flex-start; padding-top: 40px;">
+            <div class="preview-container">
+
+            <!-- 顶部信息卡片 -->
+            <div class="info-card">
+                <div class="info-card-content">
+                    <div class="info-card-title">恭喜你 你捡到了一个小年糕糕糕...</div>
+                </div>
+                <div class="info-card-divider"></div>
+                <div class="info-card-footer">
+                    <div class="info-card-date">Sunday, Nov 16</div>
+                    <div class="icon-dots">
+                        <svg width="24" height="8" viewBox="0 0 24 8"><circle cx="4" cy="4" r="2.5"></circle><circle cx="12" cy="4" r="2.5"></circle><circle cx="20" cy="4" r="2.5"></circle></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部操作菜单 -->
+            <div class="action-menu">
+                <div class="menu-item" onclick="openApiPanel()">
+                    <span class="menu-text">Api</span>
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    </span>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-text">全屏</span>
+                    <label class="ios-switch">
+                        <input type="checkbox" id="fullscreenToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-text">状态栏</span>
+                    <label class="ios-switch">
+                        <input type="checkbox" id="statusBarToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="menu-item" onclick="showStorageAnalysisModal()">
+                    <span class="menu-text">数据储存分析</span>
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v10l8.5 5"></path></svg>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导出命名弹窗 -->
+        <div class="preset-modal-overlay" id="exportModalOverlay">
+            <div class="preset-modal">
+                <div class="preset-modal-title">导出数据</div>
+                <div class="preset-modal-desc">请输入导出文件的名称。</div>
+                <input type="text" class="preset-modal-input" id="exportNameInput" placeholder="例如：我的备份" maxlength="20">
+                <div class="preset-modal-actions">
+                    <div class="preset-btn-cancel" onclick="hideExportModal()">取消</div>
+                    <div class="preset-btn-confirm" onclick="confirmExport()">导出</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据储存分析弹窗 -->
+        <div class="preset-modal-overlay" id="storageModalOverlay">
+            <div class="preset-modal" style="width: 280px;">
+                <div class="preset-modal-title">数据储存分析</div>
+                <div class="preset-modal-desc">当前应用数据占用情况</div>
+                <div class="storage-chart-container">
+                    <div class="storage-pie-chart" id="storagePieChart"></div>
+                    <div class="storage-legend" id="storageLegend"></div>
+                </div>
+                <div class="preset-modal-actions">
+                    <div class="preset-btn-confirm" style="width: 100%; border-left: none;" onclick="hideStorageAnalysisModal()">确定</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- 修复：这里补上 settingsFullScreenPanel 缺失的闭合标签 -->
+        <!-- 角色 Secret 弹窗 (仿图片样式) -->
+        <div class="preset-modal-overlay" id="secretModalOverlay">
+            <div style="width: 320px; background: #fff; border-radius: 16px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;" id="secretModalContent">
+                <!-- 外层虚线框 -->
+                <div style="border: 1px dashed #d0d0d0; border-radius: 12px; padding: 20px 15px; display: flex; align-items: center; gap: 15px; background: #fdfdfd;">
+                    
+                    <!-- 左侧头像与按钮区 -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0;">
+                        <!-- 头像及五角星装饰 -->
+                        <div style="position: relative; width: 80px; height: 80px;">
+                            <div id="secretAvatar" style="width: 100%; height: 100%; border-radius: 12px; background-color: #f4f4f4; background-size: cover; background-position: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); position: relative; z-index: 2;"></div>
+                            <!-- 装饰五角星 -->
+                            <svg viewBox="0 0 24 24" style="position: absolute; top: -8px; left: -8px; width: 16px; height: 16px; fill: #111; z-index: 3;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24" style="position: absolute; bottom: -5px; right: -5px; width: 14px; height: 14px; fill: #888; z-index: 3;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24" style="position: absolute; top: 10px; right: -10px; width: 12px; height: 12px; fill: #ccc; z-index: 1;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24" style="position: absolute; bottom: 10px; left: -12px; width: 18px; height: 18px; fill: #eee; z-index: 1;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        </div>
+                        <!-- Check 按钮 (API生成) -->
+                        <div id="btnGenerateSecret" style="font-size: 11px; font-weight: bold; color: #fff; background: #111; padding: 4px 14px; border-radius: 12px; cursor: pointer; letter-spacing: 1px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">Check</div>
+                    </div>
+                    
+                    <!-- 右侧信息区 -->
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+                        <!-- 网名 (User图标) -->
+                        <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#bbb" style="flex-shrink: 0;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                            <span id="secretNetName" style="font-size: 14px; color: #555; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未生成</span>
+                        </div>
+                        <!-- 账号 (ID Card图标) -->
+                        <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#bbb" style="flex-shrink: 0;"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14H5v-2h7v2zm3-4H5v-2h10v2zm3-4H5V7h13v2z"/></svg>
+                            <span id="secretAccount" style="font-size: 14px; color: #888; font-style: italic; font-family: 'Times New Roman', Times, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未生成</span>
+                        </div>
+                        <!-- 密码 (Lock图标) -->
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#bbb" style="flex-shrink: 0;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                            <span id="secretPassword" style="font-size: 12px; color: #555; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未生成</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 世界书选择弹窗 (折叠栏黑白灰风格) -->
+        <div class="preset-modal-overlay" id="charWbSelectModalOverlay">
+            <div class="preset-modal" style="width: 320px; max-height: 80vh; display: flex; flex-direction: column; border-radius: 20px; background: #fff; padding: 20px 15px;">
+                <div style="font-size: 16px; font-weight: bold; color: #555; text-align: center; margin-bottom: 15px;">绑定世界书</div>
+                
+                <div id="charWbSelectList" style="flex: 1; overflow-y: auto; width: 100%; text-align: left; margin-bottom: 15px;">
+                    <!-- 动态渲染分组和条目 -->
+                </div>
+                
+                <!-- 底部大确认按钮 -->
+                <div style="width: 100%; background: #f0f0f0; color: #333; text-align: center; padding: 12px 0; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer;" onclick="confirmCharWbSelect()">确认</div>
+            </div>
+        </div>
+
+    <!-- 2. API 设置全屏面板 (带预设气泡弹窗) -->
+    <div class="theme-panel" id="apiPanel">
+        <div class="panel-header">
+            <!-- 左上角返回图标 -->
+            <div class="header-close" onclick="closeApiPanel()" style="color: #8888; font-size: 19px; font-weight: bold; cursor: pointer;">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" onclick="toggleApiPresetPopup()">API Settings</div>
+                
+                <!-- API 预设列表气泡弹窗 -->
+                <div class="preset-popup" id="apiPresetPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-header">
+                        <span style="font-weight: bold; color: #333;">API 预设库</span>
+                        <span class="preset-edit-btn" id="apiPresetEditBtn" onclick="toggleApiPresetEditMode()">Edit</span>
+                    </div>
+                    <div class="preset-list" id="apiPresetList">
+                        <!-- 动态生成的预设列表将放在这里 -->
+                    </div>
+                    <div class="preset-footer" onclick="promptSaveApiPreset()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        保存当前为预设
+                    </div>
+                </div>
+            </div>
+            <!-- 右上角 Done 按钮 -->
+            <div class="header-close" onclick="saveAndCloseApiPanel()">Done</div>
+        </div>
+
+        <div class="panel-content">
+            <div class="app-settings-box">
+                <div class="font-section-title">API CONFIGURATION</div>
+                
+                <!-- URL 输入框 -->
+                <div class="api-input-wrapper">
+                    <div class="api-input-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        URL
+                    </div>
+                    <input type="text" id="apiUrl" placeholder="例如 https://api.openai.com">
+                </div>
+
+                <!-- KEY 输入框 -->
+                <div class="api-input-wrapper">
+                    <div class="api-input-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        KEY
+                    </div>
+                    <input type="password" id="apiKey" placeholder="sk-...">
+                </div>
+
+                <!-- 搜索模型输入框 -->
+                <div class="api-input-wrapper">
+                    <div class="api-input-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <input type="text" id="modelSearch" placeholder="Searching...">
+                </div>
+
+                <!-- 拉取模型按钮 (复用输入框样式使其大小一致) -->
+                <div class="api-input-wrapper" style="justify-content:center; cursor:pointer; background:#f9f9f9; font-weight:bold; color:#333;" onclick="fetchModels()">
+                    <span>拉取模型</span>
+                </div>
+
+                <!-- 模型选择下拉框 -->
+                <select id="apiModel" class="font-url-input" style="background:#fff; border:1px solid #eee; border-radius:8px; padding:8px; outline:none; width: 100%; margin-bottom: 12px;">
+                    <option value="">请先拉取模型</option>
+                </select>
+
+                <!-- 新增：温度调节 -->
+                <div class="api-input-wrapper" style="flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div class="api-input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
+                            温度 (Temperature)
+                        </div>
+                        <span id="apiTempValue" style="font-size: 14px; color: #111; font-weight: bold;">0.8</span>
+                    </div>
+                    <input type="range" id="apiTemperature" min="0" max="2" step="0.1" value="0.8" style="width: 100%; accent-color: #111;" oninput="document.getElementById('apiTempValue').innerText = this.value">
+                    <div style="font-size: 10px; color: #aaa; width: 100%; text-align: center;">数值越高回复越发散、越有创造力</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Worldbook 列表主页面 -->
+    <div class="theme-panel instant-panel" id="wbListPanel">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeWorldbookPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" onclick="toggleWbGroupPopup()">Worldbook</div>
+                
+                <!-- 世界书分组气泡弹窗 -->
+                <div class="preset-popup" id="wbGroupPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-header">
+                        <span style="font-weight: bold; color: #333;">分组列表</span>
+                        <span class="preset-edit-btn" id="wbGroupEditBtn" onclick="toggleWbGroupEditMode()">Edit</span>
+                    </div>
+                    <div class="preset-list" id="wbGroupList">
+                        <!-- 示例分组 -->
+                        <div class="preset-item">
+                            <span class="preset-item-name">默认分组</span>
+                            <div class="preset-delete-btn">-</div>
+                        </div>
+                        <div class="preset-item">
+                            <span class="preset-item-name">魔法世界设定</span>
+                            <div class="preset-delete-btn">-</div>
+                        </div>
+                    </div>
+                    <div class="preset-footer" onclick="promptAddWbGroup()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        新建分组
+                    </div>
+                </div>
+            </div>
+            <!-- 右上角 Create 按钮及下拉弹窗 -->
+            <div style="position: relative;">
+                <div class="header-close" style="color: #888; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="toggleWbCreatePopup()">Create</div>
+                
+                <!-- Create 弹窗 -->
+                <div class="preset-popup" id="wbCreatePopup">
+                    <div class="preset-popup-arrow" style="left: auto; right: 15px; transform: rotate(45deg);"></div>
+                    <div class="preset-list">
+                        <div class="preset-item" onclick="createNewWbEntry(); document.getElementById('wbCreatePopup').classList.remove('show');">
+                            <span class="preset-item-name">创建词条</span>
+                        </div>
+                        <div class="preset-item" onclick="importWbEntry(); document.getElementById('wbCreatePopup').classList.remove('show');">
+                            <span class="preset-item-name">导入词条</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-content">
+            <!-- 搜索框 -->
+            <div class="search-wrapper">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#bbb" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" placeholder="搜索世界书词条...">
+            </div>
+
+            <!-- 词条列表 (改为网格文件布局) -->
+            <div id="wbEntryList" class="wb-file-grid">
+                <!-- 动态添加的词条会插在这里，目前留空 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Worldbook 词条编辑页面 (图片风格重构) -->
+    <div class="theme-panel instant-panel" id="wbEditPanel">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeWbEditPanel()">Cancel</div>
+            <div class="header-title-wrapper">
+                <!-- 标题改为分组选择 -->
+                <div class="header-title" onclick="toggleWbEditGroupPopup()" style="display: flex; align-items: center; gap: 4px;">
+                    <span id="wb-edit-header-group">默认分组</span>                   
+                </div>
+                <!-- 编辑页分组选择弹窗 -->
+                <div class="preset-popup" id="wbEditGroupPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-list" id="wbEditGroupList">
+                        <!-- 动态渲染 -->
+                    </div>
+                </div>
+            </div>
+            <!-- 绑定保存逻辑 -->
+            <div class="header-close" style="color: #111;" onclick="saveWbEntry()">Save</div>
+        </div>
+
+        <div class="panel-content wb-pic-style-content">
+            <!-- 隐藏的 ID 字段，用于判断是新建还是编辑 -->
+            <input type="hidden" id="wb-edit-id">
+
+            <!-- 顶部个人主页风格区域 -->
+            <div class="wb-profile-header">
+                <!-- 新增：五角星与 Worldbook Name -->
+                <div class="wb-title-label">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    Worldbook Name
+                </div>
+                <!-- 居中的大字号名称输入框 -->
+                <input type="text" id="wb-edit-title" class="wb-title-input" placeholder="输入世界书名称...">
+                
+                <!-- 三个标签块 (同一行排列) -->
+                <div class="wb-tags-row">
+                    <!-- 插入位置 -->
+                    <div class="wb-tag-item" style="position: relative;">
+                        <span class="wb-tag-text" id="wb-edit-position-text">插入位置</span>
+                        <select id="wb-edit-position" class="wb-transparent-select" onchange="document.getElementById('wb-edit-position-text').innerText = this.options[this.selectedIndex].text.split(' ')[0]">
+                            <option value="before">字符前 (Before Char)</option>
+                            <option value="after">字符后 (After Char)</option>
+                            <option value="top">顶部 (Top of Prompt)</option>
+                            <option value="bottom">底部 (Bottom)</option>
+                        </select>
+                    </div>
+                    <!-- 常驻激活 -->
+                    <label class="wb-tag-item">
+                        <input type="checkbox" id="wb-edit-constant" class="wb-hidden-cb">
+                        <span class="wb-tag-text">常驻激活</span>
+                    </label>
+                    <!-- 匹配全词 -->
+                    <label class="wb-tag-item">
+                        <input type="checkbox" id="wb-edit-exact" class="wb-hidden-cb" checked>
+                        <span class="wb-tag-text">匹配全词</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 下方列表区域 -->
+            <div class="wb-info-list">
+                <!-- 关键词 (加上了 wb-content-textarea 使其可见) -->
+                <div class="wb-info-row">
+                    <div class="wb-info-label">[属性] ๑òᆺó๑</div>
+                    <div class="wb-info-input-wrap">
+                        <textarea id="wb-edit-keywords" class="wb-pic-textarea wb-content-textarea" style="height: 45px; min-height: 45px;" placeholder="输入触发关键词，用逗号分隔..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 内容 (改为上下排列，占满宽度并加高) -->
+                <div class="wb-info-row-vertical">
+                    <div class="wb-info-label-top">[其他] ^ω^</div>
+                    <div class="wb-info-input-wrap" style="width: 100%;">
+                        <textarea id="wb-edit-content" class="wb-pic-textarea wb-content-textarea" style="height: 250px;" placeholder="输入世界书具体内容..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 删除按钮 (带大号双引号) -->
+            <div class="wb-delete-text" onclick="deleteWbEntry()">
+                <svg class="wb-quote-icon" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                <span>除了死亡所有的离开都是背叛 (删除此词条)</span>
+                <svg class="wb-quote-icon" viewBox="0 0 24 24"><path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.57-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         5. Chat 注册/登录主面板
+         ========================================= -->
+    <div class="theme-panel" id="chatPanel">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeChatPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" id="chatHeaderTitle" onclick="toggleChatPresetPopup()">
+                    Sign Up
+                </div>
+                
+                <!-- 气泡弹窗 (面具列表) -->
+                <div class="preset-popup" id="chatPresetPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-header">
+                        <span style="font-weight: bold; color: #333;">用户面具</span>
+                        <span class="preset-edit-btn" id="chatPresetEditBtn" onclick="toggleChatPresetEditMode(event)">Edit</span>
+                    </div>
+                    <div class="preset-list" id="chatPresetList">
+                        <!-- 动态生成的面具列表将放在这里 -->
+                        <div style="padding: 15px; text-align: center; color: #aaa; font-size: 12px;">暂无面具，请先创建</div>
+                    </div>
+                    <div class="preset-footer" onclick="openPersonaPanel()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        创建新面具
+                    </div>
+                </div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+
+        <!-- 注册内容区 (默认显示) -->
+        <div class="panel-content" id="chatRegisterContainer">
+            <div>
+                <div class="welcome-title">创建账号</div>
+                <div class="welcome-sub">请先选择面具，然后填写信息完成绑定注册</div>
+            </div>
+
+            <!-- 面具绑定区域 -->
+            <div class="mask-bind-container" onclick="toggleChatPresetPopup()">
+                <div class="chat-avatar-wrapper">
+                    <div class="chat-avatar" id="regSelectedAvatar">
+                        <svg viewBox="0 0 24 24" width="32" height="32" stroke="#aaa" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                    <div class="chat-camera-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                </div>
+                <div class="bind-mask-name" id="regSelectedName">点击选择要绑定的面具</div>
+            </div>
+
+            <div class="input-group">
+                <div class="chat-input-row">
+                    <div class="chat-input-label">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        名称 (Net Name)
+                    </div>
+                    <input type="text" id="regNetName" placeholder="请输入网名">
+                </div>
+                <div class="chat-input-row">
+                    <div class="chat-input-label">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                        账号 (Account number)
+                    </div>
+                    <input type="text" id="regAccount" placeholder="请输入手机号或账号">
+                </div>
+                <div class="chat-input-row">
+                    <div class="chat-input-label">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        密码 (Password)
+                    </div>
+                    <input type="password" id="regPassword" placeholder="请设置密码">
+                </div>
+            </div>
+
+            <label class="chat-checkbox-label">
+                <input type="checkbox" id="regAgreement">
+                <div class="chat-checkbox-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="agreement-text">我已阅读并同意 <a href="#">《服务协议》</a> 和 <a href="#">《隐私政策》</a>。</div>
+            </label>
+            <!-- 注册区的按钮 -->
+            <button class="register-btn" id="doRegisterBtn">注 册</button>
+            <div class="login-hint">已有账号？ <span onclick="switchChatMode('login')">直接登录</span></div>
+        </div>
+
+        <!-- 登录内容区 (默认隐藏) -->
+        <div class="panel-content" id="chatLoginContainer" style="display: none;">
+            <div>
+                <div class="welcome-title">Welcome back</div>
+                <div class="welcome-sub">点击头像选择已绑定的账号快速登录</div>
+            </div>
+
+            <!-- 登录头像展示区域 -->
+            <div class="mask-bind-container" onclick="toggleChatPresetPopup('login')">
+                <div class="chat-avatar-wrapper">
+                    <div class="chat-avatar" id="loginSelectedAvatar">
+                        <svg viewBox="0 0 24 24" width="32" height="32" stroke="#aaa" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                </div>
+                <div class="bind-mask-name" id="loginSelectedName" style="background: transparent; font-size: 18px; padding: 0;">点击选择账号</div>
+            </div>
+
+            <div class="input-group" style="margin-top: 10px;">
+                <div class="chat-input-row">
+                    <div class="chat-input-label">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                        账号 (Account number)
+                    </div>
+                    <input type="text" id="loginAccount" placeholder="请输入手机号或账号">
+                </div>
+                <div class="chat-input-row">
+                    <div class="chat-input-label">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        密码 (Password)
+                    </div>
+                    <input type="password" id="loginPassword" placeholder="请输入密码">
+                </div>
+            </div>
+
+            <button class="register-btn" style="margin-top: 20px;" id="doLoginBtn">登 录</button>
+            <div class="login-hint">没有账号？ <span onclick="switchChatMode('register')">去注册</span></div>
+        </div>
+       </div>
+
+    <!-- =========================================
+         6. 全屏人设编辑页 (子面板)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="personaPanel" style="z-index: 280; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closePersonaPanel()">Cancel</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">编辑人设</div>
+            </div>
+            <div class="header-close" style="color: #888;" onclick="savePersona()">Save</div>
+        </div>
+
+        <div class="persona-content">
+            <div class="binder-container">
+                
+                <!-- 上半部分卡片 -->
+                <div class="p-card p-card-top">
+                    <div class="p-avatar-square" id="pAvatarUpload" onclick="triggerPersonaAvatarUpload()">上传头像</div>
+                    <input type="file" id="pAvatarInput" accept="image/*" style="display: none;" onchange="handlePersonaAvatarChange(event)">
+                    
+                    <div class="p-info-right">
+                        <div class="p-row">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <label>名称 (Name):</label>
+                                <input type="text" id="pIdInput" placeholder="输入名称" value="">
+                            </div>
+                            <div class="p-capsule black">Name</div>
+                        </div>
+                        <div class="p-row">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <label>性别 (Sex):</label>
+                                <textarea id="pSexInput" placeholder="输入性别..."></textarea>
+                            </div>
+                            <div class="p-capsule gray">Sex</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 活页环 -->
+                <div class="binder-ring left"></div>
+                <div class="binder-ring right"></div>
+
+                <!-- 下半部分卡片 -->
+                <div class="p-card p-card-bottom">
+                    <!-- 占满全宽的文本区 -->
+                    <div class="p-content-full">
+                        <div class="p-row">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <label>About Me "关于我的一切"</label>
+                                <textarea id="pPersonaInput" class="visible-textarea" placeholder="输入详细设定..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         7. Wechat 主界面
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="wechatPanel" style="z-index: 150;">
+        <div class="panel-header">
+            <!-- 左侧返回按钮 -->
+            <div class="header-close" onclick="closeWechatPanel()">Back</div>
+            
+            <!-- 中间标题 -->
+            <div class="header-title-wrapper">
+                <div class="header-title" id="wechatHeaderTitle" style="cursor: default;">Chat</div>
+            </div>
+            
+            <!-- 右侧操作区：搜索按钮 + 动态 Edit 按钮 -->
+            <div style="display: flex; align-items: center; justify-content: flex-end; width: 60px;">
+                <!-- 搜索按钮：使用 transform 单独向右平移，不影响 Edit 按钮 -->
+                <div class="header-close" id="wechatSearchBtn" onclick="openSearchAddPanel()" style="display: flex; align-items: center; cursor: pointer; transform: translateX(35px);" title="搜索添加角色">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="#bbb" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+                <div class="header-close" id="wechatHeaderRightBtn" style="visibility: hidden; width: 36px; text-align: right;"></div>
+            </div>
+        </div>
+
+        <!-- 四个子页面容器 -->
+        <div class="panel-content wechat-tab-content" id="tab-chat">
+            <!-- 动态渲染的聊天列表将放在这里 -->
+            <div id="chatSessionList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+        <!-- 【关键修改】：将 background-color 从 #f4f4f5 改为 #fafafa (或者直接改成 #fff 纯白) -->
+<div class="panel-content wechat-tab-content" id="tab-contacts" style="display: none; padding: 0; background-color: #fafafa;">
+            <!-- 顶部均等分导航栏 -->
+            <div class="contact-top-nav">
+                <!-- 【关键修改】：Chats 改为 Categories (分组) -->
+                <div class="contact-nav-btn active" onclick="switchContactSubTab('categories')">Categories</div>
+                <div class="contact-nav-btn" onclick="switchContactSubTab('friends')">Friends</div>
+                <div class="contact-nav-btn" onclick="switchContactSubTab('groups')">Groups</div>
+            </div>
+
+            <!-- 滑动容器 -->
+            <div class="contact-slider-container">
+                <div class="contact-slider-wrapper" id="contactSliderWrapper">
+                    
+                    <!-- 1. Categories 列表 (分组) -->
+                    <div class="contact-sub-page" id="sub-categories">
+                        <div class="contact-group-list" id="contactCategoriesList">
+                            <!-- 动态渲染分组 -->
+                        </div>
+                    </div>
+
+                    <!-- 2. Friends 列表 (所有好友平铺) -->
+                    <div class="contact-sub-page" id="sub-friends">
+                        <div id="contactFriendsList" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+                            <!-- 动态渲染所有好友 -->
+                        </div>
+                    </div>
+
+                    <!-- 3. Groups 列表 (群聊) -->
+                    <div class="contact-sub-page" id="sub-groups">
+                        <div id="contactGroupsList" style="padding: 15px; text-align: center; color: #aaa; font-size: 13px;">
+                            暂无群聊
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="panel-content wechat-tab-content" id="tab-moment" style="display: none;">
+            <div style="text-align: center; color: #999; margin-top: 50px; font-size: 14px; font-weight: bold;">朋友圈页面</div>
+        </div>
+
+        <div class="panel-content wechat-tab-content" id="tab-me" style="display: none; padding: 20px; padding-bottom: 120px; background-color: #fafafa; overflow-y: auto;">
+            
+            <!-- 顶部切换账号胶囊 -->
+            <div class="me-switch-capsule" onclick="openSwitchAccountPanel()">
+                <div class="me-switch-icon">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#666" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="12" y2="14"></line></svg>
+                </div>
+                <div class="me-switch-info">
+                    <div class="me-switch-title">正在切换账号...</div>
+                    <div class="me-switch-name">Name <svg viewBox="0 0 24 24" width="10" height="10" fill="#333"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg> <span id="meNameTop">岛</span></div>
+                </div>
+                <div class="me-switch-close">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+
+            <!-- 学生证大卡片 -->
+            <div class="me-id-card">
+                <div class="me-id-top">
+                    <div class="me-id-avatar-wrap">
+                        <div class="me-id-avatar" id="meAvatar"></div>
+                        <svg class="me-id-star-tl" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                        <svg class="me-id-star-br" viewBox="0 0 24 24" width="10" height="10" fill="#ccc"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    </div>
+                    <div class="me-id-info">
+                        <div class="me-id-label">SUBJECT NAME</div>
+                        <!-- 增加 onclick 事件和提示样式 -->
+                        <div class="me-id-name" id="meName" onclick="editMeName()" style="cursor: pointer;" title="点击修改网名">岛</div>
+                        <div class="me-id-bottom-row">
+                            <div class="me-id-no">NO. <span id="meAccountNo">0023798</span></div>
+                            <div class="me-id-linked">LINKED</div>
+                        </div>
+                    </div>
+                    <div class="me-id-pin">
+                        <div class="me-id-pin-dot"></div>
+                        <div class="me-id-pin-line"></div>
+                        <div class="me-id-pin-star">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                        </div>
+                    </div>
+                </div>
+                <!-- 替换条形码为个性签名 -->
+                <div class="me-id-sign-wrap">
+                    <div class="me-id-sign" id="meSign" onclick="editMeSign()" style="cursor: pointer;" title="点击修改个性签名">这个人很懒，什么都没写~</div>
+                </div>
+            </div>
+
+            <!-- 下半部分列表 -->
+            <div class="me-menu-list" style="width: 100%; padding: 0;">
+                <!-- 钱包 -->
+                <div class="me-menu-item">
+                    <div class="me-menu-left">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                        <div class="me-menu-text">钱包 <span class="me-menu-text-en">Wallet</span></div>
+                    </div>
+                    <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                </div>
+                <!-- 面具 -->
+                <div class="me-menu-item">
+                    <div class="me-menu-left">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <div class="me-menu-text">面具 <span class="me-menu-text-en">Masks</span></div>
+                    </div>
+                    <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                </div>
+                <!-- 表情包 -->
+                <div class="me-menu-item" onclick="openEmojiManagerPanel()">
+                    <div class="me-menu-left">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                        <div class="me-menu-text">表情包 <span class="me-menu-text-en">Emojis</span></div>
+                    </div>
+                    <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                </div>
+                <!-- 收藏 -->
+                <div class="me-menu-item">
+                    <div class="me-menu-left">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                        <div class="me-menu-text">收藏 <span class="me-menu-text-en">Favorites</span></div>
+                    </div>
+                    <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                </div>
+                <!-- 设置 -->
+                <div class="me-menu-item" onclick="openSettingsPanel()">
+                    <div class="me-menu-left">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <div class="me-menu-text">设置 <span class="me-menu-text-en">Settings</span></div>
+                    </div>
+                    <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                </div>
+            </div>
+        </div>
+        <!-- 悬浮胶囊底栏 -->
+        <div class="wechat-bottom-bar">
+            <div class="wechat-nav-item active" onclick="switchWechatTab('chat')">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <div class="wechat-nav-item" onclick="switchWechatTab('contacts')">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+            </div>
+            <div class="wechat-nav-item" onclick="switchWechatTab('moment')">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="2" x2="12" y2="9"></line><line x1="12" y1="15" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="9.88" y2="9.88"></line><line x1="14.12" y1="14.12" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="9" y2="12"></line><line x1="15" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="9.88" y2="14.12"></line><line x1="14.12" y1="9.88" x2="19.07" y2="4.93"></line></svg>
+            </div>
+
+            <div class="wechat-nav-item" onclick="switchWechatTab('me')">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+        </div>
+    </div>
+
+      <!-- =========================================
+         8. 设置与切换账号面板 (学生证样式)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="switchAccountPanel" style="z-index: 210; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeSwitchAccountPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">设置与账号</div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- 动态生成的学生证卡片将放在这里 -->
+            <div id="accountCardList" style="display: flex; flex-direction: column; gap: 20px;"></div>
+
+            <!-- 退出登录按钮 -->
+            <div class="me-menu-list" style="margin-top: 10px;">
+                <div class="me-menu-item" onclick="logoutWechat()" style="justify-content: center; border-bottom: none;">
+                    <span style="color: #ff3b30; font-weight: bold;">退出当前登录</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：表情包管理全屏面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="emojiManagerPanel" style="z-index: 212; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeEmojiManagerPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" onclick="toggleEmojiGroupPopup()" style="cursor: pointer;">
+                    <span id="emojiCurrentGroupText">默认分组</span>
+                </div>
+                <!-- 表情包分组气泡弹窗 -->
+                <div class="preset-popup" id="emojiGroupPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-header">
+                        <span style="font-weight: bold; color: #333;">表情包分组</span>
+                        <span class="preset-edit-btn" id="emojiGroupEditBtn" onclick="toggleEmojiGroupEditMode()">Edit</span>
+                    </div>
+                    <div class="preset-list" id="emojiGroupList">
+                        <!-- 动态渲染 -->
+                    </div>
+                    <div class="preset-footer" onclick="promptAddEmojiGroup()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        新建分组
+                    </div>
+                </div>
+            </div>
+            <div class="header-close" id="emojiEditBtn" style="color: #888; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="toggleEmojiEditMode()">Edit</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <!-- 导入区域 -->
+            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; margin-bottom: 20px;">
+                <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 8px;">批量导入表情包 (格式: 描述:URL)</div>
+                <textarea id="emojiImportInput" style="width: 100%; height: 80px; background: #f9f9f9; border: 1px solid #eaeaea; border-radius: 8px; padding: 10px; font-size: 12px; resize: none; outline: none;" placeholder="例如：&#10;开心:https://example.com/1.png&#10;难过：https://example.com/2.png"></textarea>
+                <div onclick="importEmojis()" style="background: #111; color: #fff; text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 10px;">导入到当前分组</div>
+            </div>
+            
+            <!-- 表情包展示网格 -->
+            <div id="emojiGrid" class="emoji-manager-grid">
+                <!-- 动态渲染 -->
+            </div>
+            
+            <!-- 编辑模式下的底部操作栏 -->
+            <div id="emojiBatchActionBar" style="display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #111; border-radius: 24px; padding: 12px 30px; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 10; align-items: center;">
+                <div onclick="openEmojiMoveModal()" style="color: #fff; font-size: 15px; font-weight: bold; cursor: pointer;">移动</div>
+                <div style="width: 1px; height: 16px; background: #555;"></div>
+                <div onclick="batchDeleteEmojis()" style="color: #ff3b30; font-size: 15px; font-weight: bold; cursor: pointer;">删除</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动表情包分组弹窗 -->
+    <div class="preset-modal-overlay" id="emojiMoveModalOverlay">
+        <div class="preset-modal">
+            <div class="preset-modal-title">移动至分组</div>
+            <div class="preset-list" id="emojiMoveGroupList" style="width: 100%; max-height: 200px; overflow-y: auto; margin-top: 10px;">
+                <!-- 动态渲染 -->
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeEmojiMoveModal()" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =========================================
+         新增：搜索添加角色全屏面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="searchAddPanel" style="z-index: 215; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeSearchAddPanel()">Cancel</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">添加朋友</div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <!-- 搜索框 -->
+            <div class="search-wrapper" style="margin-bottom: 20px; background: #fff; border: 1px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#bbb" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="searchCharInput" placeholder="请输入角色账号搜索..." oninput="handleCharSearch()">
+            </div>
+            
+            <!-- 搜索结果展示区 -->
+            <div id="searchCharResult" style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">输入账号查找角色</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用上下文菜单 (长按弹出) -->
+    <div class="context-menu-overlay" id="contextMenuOverlay" onclick="closeContextMenu()">
+        <div class="context-menu" id="contextMenu" onclick="event.stopPropagation()">
+            <!-- 动态内容将由 JS 渲染 -->
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：角色库全屏面板 (Char Library)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="charLibraryPanel" style="z-index: 180; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeCharLibraryPanel()">Back</div>
+            
+            <!-- 标题与分组弹窗 -->
+            <div class="header-title-wrapper">
+                <div class="header-title" onclick="toggleCharGroupPopup()">角色库</div>
+                
+                <!-- 角色分组气泡弹窗 -->
+                <div class="preset-popup" id="charGroupPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-header">
+                        <span style="font-weight: bold; color: #333;">角色分组</span>
+                        <span class="preset-edit-btn" id="charGroupEditBtn" onclick="toggleCharGroupEditMode()">Edit</span>
+                    </div>
+                    <div class="preset-list" id="charGroupList">
+                        <div class="preset-item"><span class="preset-item-name">默认分组</span></div>
+                    </div>
+                    <div class="preset-footer" onclick="promptAddCharGroup()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        新建分组
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右上角 Create 按钮及下拉弹窗 -->
+            <div style="position: relative;">
+                <div class="header-close" style="color: #111; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="toggleCharCreatePopup()">Create</div>
+                
+                <!-- Create 弹窗 -->
+                <div class="preset-popup" id="charCreatePopup" style="right: 0; left: auto; transform: none; top: 35px; width: 140px;">
+                    <div class="preset-popup-arrow" style="left: auto; right: 15px; transform: none;"></div>
+                    <div class="preset-list">
+                        <div class="preset-item" onclick="openCharEditPanel(); document.getElementById('charCreatePopup').classList.remove('show');">
+                            <span class="preset-item-name">创建角色</span>
+                        </div>
+                        <div class="preset-item" onclick="importCharCard(); document.getElementById('charCreatePopup').classList.remove('show');">
+                            <span class="preset-item-name">导入角色卡</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel-content" style="padding: 20px; background-color: #f4f4f5;">
+
+            <!-- 角色列表容器 -->
+            <div id="charLibraryList" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                <!-- 动态渲染的角色卡片将放在这里 -->
+            </div>
+        </div>
+    </div> <!-- 👈 删掉多余代码后，只留这一个 div 闭合标签 -->
+
+    <!-- =========================================
+         9. 全屏角色编辑面板 (Char Edit) - 仿面具UI
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="charEditPanel" style="z-index: 270; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeCharEditPanel()">Cancel</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" onclick="toggleCharEditGroupPopup()" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <span id="char-edit-header-group">默认分组</span>
+                </div>
+                <!-- 编辑页分组选择弹窗 -->
+                <div class="preset-popup" id="charEditGroupPopup">
+                    <div class="preset-popup-arrow"></div>
+                    <div class="preset-list" id="charEditGroupList">
+                        <!-- 动态渲染 -->
+                    </div>
+                </div>
+            </div>
+            <div class="header-close" style="color: #111;" onclick="saveChar()">Save</div>
+        </div>
+
+        <div class="persona-content">
+            <div class="binder-container">
+                
+                <!-- 上半部分卡片 -->
+                <div class="p-card p-card-top" style="height: auto; padding-bottom: 25px;">
+                    <div class="p-avatar-square" id="charAvatarUpload" onclick="document.getElementById('charAvatarInput').click()">上传头像</div>
+                    <input type="file" id="charAvatarInput" accept="image/*" style="display: none;" onchange="handleCharAvatarChange(event)">
+                    
+                    <div class="p-info-right">
+                        <div class="p-row">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <label>名称 (Name):</label>
+                                <input type="text" id="charNameInput" placeholder="输入角色名称">
+                            </div>
+                            <div class="p-capsule black">Name</div>
+                        </div>
+                        <div class="p-row">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <label>性别 (Sex):</label>
+                                <input type="text" id="charSexInput" placeholder="输入性别">
+                            </div>
+                            <div class="p-capsule gray">Sex</div>
+                        </div>
+                        <!-- 新增：世界书选择 -->
+                        <div class="p-row">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <label>世界书 (Worldbook):</label>
+                                <div id="charWbSelectText" onclick="openCharWbSelectModal()" style="font-size: 12px; color: #888; margin-top: 4px; cursor: pointer; border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fff;">未绑定...</div>
+                            </div>
+                            <div class="p-capsule gray">Book</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 活页环 -->
+                <div class="binder-ring left" style="top: 210px;"></div>
+                <div class="binder-ring right" style="top: 210px;"></div>
+
+                <!-- 下半部分卡片 -->
+                <div class="p-card p-card-bottom" style="min-height: auto;">
+                    <div class="p-content-full">
+                        <!-- 标签切换区 -->
+                        <div class="char-tabs" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 0 5px;">
+                            <div class="p-capsule black char-tab-btn" onclick="switchCharTab('desc')" id="btn-char-desc" style="transform-origin: left center; margin: 0;">＃角色设定</div>
+                            <div class="p-capsule gray char-tab-btn" onclick="switchCharTab('firstMsg')" id="btn-char-firstMsg" style="transform-origin: center; margin: 0;">＃开场白</div>
+                            <div class="p-capsule gray char-tab-btn" onclick="switchCharTab('scenario')" id="btn-char-scenario" style="transform-origin: right center; margin: 0;">＃场景设定</div>
+                        </div>
+                        
+                        <div class="p-row char-tab-content" id="charTab-desc">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <textarea id="charDescInput" class="visible-textarea" style="height: 200px !important;" placeholder="输入角色的外貌、性格、背景设定..."></textarea>
+                            </div>
+                        </div>
+                        <div class="p-row char-tab-content" id="charTab-firstMsg" style="display: none;">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <textarea id="charFirstMsgInput" class="visible-textarea" style="height: 200px !important;" placeholder="输入角色的第一句话..."></textarea>
+                            </div>
+                        </div>
+                        <div class="p-row char-tab-content" id="charTab-scenario" style="display: none;">
+                            <svg class="p-star" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <div class="p-input-group">
+                                <textarea id="charScenarioInput" class="visible-textarea" style="height: 200px !important;" placeholder="输入当前对话的场景设定..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：角色详情主页 (仿微信他人主页)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="charProfilePanel" style="z-index: 230; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeCharProfilePanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">详细资料</div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 0;">
+            <!-- 顶部信息区 -->
+            <div style="background: #fff; padding: 20px; display: flex; gap: 20px; align-items: center; border-bottom: 1px solid #eee;">
+                <div id="cpAvatar" style="width: 64px; height: 64px; border-radius: 12px; background-color: #f4f4f4; background-size: cover; background-position: center;"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <div id="cpName" style="font-size: 20px; font-weight: bold; color: #111;"></div>
+                    <div id="cpAccount" style="font-size: 13px; color: #888;"></div>
+                </div>
+            </div>
+            
+<!-- 设定信息区 -->
+<div style="background: #fff; margin-top: 10px; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
+    <!-- 新增：设置备注行 -->
+    <div onclick="editCharRemark()" style="padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; cursor: pointer;">
+        <div style="font-size: 14px; color: #333;">设置备注</div>
+        <div id="cpRemarkValue" style="font-size: 14px; color: #999;"></div>
+    </div>
+    <!-- 个性签名行 -->
+    <div style="padding: 15px 20px;">
+        <div style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 6px;">个性签名</div>
+        <div id="cpSign" style="font-size: 13px; color: #666; line-height: 1.5;"></div>
+    </div>
+</div>
+
+
+            <!-- 操作按钮区 -->
+            <div style="margin-top: 20px; padding: 0 20px; display: flex; flex-direction: column; gap: 15px;">
+                <div onclick="startChatWithChar()" style="background: #111; color: #fff; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer;">发消息</div>
+                <div onclick="clearChatHistory()" style="background: #f4f4f4; color: #333; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #eee;">清空聊天记录</div>
+                <div onclick="deleteContactChar()" style="background: #fff; color: #ff3b30; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #ffe5e5;">删除好友</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：全屏聊天页面 (Chat Room)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="chatRoomPanel" style="z-index: 250; background-color: #fafafa; padding: 0;">
+        <!-- 顶部导航 (复刻 Settings 风格 + 双头像 + MORE) -->
+        <div class="panel-header">
+            <div class="header-close" onclick="closeChatRoom()">Back</div>
+            <div class="header-title-wrapper" style="flex-direction: column; gap: 4px; transform: translate(-50%, 15px);">
+                <div class="cr-header-avatars">
+                    <div class="cr-header-avatar" id="crHeaderAvatarMe"></div>
+                    <div class="cr-header-avatar" id="crHeaderAvatarChar"></div>
+                </div>
+                <div class="header-title" id="chatRoomTitle" style="cursor: default; transform: none; padding: 4px 16px;">Name</div>
+            </div>
+            <div class="header-close" style="color: #aaa; font-size: 14px; cursor: pointer;" onclick="openChatSettingsPanel()">MORE</div>
+        </div>
+
+        <!-- 聊天记录区 -->
+        <div class="chat-room-history" id="chatRoomHistory" onclick="closeChatPanels()">
+            <!-- 动态渲染的聊天气泡将放在这里 -->
+            <div style="text-align: center; color: #ccc; font-size: 12px; margin-top: 20px;">暂无聊天记录</div>
+        </div>
+
+        <!-- 底部输入区 -->
+        <div class="chat-room-bottom-bar" id="chatRoomBottomBar">
+            <!-- 新增：引用预览条 -->
+            <div class="cr-input-quote-preview" id="crInputQuotePreview">
+                <div class="cr-input-quote-text" id="crInputQuoteText"></div>
+                <div class="cr-input-quote-close" onclick="cancelQuote()">×</div>
+            </div>
+            
+            <div class="cr-input-container">
+                <div class="cr-icon-left" onclick="toggleChatPanel('more')">
+                    <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                </div>
+                <div class="cr-divider"></div>
+                <input type="text" id="chatRoomInput" placeholder="Entering......" onkeydown="handleChatInputKeydown(event)" onclick="closeChatPanels()">
+            </div>
+            <!-- 替换为 in 图标 -->
+            <div class="cr-icon-in" onclick="toggleChatPanel('emoji')">in</div>
+            
+            <!-- AI回复键：改为黑色圆形+白色小飞机图标 -->
+            <div class="cr-api-btn" onclick="generateApiReply()" style="width: 32px; height: 32px; background-color: #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-right: 4px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </div>
+            <!-- 已移除手动发送键，仅保留回车发送 -->
+        </div>
+
+        <!-- =========================================
+             新增：底部弹出面板 (更多功能 & 表情包)
+             ========================================= -->
+        <!-- 更多功能悬浮面板 (黑白灰简约风) -->
+        <div class="cr-floating-more-panel" id="crMorePanel">
+            <div class="cr-more-grid">
+                <div class="cr-more-item" onclick="handleMoreAction('roll')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 0 2.13-5.87L21 8"></path></svg></div>
+                    <span>Roll重回</span>
+                </div>
+                <div class="cr-more-item" onclick="handleMoreAction('voice')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div>
+                    <span>语音</span>
+                </div>
+                <div class="cr-more-item" onclick="handleMoreAction('image')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                    <span>图片</span>
+                </div>
+                <div class="cr-more-item" onclick="handleMoreAction('camera')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+                    <span>拍照</span>
+                </div>
+                <div class="cr-more-item" onclick="handleMoreAction('transfer')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+                    <span>转账</span>
+                </div>
+                <div class="cr-more-item" onclick="handleMoreAction('redpacket')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+                    <span>红包</span>
+                </div>
+                <div class="cr-more-item" onclick="handleMoreAction('location')">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+                    <span>定位</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 悬浮毛玻璃表情包面板 (300x300) -->
+        <div class="cr-floating-emoji-panel" id="crEmojiPanel">
+            <div class="cr-emoji-list" id="chatRoomEmojiGrid">
+                <!-- 动态渲染的表情包 -->
+            </div>
+            <div class="cr-emoji-groups" id="chatRoomEmojiGroups">
+                <!-- 动态渲染的分组 -->
+            </div>
+        </div>
+
+        <!-- 新增：多选模式底部操作栏 -->
+        <div class="chat-multi-action-bar" id="chatMultiActionBar">
+            <div class="chat-multi-btn" onclick="batchForwardMessages()">
+                <!-- 替换为向左的分享箭头 -->
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 14L4 9l5-5"></path>
+                    <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path>
+                </svg>
+                <span>合并转发</span>
+            </div>
+            <div class="chat-multi-btn" onclick="batchDeleteMessages()">
+                <svg viewBox="0 0 24 24" stroke="#ff3b30"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span style="color: #ff3b30;">删除</span>
+            </div>
+            <div class="chat-multi-btn" onclick="exitMultiSelectMode()">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <span>取消</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增：聊天气泡长按菜单 -->
+    <div class="chat-bubble-menu-overlay" id="chatBubbleMenuOverlay" onclick="closeChatBubbleMenu()">
+        <div class="chat-bubble-menu" id="chatBubbleMenu" onclick="event.stopPropagation()">
+            <div class="chat-bubble-menu-item" onclick="actionQuoteMessage()">引用</div>
+            <div class="chat-bubble-menu-item" onclick="actionEditMessage()">编辑</div>
+            <div class="chat-bubble-menu-item" onclick="actionMultiSelect()">多选</div>
+            <div class="chat-bubble-menu-item" onclick="actionDeleteMessage()">删除</div>
+        </div>
+    </div>
+
+    <!-- 新增：转发选择联系人弹窗 -->
+    <div class="preset-modal-overlay" id="forwardModalOverlay">
+        <div class="preset-modal" style="width: 300px; max-height: 70vh;">
+            <div class="preset-modal-title">选择发送给：</div>
+            <div id="forwardContactList" style="width: 100%; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- 动态渲染联系人 -->
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeForwardModal()">取消</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表情包多选弹窗 -->
+    <div class="preset-modal-overlay" id="emojiSelectModalOverlay">
+        <div class="preset-modal" style="width: 300px; max-height: 70vh;">
+            <div class="preset-modal-title">选择表情包分组</div>
+            <div id="emojiSelectModalList" style="width: 100%; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- 动态渲染复选框列表 -->
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-confirm" style="width: 100%; border-left: none;" onclick="confirmEmojiSelect()">确定</div>
+            </div>
+        </div>
+    </div>
+    <!-- 隐藏的导入文件输入框 -->
+    <input type="file" id="charImportInput" style="display: none;" accept=".png,.json,.txt" onchange="handleCharImportFile(event)">
+    
+    <!-- 隐藏的本地图片发送输入框 -->
+    <input type="file" id="chatLocalImageInput" style="display: none;" accept="image/*" onchange="handleSendLocalImage(event)">
+
+    <!-- 隐藏的直接拍照输入框 (capture="environment" 强制调用后置摄像头) -->
+    <input type="file" id="chatCameraInput" style="display: none;" accept="image/*" capture="environment" onchange="handleCameraCapture(event)">
+
+    <!-- 发送图片选择弹窗 -->
+    <div class="preset-modal-overlay" id="sendImageModalOverlay">
+
+        <div class="preset-modal" style="width: 260px;">
+            <div class="preset-modal-title">发送图片</div>
+            <div class="preset-list" style="width: 100%; margin-top: 10px;">
+                <div class="preset-item" onclick="triggerLocalImageUpload()">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">本地相册</span>
+                </div>
+                <div class="preset-item" onclick="triggerDescImageUpload()">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">文字描述发送</span>
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeSendImageModal()" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑消息大弹窗 -->
+    <div class="preset-modal-overlay" id="editMsgModalOverlay">
+        <div class="edit-msg-modal">
+            <div class="edit-msg-header">
+                <span class="edit-msg-title">编辑消息</span>
+                <svg class="edit-msg-close" onclick="closeEditMsgModal()" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+            <div class="edit-msg-body">
+                <div class="edit-msg-label">消息内容：</div>
+                <textarea id="editMsgTextarea" class="edit-msg-textarea"></textarea>
+                
+                <div class="edit-msg-tools-box">
+                    <div class="edit-msg-label">修复：</div>
+                    <div class="edit-msg-tags">
+                        <div class="edit-msg-tag active">文本</div>
+                        <div class="edit-msg-tag">拆分(按换行)</div>
+                        <div class="edit-msg-tag">图片</div>
+                        <div class="edit-msg-tag">语音</div>
+                        <div class="edit-msg-tag">表情包</div>
+                        <div class="edit-msg-tag">转账</div>
+                        <div class="edit-msg-tag">定位</div>
+                        <div class="edit-msg-tag">翻译</div>
+                    </div>
+                </div>
+            </div>
+            <div class="edit-msg-footer">
+                <div class="edit-msg-btn cancel" onclick="closeEditMsgModal()">取消</div>
+                <div class="edit-msg-btn save" onclick="saveEditedMessage()">保存</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 转发详情查看面板 -->
+    <div class="forward-detail-overlay" id="forwardDetailOverlay">
+        <div class="forward-detail-header">
+            <div style="cursor: pointer; padding: 5px;" onclick="closeForwardDetail()">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#333" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </div>
+            <div id="forwardDetailTitle" style="font-size: 17px; font-weight: bold; color: #000;">聊天记录</div>
+        </div>
+        <div id="forwardDetailContent" style="flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; background: #fff;">
+            <!-- 动态渲染转发的内容 -->
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：聊天室设置全屏面板 (Chat Settings)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="chatSettingsPanel" style="z-index: 260; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeChatSettingsPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">聊天设置</div>
+            </div>
+            <div class="header-close" style="color: #888;" onclick="saveChatSettings()">Save</div>
+        </div>
+        <div class="panel-content" style="padding: 20px; gap: 20px;">
+            <!-- 1. 人设管理 (头像样式) -->
+            <div style="background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; display: flex; justify-content: space-around; align-items: center;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;" onclick="openCharEditPanel(currentChatRoomCharId)">
+                    <div id="csCharAvatar" style="width: 60px; height: 60px; border-radius: 50%; background-color: #f4f4f4; background-size: cover; background-position: center; border: 2px solid #eee;"></div>
+                    <!-- 这里改为 ID 绑定，由 JS 填充名称 -->
+                    <div id="csCharNameLabel" style="font-size: 12px; font-weight: bold; color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+                </div>
+                <div style="width: 1px; height: 40px; background: #eee;"></div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;" onclick="editCurrentPersona()">
+                    <div id="csUserAvatar" style="width: 60px; height: 60px; border-radius: 50%; background-color: #f4f4f4; background-size: cover; background-position: center; border: 2px solid #eee;"></div>
+                    <!-- 这里改为 ID 绑定，由 JS 填充名称 -->
+                    <div id="csUserNameLabel" style="font-size: 12px; font-weight: bold; color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+                </div>
+            </div> <!-- 👈 就是这里，补上这个闭合标签 -->
+
+            <!-- 新增：API 生成限制设置 -->
+            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; display: flex; flex-direction: column; gap: 15px;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding-bottom: 10px;">
+                    <div style="font-size: 14px; color: #333; font-weight: bold;">角色专属表情包</div>
+                    <div onclick="openEmojiSelectModal()" id="csEmojiSelectBtn" style="font-size: 12px; color: #888; background: #f4f4f4; padding: 6px 12px; border-radius: 8px; cursor: pointer;">点击选择...</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 14px; color: #333; font-weight: bold;">上下文条数限制</div>
+                    <input type="number" id="csContextLimit" placeholder="0为无限制" style="width: 80px; text-align: center; background: #f4f4f4; border: none; border-radius: 8px; padding: 6px; font-size: 12px; outline: none;">
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 14px; color: #333; font-weight: bold;">时间感知</div>
+                    <label class="ios-switch">
+                        <input type="checkbox" id="csTimeAwareToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #888;">回复气泡数限制 (最小 - 最大)</div>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        <input type="number" id="csMinReply" placeholder="5" style="flex: 1; width: 100%; min-width: 0; box-sizing: border-box; background: #f4f4f5; border: none; border-radius: 6px; padding: 4px 6px; font-size: 16px; font-weight: bold; color: #111; outline: none; text-align: center;">
+                        <input type="number" id="csMaxReply" placeholder="15" style="flex: 1; width: 100%; min-width: 0; box-sizing: border-box; background: #f4f4f5; border: none; border-radius: 6px; padding: 4px 6px; font-size: 16px; font-weight: bold; color: #111; outline: none; text-align: center;">
+                    </div>                    
+                </div>
+            </div>
+
+            <!-- 2. 聊天背景库 -->
+            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="font-size: 13px; font-weight: bold; color: #888;">聊天背景库</div>
+                    <div onclick="document.getElementById('chatBgUploadInput').click()" style="font-size: 12px; color: #111; font-weight: bold; cursor: pointer; background: #f4f4f4; padding: 6px 12px; border-radius: 12px;">+ 上传</div>
+                    <input type="file" id="chatBgUploadInput" accept="image/*" style="display: none;" onchange="handleChatBgUpload(event)">
+                </div>
+                <div id="chatBgLibraryGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <!-- 动态渲染背景 -->
+                </div>
+            </div>
+
+            <!-- 3. 自定义 CSS 美化 -->
+            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-size: 13px; font-weight: bold; color: #888;">自定义 CSS 美化</div>
+                    <div onclick="saveChatCssPreset()" style="font-size: 12px; color: #fff; font-weight: bold; cursor: pointer; background: #111; padding: 6px 12px; border-radius: 12px;">保存为预设</div>
+                </div>
+                <textarea id="chatCustomCssInput" style="width: 100%; height: 120px; background: #f9f9f9; border: 1px solid #eaeaea; border-radius: 8px; padding: 10px; font-size: 12px; font-family: monospace; resize: none; outline: none;" placeholder="输入 CSS 代码，例如：&#10;.cr-bubble-right { background: blue; }"></textarea>
+                <div onclick="applyChatCustomCss()" style="width: 100%; background: #f4f4f4; color: #333; text-align: center; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; border: 1px solid #eee;">应用 CSS</div>
+                
+                <div style="font-size: 12px; font-weight: bold; color: #aaa; margin: 20px 0 10px 0;">CSS 预设库</div>
+                <div id="chatCssPresetList" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- 动态渲染 CSS 预设 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+    <script>
+// PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const swResponse = await fetch('sw.js', { method: 'HEAD', cache: 'no-store' });
+                    if (!swResponse.ok) return;
+
+                    const registration = await navigator.serviceWorker.register('sw.js');
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                } catch (err) {
+                    console.log('ServiceWorker registration skipped/failed: ', err);
+                }
+            });
+        }
+</script>
+<!-- 引入外部 JS 文件 -->
+<script src="script.js"></script>
+<script src="chat.js"></script>
+</body>
+</html>
