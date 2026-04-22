@@ -1,0 +1,27 @@
+{
+  "name": "年糕机",
+  "short_name": "年糕机",
+  "id": "./index.html",
+  "description": "iOS Theme Studio Standalone App",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f5",
+  "theme_color": "#f4f4f5",
+  "lang": "zh-CN",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
