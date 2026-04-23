@@ -814,7 +814,7 @@ body.ios-standalone .iphone.immersive-mode {
 /* 当关闭全屏（显示手机边框）时 */
 body.ios-standalone .iphone:not(.immersive-mode) {
     width: 390px; /* 模拟 iPhone 宽度 */
-    height: 844px; /* 模拟 iPhone 高度 */
+    height: 860px; /* 模拟 iPhone 高度 */
     max-width: 95vw;
     max-height: 90vh;
     margin: auto; /* 垂直水平居中 */
@@ -822,7 +822,7 @@ body.ios-standalone .iphone:not(.immersive-mode) {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border: 12px solid #333; /* 更有质感的深色边框 */
+    border: 12px solid #f4f4f5; /* 更有质感的深色边框 */
     border-radius: 50px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
 }
