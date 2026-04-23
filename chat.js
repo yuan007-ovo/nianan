@@ -126,11 +126,26 @@ function savePersona() {
     }
 
     ChatDB.setItem('chat_personas', JSON.stringify(personas));
+    
+    // 【修复】：同步更新绑定了该面具的所有账号的头像
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    let accountModified = false;
+    accounts.forEach(acc => {
+        if (acc.personaId === (currentEditingPersonaId || newPersona.id)) {
+            acc.avatarUrl = avatarUrl;
+            accountModified = true;
+        }
+    });
+    if (accountModified) {
+        ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    }
+
     closePersonaPanel();
 
-    // 如果当前停留在微信主页，保存后立即刷新页面数据
+    // 如果当前停留在微信主页，保存后立即刷新页面数据和聊天列表
     if (document.getElementById('wechatPanel').style.display === 'flex') {
         renderMePage();
+        if (typeof renderChatList === 'function') renderChatList();
     }
 }
 
@@ -571,10 +586,16 @@ function handlePersonaAvatarChange(event) {
         reader.onload = function(e) {
             const imgUrl = `url(${e.target.result})`;
             const squareAvatar = document.getElementById('pAvatarUpload');
-            squareAvatar.style.backgroundImage = imgUrl;
-            squareAvatar.innerText = ''; 
-            squareAvatar.style.border = 'none';
-            document.getElementById('pAvatarFloat').style.backgroundImage = imgUrl;
+            if (squareAvatar) {
+                squareAvatar.style.backgroundImage = imgUrl;
+                squareAvatar.innerText = ''; 
+                squareAvatar.style.border = 'none';
+            }
+            // 【修复】：增加判空，防止旧版 UI 元素不存在导致报错卡死
+            const floatAvatar = document.getElementById('pAvatarFloat');
+            if (floatAvatar) {
+                floatAvatar.style.backgroundImage = imgUrl;
+            }
         }
         reader.readAsDataURL(file);
     }
@@ -847,7 +868,17 @@ function saveChar() {
     ChatDB.setItem('chat_chars', JSON.stringify(chars));
     alert('角色保存成功！');
     closeCharEditPanel();
+    
+    // 【修复】：保存后全局刷新相关 UI，确保头像第一时间更新
     if (typeof renderCharLibrary === 'function') renderCharLibrary();
+    if (typeof renderChatList === 'function') renderChatList();
+    if (typeof renderContactList === 'function') renderContactList();
+    
+    // 如果当前正在和这个角色聊天，同步更新聊天室顶部的头像
+    if (currentChatRoomCharId === (currentEditingCharId || newChar.id)) {
+        document.getElementById('crHeaderAvatarChar').style.backgroundImage = `url('${avatarUrl || ''}')`;
+        renderChatHistory(currentChatRoomCharId, true);
+    }
 }
 
 function handleCharAvatarChange(event) {
@@ -2308,25 +2339,26 @@ function formatChatTime(timestamp) {
 }
 
 // ==========================================
-// 聊天记录分页与渲染逻辑 (融合小元机极致性能优化版)
+// 聊天记录分页与渲染逻辑 (融合 script.js 极致性能优化版)
 // ==========================================
-let chatDisplayCount = 80; // 每次最多渲染 80 条
+let chatDisplayCount = 50; // 像 script.js 一样改为 50 条，提升首屏速度
 
 function renderChatHistory(charId, keepScroll = false) {
     const historyEl = document.getElementById('chatRoomHistory');
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
-    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === charId);
-    
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const me = accounts.find(a => a.id === currentLoginId);
-
-    // 记录旧的滚动高度，用于加载更多时保持位置不跳动
+    // 记录旧的滚动高度
     const oldScrollHeight = historyEl.scrollHeight;
     const oldScrollTop = historyEl.scrollTop;
+
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
+    
+    // 【性能优化】：提取全局变量，避免在循环中重复查找
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === charId);
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const me = accounts.find(a => a.id === currentLoginId);
 
     historyEl.innerHTML = '';
 
@@ -2340,25 +2372,40 @@ function renderChatHistory(charId, keepScroll = false) {
         }
     }
 
-    // 【性能优化】：分页切片计算，只渲染最后 chatDisplayCount 条
-    if (!chatDisplayCount) chatDisplayCount = 80;
+    if (!chatDisplayCount) chatDisplayCount = 50;
     const startIndex = Math.max(0, history.length - chatDisplayCount);
     const renderHistory = history.slice(startIndex);
 
-    // 如果还有更早的历史记录，在顶部插入“加载更多”按钮
+    // 【性能终极优化】：使用 DocumentFragment 在内存中组装 DOM，一次性插入，彻底消灭重绘卡顿！
+    const fragment = document.createDocumentFragment();
+
     if (startIndex > 0) {
         const loadMoreBtn = document.createElement('div');
         loadMoreBtn.style.cssText = 'text-align: center; padding: 15px 0; color: #576b95; font-size: 13px; cursor: pointer; font-weight: bold;';
         loadMoreBtn.innerText = '点击加载更多历史记录';
         loadMoreBtn.onclick = () => {
-            chatDisplayCount += 80;
-            renderChatHistory(charId, true); // 传入 true 保持滚动位置
+            chatDisplayCount += 50;
+            renderChatHistory(charId, true);
         };
-        historyEl.appendChild(loadMoreBtn);
+        fragment.appendChild(loadMoreBtn);
     }
 
+    // 提取头像为全局 CSS 类，避免 Base64 重复拼接
+    let avatarStyleTag = document.getElementById('chat-avatar-dynamic-style');
+    if (!avatarStyleTag) {
+        avatarStyleTag = document.createElement('style');
+        avatarStyleTag.id = 'chat-avatar-dynamic-style';
+        document.head.appendChild(avatarStyleTag);
+    }
+    const meAvatarUrl = me ? me.avatarUrl : '';
+    const charAvatarUrl = char ? char.avatarUrl : '';
+    avatarStyleTag.innerHTML = `
+        .cr-avatar-me-bg { background-image: url('${meAvatarUrl}'); }
+        .cr-avatar-char-bg { background-image: url('${charAvatarUrl}'); }
+    `;
+
     renderHistory.forEach((msg, i) => {
-        const index = startIndex + i; // 保持真实的全局索引
+        const index = startIndex + i;
         const prevMsg = renderHistory[i - 1];
         const nextMsg = renderHistory[i + 1];
 
@@ -2381,7 +2428,7 @@ function renderChatHistory(charId, keepScroll = false) {
             const timeEl = document.createElement('div');
             timeEl.className = 'chat-time';
             timeEl.innerText = formatChatTime(msg.timestamp);
-            historyEl.appendChild(timeEl);
+            fragment.appendChild(timeEl);
         }
 
         const containerEl = document.createElement('div');
@@ -2396,10 +2443,13 @@ function renderChatHistory(charId, keepScroll = false) {
             if (isChatMultiSelecting) toggleMsgSelection(index, rowEl);
         };
 
-        const avatarUrl = msg.role === 'user' ? (me ? me.avatarUrl : '') : (char ? char.avatarUrl : '');
+        const isUser = msg.role === 'user';
+        const hasAvatar = isUser ? meAvatarUrl : charAvatarUrl;
+        const avatarClass = isUser ? 'cr-avatar-me-bg' : 'cr-avatar-char-bg';
+        
         const avatarHtml = `
-            <div class="cr-avatar ${isContinuous ? 'hidden' : ''}" style="background-image: url('${avatarUrl || ''}');">
-                ${!avatarUrl ? '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' : ''}
+            <div class="cr-avatar ${avatarClass} ${isContinuous ? 'hidden' : ''}">
+                ${!hasAvatar ? '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' : ''}
             </div>
         `;
 
@@ -2438,10 +2488,7 @@ function renderChatHistory(charId, keepScroll = false) {
             bubbleInnerHtml = `
                 <div class="cr-voice-bubble" style="width: ${voiceWidth}px;" onclick="event.stopPropagation(); toggleVoiceText(${index})">
                     <div class="voice-waves ${msg.role === 'user' ? 'me' : 'other'}">
-                        <span class="wave"></span>
-                        <span class="wave"></span>
-                        <span class="wave"></span>
-                        <span class="wave"></span>
+                        <span class="wave"></span><span class="wave"></span><span class="wave"></span><span class="wave"></span>
                     </div>
                     <span class="voice-duration">${voiceLength}"</span>
                 </div>
@@ -2449,7 +2496,6 @@ function renderChatHistory(charId, keepScroll = false) {
         } else if (isTransferMsg) {
             const isReceived = msg.status === 'received';
             const isRejected = msg.status === 'rejected' || msg.status === 'refunded';
-            
             let iconHtml = `¥`;
             let descText = msg.note || (msg.role === 'user' ? '转账给对方' : '转账给你');
             let cardClass = '';
@@ -2479,7 +2525,6 @@ function renderChatHistory(charId, keepScroll = false) {
         } else if (isFamilyCardMsg) {
             const isGift = msg.subType === 'gift';
             const isReceived = msg.status === 'received';
-            
             let titleText = isGift ? (msg.role === 'user' ? '送你一张亲属卡' : '送你一张亲属卡') : '向你索要亲属卡';
             let statusText = isReceived ? '你已领取' : (msg.role === 'user' ? '等待对方领取' : '点击查看详情');
             if (!isGift && isReceived) statusText = '已开通';
@@ -2555,22 +2600,31 @@ function renderChatHistory(charId, keepScroll = false) {
             containerEl.appendChild(voicePreview);
         }
 
-        historyEl.appendChild(containerEl);
+        fragment.appendChild(containerEl);
     });
 
-    // 滚动控制逻辑
+    // 一次性将所有组装好的 DOM 插入页面
+    historyEl.appendChild(fragment);
+
+    // 滚动控制逻辑 (与 script.js 保持一致)
     requestAnimationFrame(() => {
         if (keepScroll) {
-            // 加载更多后，保持原来的可视位置，防止画面跳动
             historyEl.scrollTop = historyEl.scrollHeight - oldScrollHeight + oldScrollTop;
         } else {
-            // 正常打开或发送新消息，滚动到底部
             historyEl.scrollTop = historyEl.scrollHeight;
         }
     });
 }
+// 处理聊天输入框的键盘事件（回车发送）
+function handleChatInputKeydown(event) {
+    // 如果按下的是 Enter 键，并且没有按 Shift 键
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); // 阻止默认的换行行为
+        sendChatMessage();      // 调用发送消息函数
+    }
+}
 
-// 发送消息逻辑
+// 发送消息逻辑 (异步非阻塞极致流畅版)
 function sendChatMessage() {
     const inputEl = document.getElementById('chatRoomInput');
     const content = inputEl.value.trim();
@@ -2579,36 +2633,31 @@ function sendChatMessage() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
-    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-    
     let newMsg = { role: 'user', content: content, timestamp: Date.now() };
     if (currentQuoteText) {
         newMsg.quote = currentQuoteText;
         cancelQuote(); 
     }
-    
-    history.push(newMsg);
-    ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
-    
-    let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
-    sessions = sessions.filter(id => id !== currentChatRoomCharId);
-    sessions.unshift(currentChatRoomCharId);
-    ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
-    if (typeof renderChatList === 'function') renderChatList();
 
+    // 1. 立即清空输入框，解除主线程阻塞，给用户“秒发”的极致流畅反馈
     inputEl.value = '';
-    
-    // 【性能优化】：发送消息后，强制重置为第一页（最新消息），并重新渲染
-    chatDisplayCount = 80;
-    renderChatHistory(currentChatRoomCharId);
-}
 
-// 监听回车键发送
-function handleChatInputKeydown(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        sendChatMessage();
-    }
+    // 2. 将极其耗时的 JSON 读写和 DOM 全量渲染扔进异步队列，延迟 10ms 执行
+    setTimeout(() => {
+        let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+        history.push(newMsg);
+        ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+        
+        let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
+        sessions = sessions.filter(id => id !== currentChatRoomCharId);
+        sessions.unshift(currentChatRoomCharId);
+        ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
+        
+        if (typeof renderChatList === 'function') renderChatList();
+        
+        // 在后台完成数据保存后，再渲染聊天界面
+        renderChatHistory(currentChatRoomCharId);
+    }, 10);
 }
 
 function openChatRoom(charId) {
@@ -2635,13 +2684,10 @@ function openChatRoom(charId) {
         document.getElementById('chatRoomInput').value = '';
         closeChatPanels(); 
         
-        // 【性能优化】：先让面板弹出来，再利用 requestAnimationFrame 延迟渲染繁重的 DOM，彻底消除点击卡顿
+        // 【终极流畅修复】：移除 requestAnimationFrame 阻塞，直接显示面板并渲染，与流畅版项目保持一致
         document.getElementById('chatRoomPanel').style.display = 'flex';
-        
-        requestAnimationFrame(() => {
-            updateChatRoomAppearance(); 
-            renderChatHistory(charId);
-        });
+        updateChatRoomAppearance(); 
+        renderChatHistory(charId);
     }
 }
 
@@ -4536,7 +4582,8 @@ function handlePasswordInput() {
 }
 
 function updatePasswordDots(length) {
-    const boxes = document.querySelectorAll('#pwdDotsContainer .pwd-box');
+    // 修复：去掉 .pwd-box 类名限制，直接选择子 div
+    const boxes = document.querySelectorAll('#pwdDotsContainer > div');
     boxes.forEach((box, idx) => {
         if (idx < length) {
             box.innerHTML = '<div style="width: 12px; height: 12px; background: #111; border-radius: 50%;"></div>';

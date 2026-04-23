@@ -136,23 +136,20 @@ function updateAppViewportVars() {
 }
 
 // 监听可视区域变化（键盘弹出/收起）
-let viewportResizeTimer = null; 
+let viewportResizeTimer = null;
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
-        // 核心修复：加入防抖逻辑，防止打开APP时疯狂触发重绘导致卡顿
         if (viewportResizeTimer) clearTimeout(viewportResizeTimer);
         viewportResizeTimer = setTimeout(() => {
             updateAppViewportVars();
-            
-            // 只有在聊天室显示时才去操作滚动，避免后台无效计算
+            // 【性能优化】：只有在聊天室显示时才去操作滚动，避免后台无效计算
             const chatHistory = document.getElementById('chatRoomHistory');
             if (chatHistory && document.getElementById('chatRoomPanel').style.display === 'flex') {
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
-        }, 150); // 延迟 150ms，等屏幕完全稳定后再计算
+        }, 150); // 延迟 150ms，等屏幕完全稳定后再计算，极其丝滑
     });
     
-    // 恢复防滚动机制，配合正确的键盘高度计算，实现原生 App 体验
     window.visualViewport.addEventListener('scroll', () => {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
@@ -396,44 +393,55 @@ function hideStorageAnalysisModal() {
     document.getElementById('storageModalOverlay').classList.remove('show');
 }
 
-// 导入所有数据
+// 导入所有数据 (修复异步写入丢失与旧数据残留问题)
 function importAllData(e) {
     if(e) e.stopPropagation();
     uploadJson(async (data) => {
-        if (data && (data.state || data.chatDBData || data.localData)) {
-            // 恢复状态
-            if (data.state) {
-                applyFullState(data.state);
-                await saveGlobalStateToDB(data.state);
-            }
+        if (data && data.state) {
+            // 1. 恢复桌面状态
+            applyFullState(data.state);
+            await saveGlobalStateToDB(data.state);
             
-            // 恢复预设
+            // 2. 恢复预设库
             if (data.presets && Array.isArray(data.presets)) {
                 for (const p of data.presets) {
                     await savePresetToDB(p);
                 }
             }
             
-            // 恢复 ChatDB 数据
-            if (data.chatDBData) {
+            // 3. 恢复 ChatDB 核心数据 (确保异步写入完成)
+            if (data.chatDBData && chatDBInstance) {
+                // 开启读写事务
+                const tx = chatDBInstance.transaction(CHAT_STORE_NAME, 'readwrite');
+                const store = tx.objectStore(CHAT_STORE_NAME);
+                
+                // 先清空当前所有旧数据，防止新旧数据污染
+                store.clear();
+                window.ChatMemoryCache = {}; 
+                
+                // 批量写入新数据
                 for (let key in data.chatDBData) {
-                    ChatDB.setItem(key, data.chatDBData[key]);
+                    store.put({ key: key, value: data.chatDBData[key] });
+                    window.ChatMemoryCache[key] = data.chatDBData[key]; // 同步更新内存
                 }
+                
+                // 监听事务完成事件，确保 100% 写入硬盘后再刷新
+                tx.oncomplete = () => {
+                    alert('所有数据导入成功！即将刷新页面...');
+                    location.reload();
+                };
+                tx.onerror = () => {
+                    alert('数据写入硬盘失败，请重试！');
+                };
             } else {
-                // 兼容老版本备份
+                // 兼容极早期老版本备份
                 if (data.apiConfig) ChatDB.setItem('current_api_config', JSON.stringify(data.apiConfig));
                 if (data.apiPresets) ChatDB.setItem('api_presets', JSON.stringify(data.apiPresets));
+                setTimeout(() => {
+                    alert('所有数据导入成功！即将刷新页面...');
+                    location.reload();
+                }, 800); // 给老方法留出足够的异步写入时间
             }
-
-            // 恢复 localStorage 数据 (双重保险恢复)
-            if (data.localData) {
-                for (let key in data.localData) {
-                    localStorage.setItem(key, data.localData[key]);
-                }
-            }
-            
-            alert('所有数据导入成功！即将刷新页面...');
-            location.reload();
         } else {
             alert('无效的数据格式，请确保导入的是完整备份数据');
         }
@@ -530,8 +538,8 @@ if (sbToggle) {
 // ==========================================
 const apiPanel = document.getElementById('apiPanel');
 
-// 页面加载时恢复 API 数据
-document.addEventListener('DOMContentLoaded', () => {
+// 页面加载时恢复 API 数据 (等待数据库就绪)
+window.addEventListener('ChatDBReady', () => {
     const savedApi = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
     if (savedApi.url) document.getElementById('apiUrl').value = savedApi.url;
     if (savedApi.key) document.getElementById('apiKey').value = savedApi.key;
@@ -940,8 +948,13 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// 页面加载时初始化 Worldbook 数据
-document.addEventListener('DOMContentLoaded', () => {
+// 页面加载时初始化 Worldbook 数据 (等待数据库就绪)
+window.addEventListener('ChatDBReady', () => {
+    // 重新读取最新数据，防止被初始化的空数据覆盖
+    wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || {
+        groups: ['默认分组'],
+        entries: []
+    };
     renderWbGroups();
     renderWbList();
 });
@@ -1241,8 +1254,8 @@ function addWallpaperToGallery(url, isRestore = false) {
     updateGalleryEmptyState(); // 添加后检查状态
 }
 
-// 页面加载时初始化检查空状态
-document.addEventListener('DOMContentLoaded', () => {
+// 页面加载时初始化检查空状态 (等待数据库就绪)
+window.addEventListener('ChatDBReady', () => {
     updateGalleryEmptyState();
 });
 
