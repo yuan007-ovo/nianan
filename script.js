@@ -98,24 +98,19 @@ function initStandaloneMode() {
 }
 
 initStandaloneMode();
-
 // ==========================================
 // iOS / PWA 全屏与键盘自适应最终版 (极简流畅防卡顿)
 // ==========================================
 function updateAppViewportVars() {
     const docStyle = document.documentElement.style;
-    // 精准判断是否为 iOS 设备
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
     if (isIOS && window.visualViewport) {
-        // 🍎 iOS 专属逻辑：用 screen.height 减去 visualViewport.height 来精准判断键盘！
         const isKeyboardOpen = (window.screen.height - window.visualViewport.height) > 150;
         
         if (isKeyboardOpen) {
-            // 键盘弹起时，高度缩小到可视区域，把弹窗、输入框完美“托”上来
             docStyle.setProperty('--app-height', `${window.visualViewport.height}px`);
         } else {
-            // 键盘收起时，恢复最大高度，彻底消灭底部的黑边！
             const candidates = [
                 window.innerHeight,
                 document.documentElement.clientHeight,
@@ -128,34 +123,26 @@ function updateAppViewportVars() {
             docStyle.setProperty('--app-height', `${fullHeight}px`);
         }
         
-        // 强制回滚到顶部，防止 iOS 默认的滚动推移导致错位
         window.scrollTo(0, 0);
         document.body.scrollTop = 0;
     } else {
-        // 🤖 安卓及其他设备逻辑：安卓键盘弹出时会自动调整 innerHeight，直接使用即可
-        const fallbackHeight = window.innerHeight;
-        docStyle.setProperty('--app-height', `${fallbackHeight}px`);
+        docStyle.setProperty('--app-height', `${window.innerHeight}px`);
     }
 }
 
-// 监听可视区域变化（键盘弹出/收起）
-let viewportResizeTimer = null; // 防抖计时器
+let viewportResizeTimer = null;
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
-        // 核心修复：加入防抖逻辑，防止疯狂触发重绘导致卡顿
         if (viewportResizeTimer) clearTimeout(viewportResizeTimer);
         viewportResizeTimer = setTimeout(() => {
             updateAppViewportVars();
-            
-            // 键盘弹起时，让聊天记录自动滚到底部
+            // 统一在这里处理聊天列表滚动到底部，避免冲突
             const chatHistory = document.getElementById('chatRoomHistory');
             if (chatHistory) chatHistory.scrollTop = chatHistory.scrollHeight;
-        }, 150); // 延迟 150ms，等屏幕完全稳定后再计算
+        }, 100); // 延迟缩短到 100ms，让键盘跟随更丝滑
     });
     
-    // 恢复防滚动机制，配合正确的键盘高度计算，实现原生 App 体验
     window.visualViewport.addEventListener('scroll', () => {
-        // 仅在 iOS 上执行防滚动，安卓不需要，防止安卓滑动卡顿
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
             window.scrollTo(0, 0);
@@ -166,7 +153,6 @@ if (window.visualViewport) {
     window.addEventListener('resize', updateAppViewportVars);
 }
 
-// 监听输入框失去焦点（键盘收起），强制重置页面位置，防止页面卡在半空中漏出白边
 document.addEventListener('focusout', () => {
     setTimeout(() => {
         window.scrollTo(0, 0);
@@ -175,35 +161,8 @@ document.addEventListener('focusout', () => {
     }, 50);
 });
 
-// 额外保险：触摸空白区域时强制失去焦点收起键盘
-document.addEventListener('touchstart', (e) => {
-    const target = e.target;
-    const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true';
-    
-    if (!isInput && document.activeElement && document.activeElement !== document.body) {
-        document.activeElement.blur();
-    }
-}, { passive: true });
-
 // 初始化调用一次
 updateAppViewportVars();
-
-// ==========================================
-// 修复：所有多行文本框聚焦时自动滚动到可视区中心，防止被键盘遮挡
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    const textareas = document.querySelectorAll('textarea, input[type="text"]');
-    textareas.forEach(el => {
-        // 排除聊天输入框，因为聊天输入框有专门的滚动到底部逻辑
-        if (el.id !== 'chatRoomInput') {
-            el.addEventListener('focus', function() {
-                setTimeout(() => {
-                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300); // 延迟等待键盘完全弹出
-            });
-        }
-    });
-});
 
 // ==========================================
 // 通用输入框确认按钮事件绑定（保留原有逻辑）
@@ -1815,13 +1774,15 @@ function updateStatusBarTime() {
 
 function initBattery() {
     const batteryLevelEl = document.querySelector('.battery-level');
+    const batteryNumEl = document.getElementById('battery-num');
     if (!batteryLevelEl) return;
     
     if ('getBattery' in navigator) {
         navigator.getBattery().then(function(battery) {
             function updateBattery() {
-                batteryLevelEl.style.width = (battery.level * 100) + '%';
-                // 充电时电池变绿
+                const level = Math.round(battery.level * 100);
+                batteryLevelEl.style.width = level + '%';
+                if (batteryNumEl) batteryNumEl.textContent = level + '%';
                 if (battery.charging) {
                     batteryLevelEl.style.backgroundColor = '#34c759'; 
                 } else {
@@ -1833,8 +1794,8 @@ function initBattery() {
             battery.addEventListener('chargingchange', updateBattery);
         });
     } else {
-        // 苹果 iOS Safari 浏览器不支持获取真实电量，默认显示 80%
         batteryLevelEl.style.width = '80%';
+        if (batteryNumEl) batteryNumEl.textContent = '80%';
     }
 }
 

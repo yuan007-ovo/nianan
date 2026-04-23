@@ -33,7 +33,8 @@
     <div class="status-bar">
         <div class="time">21:40</div>
         <div class="status-right">
-            <div>5G</div>
+            <div style="margin-right: 4px;"></div>
+            <div id="battery-num" style="font-size: 12px; margin-right: 2px;">--%</div>
             <div class="battery"><div class="battery-level"></div></div>
         </div>
     </div>
@@ -1009,7 +1010,7 @@
             <!-- 下半部分列表 -->
             <div class="me-menu-list" style="width: 100%; padding: 0;">
                 <!-- 钱包 -->
-                <div class="me-menu-item">
+                <div class="me-menu-item" onclick="openWalletPanel()">
                     <div class="me-menu-left">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
                         <div class="me-menu-text">钱包 <span class="me-menu-text-en">Wallet</span></div>
@@ -1040,8 +1041,8 @@
                     </div>
                     <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
                 </div>
-                <!-- 设置 -->
-                <div class="me-menu-item" onclick="openSettingsPanel()">
+                <!-- 设置 (修改为打开 Chat 专属设置) -->
+                <div class="me-menu-item" onclick="openChatAppSettingsPanel()">
                     <div class="me-menu-left">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         <div class="me-menu-text">设置 <span class="me-menu-text-en">Settings</span></div>
@@ -1220,7 +1221,7 @@
             
             <!-- 右上角 Create 按钮及下拉弹窗 -->
             <div style="position: relative;">
-                <div class="header-close" style="color: #111; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="toggleCharCreatePopup()">Create</div>
+                <div class="header-close" style="color: #8888; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="toggleCharCreatePopup()">Create</div>
                 
                 <!-- Create 弹窗 -->
                 <div class="preset-popup" id="charCreatePopup" style="right: 0; left: auto; transform: none; top: 35px; width: 140px;">
@@ -1445,7 +1446,7 @@
         <div class="cr-floating-more-panel" id="crMorePanel">
             <div class="cr-more-grid">
                 <div class="cr-more-item" onclick="handleMoreAction('roll')">
-                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 0 2.13-5.87L21 8"></path></svg></div>
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></div>
                     <span>Roll重回</span>
                 </div>
                 <div class="cr-more-item" onclick="handleMoreAction('voice')">
@@ -1464,9 +1465,15 @@
                     <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
                     <span>转账</span>
                 </div>
-                <div class="cr-more-item" onclick="handleMoreAction('redpacket')">
-                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-                    <span>红包</span>
+                <div class="cr-more-item" onclick="handleMoreAction('familycard')">
+                    <div class="cr-more-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 9h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" />
+                            <path d="M9 5h10a2 2 0 0 1 2 2v2" opacity="0.3" />
+                            <circle cx="7" cy="15" r="1" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <span>亲属卡</span>
                 </div>
                 <div class="cr-more-item" onclick="handleMoreAction('location')">
                     <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
@@ -1513,6 +1520,28 @@
             <div class="chat-bubble-menu-item" onclick="actionEditMessage()">编辑</div>
             <div class="chat-bubble-menu-item" onclick="actionMultiSelect()">多选</div>
             <div class="chat-bubble-menu-item" onclick="actionDeleteMessage()">删除</div>
+        </div>
+    </div>
+
+    <!-- 新增：会话列表长按菜单 (iOS 风格) -->
+    <div class="session-menu-overlay" id="sessionMenuOverlay" onclick="closeSessionMenu()">
+        <div class="session-menu" id="sessionMenu" onclick="event.stopPropagation()">
+            <div class="session-menu-item" id="menuPinBtn" onclick="actionTogglePin()">
+                <span>置顶</span>
+                <svg viewBox="0 0 24 24"><path d="M12 2L12 22M12 2L5 9M12 2L19 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="session-menu-item" id="menuSpecialBtn" onclick="actionToggleSpecial()">
+                <span>特别关心</span>
+                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="session-menu-item" onclick="actionMarkRead()">
+                <span>标为已读</span>
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="session-menu-item danger" onclick="actionDeleteSession()">
+                <span>删除会话</span>
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
         </div>
     </div>
 
@@ -1569,6 +1598,26 @@
         </div>
     </div>
 
+    <!-- 发送语音弹窗 -->
+    <div class="preset-modal-overlay" id="sendVoiceModalOverlay">
+        <div class="preset-modal" style="width: 280px;">
+            <div class="preset-modal-title">发送语音</div>
+            <div class="preset-modal-desc">请输入语音对应的文字内容</div>
+            <textarea id="voiceTextInput" style="width: 85%; height: 80px; margin: 10px 0; padding: 10px; border: 1px solid #eee; border-radius: 8px; resize: none; outline: none; font-size: 14px; background: #f9f9f9;" placeholder="输入语音内容..."></textarea>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeSendVoiceModal()">取消</div>
+                <div class="preset-btn-confirm" onclick="confirmSendVoice()">发送</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片详情查看弹窗 -->
+    <div class="image-detail-overlay" id="imageDetailOverlay" onclick="closeImageDetail()">
+        <div class="image-detail-content" id="imageDetailContent" onclick="event.stopPropagation()">
+            <!-- 动态插入图片或文字 -->
+        </div>
+    </div>
+
     <!-- 编辑消息大弹窗 -->
     <div class="preset-modal-overlay" id="editMsgModalOverlay">
         <div class="edit-msg-modal">
@@ -1614,88 +1663,453 @@
         </div>
     </div>
 
+    <!-- 转账操作底部弹窗 -->
+    <div class="preset-modal-overlay" id="transferActionModalOverlay" onclick="closeTransferActionModal()">
+        <div class="preset-modal" style="width: 90%; max-width: 350px; background: transparent; box-shadow: none; justify-content: flex-end; padding-bottom: 20px;" onclick="event.stopPropagation()">
+            <div style="width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 16px; overflow: hidden; margin-bottom: 10px;">
+                <div id="transferBtnReceive" onclick="processTransferAction('received')" style="padding: 18px; text-align: center; font-size: 18px; color: #576b95; font-weight: bold; border-bottom: 1px solid rgba(0,0,0,0.1); cursor: pointer;">确认收款</div>
+                <div id="transferBtnReject" onclick="processTransferAction('rejected')" style="padding: 18px; text-align: center; font-size: 18px; color: #ff3b30; font-weight: bold; cursor: pointer;">退还</div>
+            </div>
+            <div onclick="closeTransferActionModal()" style="width: 100%; background: #fff; border-radius: 16px; padding: 18px; text-align: center; font-size: 18px; color: #111; font-weight: bold; cursor: pointer;">取消</div>
+        </div>
+    </div>
+
     <!-- =========================================
-         新增：聊天室设置全屏面板 (Chat Settings)
+         新增：聊天室设置全屏面板 (Chat Settings) - 手账风UI
          ========================================= -->
-    <div class="theme-panel instant-panel" id="chatSettingsPanel" style="z-index: 260; background-color: #fafafa;">
+    <div class="theme-panel instant-panel" id="chatSettingsPanel" style="z-index: 260; background-color: #fff;">
+        <!-- 恢复为标准顶栏样式 -->
         <div class="panel-header">
             <div class="header-close" onclick="closeChatSettingsPanel()">Back</div>
             <div class="header-title-wrapper">
                 <div class="header-title" style="cursor: default;">聊天设置</div>
             </div>
-            <div class="header-close" style="color: #888;" onclick="saveChatSettings()">Save</div>
+            <div class="header-close" style="color: #111;" onclick="saveChatSettings()">Save</div>
         </div>
-        <div class="panel-content" style="padding: 20px; gap: 20px;">
-            <!-- 1. 人设管理 (头像样式) -->
-            <div style="background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; display: flex; justify-content: space-around; align-items: center;">
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;" onclick="openCharEditPanel(currentChatRoomCharId)">
-                    <div id="csCharAvatar" style="width: 60px; height: 60px; border-radius: 50%; background-color: #f4f4f4; background-size: cover; background-position: center; border: 2px solid #eee;"></div>
-                    <!-- 这里改为 ID 绑定，由 JS 填充名称 -->
-                    <div id="csCharNameLabel" style="font-size: 12px; font-weight: bold; color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
-                </div>
-                <div style="width: 1px; height: 40px; background: #eee;"></div>
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;" onclick="editCurrentPersona()">
-                    <div id="csUserAvatar" style="width: 60px; height: 60px; border-radius: 50%; background-color: #f4f4f4; background-size: cover; background-position: center; border: 2px solid #eee;"></div>
-                    <!-- 这里改为 ID 绑定，由 JS 填充名称 -->
-                    <div id="csUserNameLabel" style="font-size: 12px; font-weight: bold; color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
-                </div>
-            </div> <!-- 👈 就是这里，补上这个闭合标签 -->
 
-            <!-- 新增：API 生成限制设置 -->
-            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; display: flex; flex-direction: column; gap: 15px;">
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding-bottom: 10px;">
-                    <div style="font-size: 14px; color: #333; font-weight: bold;">角色专属表情包</div>
-                    <div onclick="openEmojiSelectModal()" id="csEmojiSelectBtn" style="font-size: 12px; color: #888; background: #f4f4f4; padding: 6px 12px; border-radius: 8px; cursor: pointer;">点击选择...</div>
+        <div class="panel-content cs-journal-content" style="padding: 0; gap: 0;">
+            
+            <!-- 头像区域 (双头像圆角) -->
+            <div class="cs-journal-header">
+                <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
+                    <div class="cs-journal-avatar-wrap" onclick="openCharEditPanel(currentChatRoomCharId)">
+                        <div id="csCharAvatar" class="cs-journal-avatar-rounded"></div>
+                        <div class="cs-journal-name">(★)<span id="csCharNameLabel">角色名</span></div>
+                    </div>
+                    <!-- 互动标识点击区域 -->
+                    <div class="cs-journal-badge-wrap" onclick="openInteractionDetailPanel()">
+                        <div id="csInteractionBadge" class="cs-journal-badge-icon">
+                            <!-- 动态渲染 SVG -->
+                        </div>
+                    </div>
+                    <div class="cs-journal-avatar-wrap" onclick="editCurrentPersona()">
+                        <div id="csUserAvatar" class="cs-journal-avatar-rounded"></div>
+                        <div class="cs-journal-name">@<span id="csUserNameLabel">用户名</span></div>
+                    </div>
                 </div>
+                <div class="cs-journal-bubble">Setting...</div>
+            </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 14px; color: #333; font-weight: bold;">上下文条数限制</div>
-                    <input type="number" id="csContextLimit" placeholder="0为无限制" style="width: 80px; text-align: center; background: #f4f4f4; border: none; border-radius: 8px; padding: 6px; font-size: 12px; outline: none;">
+            <!-- 区块1：API 限制 -->
+            <div class="cs-journal-section">
+                <div class="cs-journal-sec-title">
+                    <span>★ | API 限制</span>
+                    <span class="cs-journal-sec-sub">「Settings」////</span>
                 </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 14px; color: #333; font-weight: bold;">时间感知</div>
-                    <label class="ios-switch">
-                        <input type="checkbox" id="csTimeAwareToggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
-                    <div style="font-size: 14px; font-weight: bold; color: #888;">回复气泡数限制 (最小 - 最大)</div>
-                    <div style="display: flex; gap: 10px; width: 100%;">
-                        <input type="number" id="csMinReply" placeholder="5" style="flex: 1; width: 100%; min-width: 0; box-sizing: border-box; background: #f4f4f5; border: none; border-radius: 6px; padding: 4px 6px; font-size: 16px; font-weight: bold; color: #111; outline: none; text-align: center;">
-                        <input type="number" id="csMaxReply" placeholder="15" style="flex: 1; width: 100%; min-width: 0; box-sizing: border-box; background: #f4f4f5; border: none; border-radius: 6px; padding: 4px 6px; font-size: 16px; font-weight: bold; color: #111; outline: none; text-align: center;">
-                    </div>                    
+                <div class="cs-journal-sec-content">
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">专属表情包</span>
+                        <div onclick="openEmojiSelectModal()" id="csEmojiSelectBtn" class="cs-value-btn">点击选择...</div>
+                    </div>
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">上下文条数限制</span>
+                        <input type="number" id="csContextLimit" placeholder="0为无限制" class="cs-value-input">
+                    </div>
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">时间感知</span>
+                        <label class="ios-switch" style="transform: scale(0.8); transform-origin: right center; margin: 0;">
+                            <input type="checkbox" id="csTimeAwareToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="cs-journal-list-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="cs-dot">·</span>
+                            <span class="cs-label">回复气泡数限制 (最小 - 最大)</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; width: 100%; padding-left: 15px;">
+                            <input type="number" id="csMinReply" placeholder="5" class="cs-value-input" style="flex: 1; text-align: center;">
+                            <input type="number" id="csMaxReply" placeholder="15" class="cs-value-input" style="flex: 1; text-align: center;">
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. 聊天背景库 -->
-            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div style="font-size: 13px; font-weight: bold; color: #888;">聊天背景库</div>
-                    <div onclick="document.getElementById('chatBgUploadInput').click()" style="font-size: 12px; color: #111; font-weight: bold; cursor: pointer; background: #f4f4f4; padding: 6px 12px; border-radius: 12px;">+ 上传</div>
+            <!-- 区块2：聊天背景库 (深色标题 + SVG加号) -->
+            <div class="cs-journal-section">
+                <div class="cs-journal-sec-title dark">
+                    <span>★ | 聊天背景库</span>
+                    <span class="cs-journal-sec-action" onclick="document.getElementById('chatBgUploadInput').click()" style="display: flex; align-items: center;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </span>
                     <input type="file" id="chatBgUploadInput" accept="image/*" style="display: none;" onchange="handleChatBgUpload(event)">
                 </div>
-                <div id="chatBgLibraryGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <!-- 动态渲染背景 -->
+                <div class="cs-journal-sec-content" style="padding-top: 15px;">
+                    <div id="chatBgLibraryGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <!-- 动态渲染背景 -->
+                    </div>
                 </div>
             </div>
 
-            <!-- 3. 自定义 CSS 美化 -->
-            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div style="font-size: 13px; font-weight: bold; color: #888;">自定义 CSS 美化</div>
-                    <div onclick="saveChatCssPreset()" style="font-size: 12px; color: #fff; font-weight: bold; cursor: pointer; background: #111; padding: 6px 12px; border-radius: 12px;">保存为预设</div>
+            <!-- 区块3：自定义 CSS -->
+            <div class="cs-journal-section">
+                <div class="cs-journal-sec-title">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <!-- 点击五角星打开预设库 -->
+                        <span onclick="openCssPresetModal()" style="cursor: pointer; display: flex; align-items: center; color: #333;" title="点击打开预设库">
+                            ★
+                        </span>
+                        <span>| 自定义 CSS</span>
+                    </div>
+                    <!-- 方框包裹的 Save -->
+                    <span class="cs-journal-sec-action-box" onclick="saveChatCssPreset()">Save</span>
                 </div>
-                <textarea id="chatCustomCssInput" style="width: 100%; height: 120px; background: #f9f9f9; border: 1px solid #eaeaea; border-radius: 8px; padding: 10px; font-size: 12px; font-family: monospace; resize: none; outline: none;" placeholder="输入 CSS 代码，例如：&#10;.cr-bubble-right { background: blue; }"></textarea>
-                <div onclick="applyChatCustomCss()" style="width: 100%; background: #f4f4f4; color: #333; text-align: center; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; border: 1px solid #eee;">应用 CSS</div>
-                
-                <div style="font-size: 12px; font-weight: bold; color: #aaa; margin: 20px 0 10px 0;">CSS 预设库</div>
-                <div id="chatCssPresetList" style="display: flex; flex-direction: column; gap: 8px;">
-                    <!-- 动态渲染 CSS 预设 -->
+                <div class="cs-journal-sec-content">
+                    <textarea id="chatCustomCssInput" class="cs-journal-textarea" placeholder="输入 CSS 代码...&#10;预设库位于左上角的★"></textarea>
+                    <div onclick="applyChatCustomCss()" class="cs-journal-btn">应用 CSS</div>
+                    
+                    <div style="font-size: 12px; color: #888; margin: 15px 0 5px 15px;">· 气泡预览 (左侧为对方，右侧为自己)</div>
+                    <div class="cs-css-preview-box">
+                        <!-- 嵌套完整的结构，确保 CSS 选择器能准确命中 -->
+                        <div class="cr-msg-row me" style="width: 100%; justify-content: flex-end;">
+                            <div class="cr-msg-content-wrapper"><div class="cr-bubble cr-bubble-right">这是一条测试气泡</div></div>
+                        </div>
+                        <div class="cr-msg-row other" style="width: 100%; justify-content: flex-start;">
+                            <div class="cr-msg-content-wrapper"><div class="cr-bubble cr-bubble-left">This is a test bubble.</div></div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSS 预设库弹窗 -->
+    <div class="preset-modal-overlay" id="cssPresetModalOverlay">
+        <div class="preset-modal" style="width: 280px; max-height: 70vh;">
+            <div class="preset-modal-title">CSS 预设库</div>
+            <div id="modalCssPresetList" style="width: 100%; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- 动态渲染 -->
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeCssPresetModal()" style="width: 100%; border-right: none;">关闭</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：全屏转账页面
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="transferPanel" style="z-index: 265; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeTransferPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">转账</div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="align-items: center; padding-top: 30px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 30px;">
+                <div id="transferTargetAvatar" style="width: 60px; height: 60px; border-radius: 16px; background-color: #ddd; background-size: cover; background-position: center;"></div>
+                <div id="transferTargetName" style="font-size: 16px; font-weight: bold; color: #111;">对方名字</div>
+            </div>
+
+            <div style="width: 100%; background: #fff; border-radius: 20px; padding: 25px 20px; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                <div style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 20px;">转账金额</div>
+                <div style="display: flex; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                    <div style="font-size: 36px; font-weight: bold; color: #111; margin-right: 10px;">¥</div>
+                    <input type="number" id="transferAmountInput" style="flex: 1; border: none; outline: none; font-size: 40px; font-weight: bold; color: #111; background: transparent; width: 100%;" placeholder="0.00">
+                </div>
+                <div id="transferNoteText" onclick="openTransferNoteModal()" style="font-size: 13px; color: #576b95; cursor: pointer; font-weight: bold;">添加转账说明</div>
+            </div>
+
+            <div onclick="confirmTransfer()" style="width: 100%; background: #111; color: #fff; font-size: 16px; font-weight: bold; text-align: center; padding: 16px; border-radius: 12px; margin-top: 30px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">转 账</div>
+        </div>
+    </div>
+
+    <!-- 转账说明输入弹窗 -->
+    <div class="preset-modal-overlay" id="transferNoteModalOverlay">
+        <div class="preset-modal" style="width: 280px;">
+            <div class="preset-modal-title">添加转账说明</div>
+            <input type="text" id="transferNoteInput" class="preset-modal-input" placeholder="最多10个字" maxlength="10" style="width: 85%; margin-top: 15px;">
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeTransferNoteModal()">取消</div>
+                <div class="preset-btn-confirm" onclick="saveTransferNote()">确定</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：钱包全屏面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="walletPanel" style="z-index: 260; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeWalletPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">钱包</div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        
+        <div class="panel-content" style="padding: 10px 20px 40px; align-items: center;">
+            <!-- 横向滑动卡片容器 -->
+            <div class="wallet-cards-slider" id="walletCardsSlider">
+                <!-- 初始只有一张银行卡，亲属卡由 JS 动态插入 -->
+                <div class="wallet-bank-card">
+                    <div class="wallet-card-top">
+                        <div class="wallet-card-label">TOTAL BALANCE</div>
+                        <div class="wallet-card-chip"></div>
+                    </div>
+                    <div class="wallet-card-balance"><span>¥</span><span id="walletBalanceText">0.00</span></div>
+                    <div class="wallet-card-bottom">
+                        <div class="wallet-card-number">**** **** **** 8888</div>
+                        <div class="wallet-card-actions">
+                            <div class="wallet-card-btn" onclick="handleWalletRecharge()">充值</div>
+                            <div class="wallet-card-btn" onclick="handleWalletWithdraw()">提现</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 滑动指示点 -->
+            <div id="walletSliderDots" style="display: flex; gap: 6px; margin-top: -15px; margin-bottom: 25px;">
+                <div class="slider-dot active"></div>
+            </div>
+
+            <!-- 交易记录区域 -->
+            <div class="wallet-history-section">
+                <div class="wallet-history-header">
+                    <div class="wallet-history-title">账单记录</div>
+                    <div class="wallet-history-filter" onclick="clearWalletHistory()">清空</div>
+                </div>
+                <div class="wallet-history-list" id="walletHistoryList">
+                    <!-- 动态渲染账单 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发送/索要亲属卡弹窗 -->
+    <div class="preset-modal-overlay" id="sendFamilyCardModalOverlay">
+        <div class="preset-modal" style="width: 280px;">
+            <div style="display: flex; width: 100%; border-bottom: 1px solid #eee;">
+                <div id="fcTabGift" onclick="switchFcTab('gift')" style="flex: 1; text-align: center; padding: 15px 0; font-size: 15px; font-weight: bold; color: #111; border-bottom: 2px solid #111; cursor: pointer;">赠送亲属卡</div>
+                <div id="fcTabRequest" onclick="switchFcTab('request')" style="flex: 1; text-align: center; padding: 15px 0; font-size: 15px; font-weight: bold; color: #888; border-bottom: 2px solid transparent; cursor: pointer;">索要亲属卡</div>
+            </div>
+            
+            <div id="fcGiftContent" style="width: 100%; display: flex; flex-direction: column; align-items: center; padding: 20px 0;">
+                <div style="font-size: 12px; color: #888;">请设置每月的消费额度</div>
+                <div style="display: flex; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 15px; width: 80%;">
+                    <span style="font-size: 24px; font-weight: bold; margin-right: 10px;">¥</span>
+                    <input type="number" id="familyCardLimitInput" style="flex: 1; border: none; outline: none; font-size: 24px; font-weight: bold; color: #111;" placeholder="0.00">
+                </div>
+            </div>
+
+            <div id="fcRequestContent" style="width: 100%; display: none; flex-direction: column; align-items: center; padding: 30px 0;">
+                <div style="font-size: 14px; color: #333; font-weight: bold;">向对方发送亲属卡邀请</div>
+                <div style="font-size: 12px; color: #888; margin-top: 8px;">对方同意后，你将可以使用对方的额度</div>
+            </div>
+
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeSendFamilyCardModal()">取消</div>
+                <div class="preset-btn-confirm" onclick="confirmSendFamilyCard()">发送</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 支付确认与密码面板 -->
+    <div class="preset-modal-overlay" id="paymentPanelOverlay" style="align-items: flex-end; padding-bottom: 0;">
+        <div style="width: 100%; background: #fff; border-radius: 24px 24px 0 0; padding: 20px 20px 40px; display: flex; flex-direction: column; align-items: center; position: relative;">
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div onclick="closePaymentPanel()" style="font-size: 24px; color: #888; cursor: pointer;">×</div>
+                <div style="font-size: 16px; font-weight: bold; color: #111;">确认付款</div>
+                <div style="width: 24px;"></div>
+            </div>
+            
+            <div id="paymentAmountText" style="font-size: 40px; font-weight: 900; color: #111; margin-bottom: 30px;">¥ 0.00</div>
+            
+            <div onclick="togglePaymentMethod()" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; cursor: pointer;">
+                <div id="paymentMethodText" style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: #333; font-weight: bold;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                    钱包余额
+                </div>
+                <div style="color: #888; font-size: 14px; display: flex; align-items: center; gap: 4px;">
+                    切换 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+
+            <div style="width: 100%; text-align: center; margin-top: 20px; font-size: 14px; font-weight: bold;">请输入支付密码</div>
+            
+            <!-- 隐藏的输入框用于唤起键盘 -->
+            <div style="position: relative; width: 100%; display: flex; justify-content: center; margin-top: 15px;">
+                <input type="tel" id="payPasswordInput" maxlength="6" style="position: absolute; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer;" oninput="handlePasswordInput()">
+                <div style="display: flex; gap: 10px;" id="pwdDotsContainer">
+                    <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
+                    <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
+                    <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
+                    <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
+                    <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
+                    <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- =========================================
+         新增：Chat APP 专属全屏设置体系
+         ========================================= -->
+    
+    <!-- 1. 设置主主页面 -->
+    <div class="theme-panel instant-panel" id="chatAppSettingsPanel" style="z-index: 300; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeChatAppSettingsPanel()">Back</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">设置</div></div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 0; gap: 0;">
+            <div style="padding: 15px 20px 10px; font-size: 13px; color: #888;">安全管理</div>
+            <div class="wechat-settings-group">
+                <div class="wechat-settings-item" onclick="openModifyPasswordPanel()">
+                    <div class="wechat-settings-left">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3-3.5 3.5z"/></svg>
+                        <span>修改登录密码</span>
+                    </div>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="wechat-settings-item" onclick="openModifyPayPasswordPanel()">
+                    <div class="wechat-settings-left">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span>支付密码管理</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span id="payPassStatusText" style="font-size: 13px; color: #aaa;">未设置</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 25px 20px 10px; font-size: 13px; color: #888;">个性化</div>
+            <div class="wechat-settings-group">
+                <div class="wechat-settings-item" onclick="openChatThemeSettingsPanel()">
+                    <div class="wechat-settings-left">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span>个性化主题 (CSS)</span>
+                    </div>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 修改登录密码页面 -->
+    <div class="theme-panel instant-panel" id="chatModifyPasswordPanel" style="z-index: 310; background-color: #fff;">
+        <div class="panel-header" style="background-color: #fff; border-bottom: none;">
+            <div class="header-close" onclick="closeModifyPasswordPanel()">取消</div>
+            <div class="header-title-wrapper"><div class="header-title" style="box-shadow:none; background:transparent;">修改登录密码</div></div>
+            <div class="header-close" style="color: #07c160;" onclick="executeModifyPassword()">完成</div>
+        </div>
+        <div class="panel-content" style="padding: 30px 25px;">
+            <div class="chat-input-row">
+                <div class="chat-input-label">旧密码</div>
+                <input type="password" id="oldPassInput" placeholder="请输入当前密码">
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px; margin-top: -15px; margin-bottom: 25px; cursor: pointer;" onclick="showOldPasswordHint('login')">
+                <div style="width:14px;height:14px;border-radius:50%;border:1px solid #576b95;display:flex;justify-content:center;align-items:center;"><svg viewBox="0 0 24 24" width="10" height="10" fill="#576b95"><path d="M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15.89 2.48.59 3.69-.3 1.21-1.02 2.23-1.89 3.22-.92 1.05-2.04 1.9-2.59 3.11-.12.26-.45 1.24-.45 1.24h-2.3s.36-2.35.94-3.82zM11 20a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/></svg></div>
+                <span style="font-size: 12px; color: #576b95; font-weight: bold;">是否忘记密码？</span>
+            </div>
+            <div class="chat-input-row"><div class="chat-input-label">新密码</div><input type="password" id="newPassInput1" placeholder="请输入新密码"></div>
+            <div class="chat-input-row"><div class="chat-input-label">确认新密码</div><input type="password" id="newPassInput2" placeholder="请再次输入新密码"></div>
+        </div>
+    </div>
+
+    <!-- 3. 修改支付密码页面 -->
+    <div class="theme-panel instant-panel" id="chatModifyPayPasswordPanel" style="z-index: 310; background-color: #fff;">
+        <div class="panel-header" style="background-color: #fff; border-bottom: none;">
+            <div class="header-close" onclick="closeModifyPayPasswordPanel()">取消</div>
+            <div class="header-title-wrapper"><div class="header-title" id="payPassTitle" style="box-shadow:none; background:transparent;">设置支付密码</div></div>
+            <div class="header-close" style="color: #07c160;" onclick="executeModifyPayPassword()">完成</div>
+        </div>
+        <div class="panel-content" style="padding: 30px 25px;">
+            <div id="payOldPassSection" class="chat-input-row" style="display: none;">
+                <div class="chat-input-label">旧支付密码</div>
+                <input type="password" id="oldPayPassInput" maxlength="6" placeholder="请输入6位旧密码">
+            </div>
+            <div id="payForgetHint" style="display: none; align-items: center; gap: 5px; margin-top: -15px; margin-bottom: 25px; cursor: pointer;" onclick="showOldPasswordHint('pay')">
+                <div style="width:14px;height:14px;border-radius:50%;border:1px solid #576b95;display:flex;justify-content:center;align-items:center;"><svg viewBox="0 0 24 24" width="10" height="10" fill="#576b95"><path d="M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15.89 2.48.59 3.69-.3 1.21-1.02 2.23-1.89 3.22-.92 1.05-2.04 1.9-2.59 3.11-.12.26-.45 1.24-.45 1.24h-2.3s.36-2.35.94-3.82zM11 20a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/></svg></div>
+                <span style="font-size: 12px; color: #576b95; font-weight: bold;">是否忘记密码？</span>
+            </div>
+            <div class="chat-input-row"><div class="chat-input-label">新支付密码</div><input type="password" id="newPayPassInput1" maxlength="6" placeholder="请输入6位新密码"></div>
+            <div class="chat-input-row"><div class="chat-input-label">确认新支付密码</div><input type="password" id="newPayPassInput2" maxlength="6" placeholder="请再次输入新密码"></div>
+        </div>
+    </div>
+
+    <!-- 4. 个性化主题设置页面 -->
+    <div class="theme-panel instant-panel" id="chatThemeSettingsPanel" style="z-index: 310; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeChatThemeSettingsPanel()">Back</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">主题设置</div></div>
+            <div class="header-close" style="color: #8888;" onclick="saveChatThemeSettings()">Save</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <div class="app-settings-box" style="gap: 15px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="font-section-title">CUSTOM CSS</div>
+                    <div onclick="openChatThemePresetModal()" style="font-size: 12px; color: #576b95; font-weight: bold; cursor: pointer;">预设库</div>
+                </div>
+                <textarea id="chatThemeCssInput" style="width: 100%; height: 250px; background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 12px; font-size: 12px; font-family: monospace; resize: none; outline: none;" placeholder="在此输入 CSS 代码..."></textarea>
+                <div style="display: flex; gap: 10px;">
+                    <div onclick="applyChatThemeCss()" style="flex: 1; background: #111; color: #fff; text-align: center; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer;">应用预览</div>
+                    <div onclick="saveChatThemePreset()" style="flex: 1; background: #fff; color: #111; border: 1px solid #111; text-align: center; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer;">保存为预设</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主题预设弹窗 (已移动至面板内部) -->
+        <div class="preset-modal-overlay" id="chatThemePresetModalOverlay">
+            <div class="preset-modal" style="width: 280px; max-height: 70vh;">
+                <div class="preset-modal-title">主题预设库</div>
+                <div id="chatThemePresetList" style="width: 100%; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px;"></div>
+                <div class="preset-modal-actions">
+                    <div class="preset-btn-cancel" onclick="closeChatThemePresetModal()" style="width: 100%; border-right: none;">关闭</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 互动标识详情全屏面板 -->
+    <div class="theme-panel instant-panel" id="interactionDetailPanel" style="z-index: 400; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeInteractionDetailPanel()">Back</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">互动标识</div></div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content interaction-detail-content" id="interactionDetailList">
+            <!-- 动态渲染标识列表 -->
+        </div>
+    </div>
+
+    <!-- 互动标识操作弹窗 (必须存在此结构点击才有反应) -->
+    <div class="preset-modal-overlay" id="badgeActionModalOverlay" style="z-index: 500;">
+        <div class="preset-modal" style="width: 300px; padding: 30px 20px; position: relative; border-radius: 24px;">
+            <div id="badgeActionIcon" class="badge-action-big-icon"></div>
+            <div id="badgeActionTitle" style="font-size: 20px; font-weight: 900; color: #111; margin-top: 20px;"></div>
+            <div id="badgeActionDesc" style="font-size: 14px; color: #888; text-align: center; margin-top: 12px; line-height: 1.6; padding: 0 10px;"></div>
+            
+            <div id="badgeActionStatusTag" style="font-size: 11px; font-weight: bold; padding: 4px 14px; border-radius: 8px; margin-top: 15px; letter-spacing: 1px;"></div>
+
+            <div style="width: 100%; margin-top: 35px;">
+                <div id="badgeActionBtn" class="register-btn" style="margin-top: 0; width: 100%; background: #0095ff; box-shadow: 0 8px 20px rgba(0,149,255,0.2); border-radius: 18px; height: 54px; display: none;">佩戴</div>
+                <div onclick="closeBadgeActionModal()" style="text-align: center; font-size: 14px; color: #bbb; margin-top: 20px; cursor: pointer; font-weight: bold;">返回</div>
             </div>
         </div>
     </div>

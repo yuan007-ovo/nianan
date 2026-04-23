@@ -24,15 +24,12 @@ body, input, textarea, select, button {
 /* --- 核心全屏重置 (完美兼容 PWA Standalone + iOS Safari) --- */
 html, body {
     width: 100%;
-    /* 🔪 终极修复：使用 var(--app-height) 统一高度，由 JS 动态计算 */
+    /* 🔪 终极修复：只使用 var(--app-height)，绝对不要写 100dvh，否则会覆盖导致底部留白 */
     height: var(--app-height, 100vh);
-    height: 100dvh;
     min-height: var(--app-height, 100vh);
-    min-height: 100dvh;
     margin: 0;
     padding: 0;
     overflow: hidden;
-    /* 🔪 核心修复：将透明改为黑色，防止 iOS 全屏模式下露出白色/黑色系统背景 */
     background-color: #FFFFFF;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
@@ -52,41 +49,17 @@ body {
 }
 
 /* 🔪 iOS Safari 和 PWA Standalone 专属全屏修复 */
-/* 注意：不再使用 -webkit-fill-available，因为它在 iOS PWA standalone 模式下经常计算错误导致留白/留黑 */
 @supports (-webkit-touch-callout: none) {
-    html {
-        /* iOS 上优先用 JS 动态计算的 --app-height，避免 -webkit-fill-available 的坑 */
+    /* 统一将所有全屏容器绑定到 JS 计算的真实高度，抛弃 100% 和 100dvh */
+    html, body, #app-root, #activation-overlay, #wc-view-phone-sim, .screen, .settings-modal, .dream-fullscreen-view {
         height: var(--app-height, 100vh) !important;
         min-height: var(--app-height, 100vh) !important;
     }
-    body {
-        height: 100% !important;
-        min-height: 100% !important;
-    }
-    #app-root {
-        height: var(--app-height, 100vh) !important;
-        min-height: var(--app-height, 100vh) !important;
-    }
-    #activation-overlay {
-        height: var(--app-height, 100vh) !important;
-        min-height: var(--app-height, 100vh) !important;
-    }
-    #wc-view-phone-sim {
-        height: var(--app-height, 100vh) !important;
-        min-height: var(--app-height, 100vh) !important;
-    }
-    .screen {
-        height: var(--app-height, 100vh) !important;
-        min-height: var(--app-height, 100vh) !important;
-    }
-    .settings-modal {
-        height: var(--app-height, 100vh) !important;
-        min-height: var(--app-height, 100vh) !important;
-    }
-    .dream-fullscreen-view {
-        height: var(--app-height, 100vh) !important;
-        min-height: var(--app-height, 100vh) !important;
-    }
+}
+
+/* 🔪 核心修复：给所有内部允许滚动的容器加上防回弹穿透，防止滑动时把整个页面带跑 */
+.panel-content, .chat-room-history, .wc-chat-scroll-area, .ls-content, .ins-forum-view {
+    overscroll-behavior: contain;
 }
 
 input, textarea, select {
@@ -259,16 +232,26 @@ input, textarea, select {
 
 /* --- 主题美化全屏面板 --- */
 .theme-panel {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    position: fixed; /* 改为 fixed，脱离文档流 */
+    top: 0; left: 0; width: 100%; height: 100dvh;
     background-color: var(--panel-bg);
     z-index: 100;
     display: none; 
     flex-direction: column;
     overflow: hidden;
-    /* 面板本身不加顶部内边距，让顶栏(header)直接顶到屏幕最上方 */
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    /* 删除了 animation 属性，让面板点击后立刻瞬间出现 */
+}
+
+/* 🔪 核心修复：底部遮羞布。当 iOS 强行把页面往上推时，这块延伸出来的背景会挡住桌面，防止穿透 */
+.theme-panel::after, #settingsFullScreenPanel::after, #charEditPanel::after {
+    content: '';
+    position: absolute;
+    top: 100%; /* 贴在面板最底部 */
+    left: 0;
+    width: 100%;
+    height: 50vh; /* 往下延伸半个屏幕的高度 */
+    background-color: var(--panel-bg);
+    z-index: 99;
 }
 
 @keyframes slideUp {
@@ -467,7 +450,7 @@ input, textarea, select {
 .preset-modal-overlay.show { 
     display: flex; 
     animation: fadeIn 0.2s; 
-    z-index: 300; /* 确保在所有面板之上 */
+    z-index: 330; /* 提升层级，确保覆盖所有 z-index 为 300+ 的面板 */
 }
 .preset-modal {
     width: 260px; background: #fff; border-radius: 16px;
@@ -813,20 +796,26 @@ input, textarea, select {
 /* =========================================
    Standalone 模式下的专属样式 (全屏适配)
    ========================================= */
-body.ios-standalone .iphone { 
+body.ios-standalone .iphone.immersive-mode { 
     width: 100vw; 
     height: var(--app-height, 100vh); 
     border: none; 
     border-radius: 0; 
     box-shadow: none; 
-    /* 适配刘海屏和底部小黑条安全区 */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
 }
+body.ios-standalone .iphone:not(.immersive-mode) {
+    margin: auto;
+    height: calc(var(--app-height) - 40px);
+    width: 390px;
+    max-width: 95vw;
+}
 body.ios-standalone .status-bar { 
-    display: none; /* 隐藏模拟的状态栏，使用系统真实状态栏 */
+    display: flex;
+    opacity: 1;
 }
 body.ios-standalone .home-screen { 
     padding-top: 20px; 
@@ -1353,22 +1342,205 @@ body.ios-standalone .home-screen {
 /* =========================================
    Wechat 界面专属样式
    ========================================= */
-/* 聊天列表卡片样式 */
+/* --- 新版极简压缩会话列表样式 (浅灰色) --- */
+#chatSessionList {
+    padding: 5px 12px;
+    background: #f7f7f7; /* 整体改为浅灰色 */
+    border-radius: 20px;
+    margin: 5px; /* 减小外边距，增加宽度 */
+}
+
 .wechat-list-item {
-    display: flex; align-items: center; padding: 15px; 
-    background: #fff; border-radius: 20px; margin-bottom: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    border: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    padding: 10px 0; /* 减小内边距，压缩高度 */
+    background: transparent;
+    border-bottom: 0.5px solid #e8e8e8;
+    position: relative;
+    transition: background 0.2s;
+    cursor: pointer;
+    -webkit-user-select: none;
 }
+.wechat-list-item:last-child { border-bottom: none; }
+.wechat-list-item:active { background: #eeeeee; }
+
+/* --- 置顶样式更新 (极简 Top 标签版) --- */
+.wechat-list-item.is-pinned::before {
+    display: none; /* 删除旧的 PIN 标签 */
+}
+
+/* Top 标签样式 */
+.top-tag {
+    font-size: 9px;
+    background: #111;
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+/* --- 特别关心标识 (纯黑) --- */
+.special-concern-star {
+    width: 14px;
+    height: 14px;
+    fill: #000; 
+}
+/* --- 聊天设置页互动标识样式 --- */
+.cs-journal-badge-wrap {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.cs-journal-badge-wrap:active { transform: scale(0.9); }
+.cs-journal-badge-icon {
+    width: 28px;
+    height: 28px;
+}
+
+/* --- 互动详情全屏页 --- */
+.interaction-detail-content {
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+.id-badge-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #eee;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+.id-badge-card.locked { opacity: 0.5; filter: grayscale(1); }
+.id-badge-card.selected { border: 2px solid #111; }
+.id-badge-info { flex: 1; }
+.id-badge-name { font-size: 16px; font-weight: bold; color: #111; margin-bottom: 4px; }
+.id-badge-desc { font-size: 12px; color: #888; line-height: 1.4; }
+.id-badge-status { font-size: 11px; font-weight: bold; color: #111; margin-top: 8px; }
+
 .wechat-avatar {
-    width: 48px; height: 48px; background: var(--gray-medium); 
-    border-radius: 14px; margin-right: 15px; flex-shrink: 0;
+    width: 44px; /* 减小头像尺寸，压缩高度 */
+    height: 44px;
+    border-radius: 50%; 
+    background-color: #e0e0e0;
+    background-size: cover !important;
+    background-position: center !important;
+    margin-right: 12px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.03);
 }
-.wechat-info { flex: 1; overflow: hidden; }
-.wechat-name-time { display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center; }
-.wechat-name { font-size: 16px; font-weight: 800; color: var(--text-main); }
-.wechat-time { font-size: 11px; color: var(--text-sub); font-weight: bold; }
-.wechat-msg { font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.wechat-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wechat-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wechat-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111;
+    letter-spacing: -0.3px;
+}
+.wechat-msg {
+    font-size: 14px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 400;
+}
+
+.wechat-right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    margin-left: 10px;
+}
+
+.wechat-time {
+    font-size: 12px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+/* --- 互动标识高级 SVG 样式 --- */
+.interaction-badges {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.badge-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.05));
+}
+.badge-icon svg { width: 100%; height: 100%; }
+
+/* 颜色规范：模仿 QQ 质感 */
+.badge-fire { fill: #FF8C00; } /* 橙色火花 */
+.badge-fire.big { fill: #FF4500; } /* 红色大火花 */
+.badge-fire.dimmed { fill: #e0e0e0; } /* 熄灭状态 */
+.badge-boat { fill: #5AC8FA; } /* 友谊小船 */
+.badge-ship { fill: #007AFF; } /* 友谊巨轮 */
+.badge-splash { fill: #AF52DE; } /* 闲聊水花 */
+.badge-luck { fill: #34C759; } /* 小幸运-嫩绿色 */
+
+/* 详情页卡片样式微调 */
+.id-badge-card .badge-icon {
+    width: 44px;
+    height: 44px;
+}
+
+/* --- iOS 风格会话长按菜单 --- */
+.session-menu-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    z-index: 5000; display: none; justify-content: center; align-items: center;
+}
+.session-menu-overlay.show { display: flex; }
+.session-menu {
+    width: 220px; background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    animation: iosMenuScale 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes iosMenuScale {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+.session-menu-item {
+    padding: 14px 18px; font-size: 16px; color: #000;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 0.5px solid rgba(0,0,0,0.05); cursor: pointer;
+}
+.session-menu-item:last-child { border-bottom: none; }
+.session-menu-item:active { background: rgba(0,0,0,0.05); }
+.session-menu-item.danger { color: #ff3b30; }
+.session-menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
 
 /* 悬浮胶囊底栏 */
 .wechat-bottom-bar {
@@ -2109,22 +2281,20 @@ body.ios-standalone .home-screen {
 
 .cr-bubble-left { background-color: #f2f2f2; color: #000; margin-left: 6px; }
 .cr-bubble-left::before {
-    content: ""; position: absolute; bottom: 0; left: -8px; height: 20px; width: 20px;
-    background-color: #f2f2f2; border-bottom-right-radius: 18px; border-bottom-left-radius: 6px; z-index: -1;
+    content: ""; position: absolute; bottom: 0; left: -12px; height: 14px; width: 12px;
+    background-color: transparent; border-bottom-right-radius: 16px; box-shadow: 7px 0 0 0 #f2f2f2; z-index: -1;
 }
 .cr-bubble-left::after {
-    content: ""; position: absolute; bottom: -2px; left: -14px; height: 22px; width: 14px;
-    background-color: #fff; border-bottom-right-radius: 14px; z-index: -1;
+    display: none; /* 彻底去除白色遮挡块 */
 }
 
 .cr-bubble-right { background-color: #000; color: #fff; margin-right: 6px; }
 .cr-bubble-right::before {
-    content: ""; position: absolute; bottom: 0; right: -8px; height: 20px; width: 20px;
-    background-color: #000; border-bottom-left-radius: 18px; border-bottom-right-radius: 6px; z-index: -1;
+    content: ""; position: absolute; bottom: 0; right: -12px; height: 14px; width: 12px;
+    background-color: transparent; border-bottom-left-radius: 16px; box-shadow: -7px 0 0 0 #000; z-index: -1;
 }
 .cr-bubble-right::after {
-    content: ""; position: absolute; bottom: -2px; right: -14px; height: 22px; width: 14px;
-    background-color: #fff; border-bottom-left-radius: 14px; z-index: -1;
+    display: none; /* 彻底去除白色遮挡块 */
 }
 
 /* 顶栏双头像样式 */
@@ -2343,29 +2513,53 @@ body.ios-standalone .home-screen {
 .chat-desc-img-120 {
     width: 120px !important;
     height: 120px !important;
-    background: #e8e8e8;
+    background: #f0f0f0;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 10px;
+    padding: 12px;
     box-sizing: border-box;
     text-align: center;
-    border: 1px solid #ddd;
+    border: 1px solid #e5e5e5;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    cursor: pointer;
 }
 .chat-desc-img-120 .img-icon {
-    font-size: 24px;
-    margin-bottom: 5px;
-    color: #888;
+    display: none; /* 兼容旧数据隐藏图标 */
 }
 .chat-desc-img-120 .img-text {
-    font-size: 11px;
-    color: #555;
+    font-size: 12px;
+    color: #666;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: break-all;
+    font-style: italic;
+}
+
+/* 图片详情查看弹窗样式 */
+.image-detail-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 3000; display: none;
+    justify-content: center; align-items: center;
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+}
+.image-detail-overlay.show { display: flex; animation: fadeIn 0.2s; }
+.image-detail-content {
+    max-width: 90%; max-height: 80%;
+    display: flex; justify-content: center; align-items: center;
+}
+.image-detail-content img {
+    max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.image-detail-text-card {
+    background: #fff; padding: 30px 20px; border-radius: 16px;
+    font-size: 16px; color: #333; line-height: 1.6; text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); min-width: 260px; max-width: 320px;
     word-break: break-all;
 }
 
@@ -2635,6 +2829,71 @@ body.ios-standalone .home-screen {
 }
 .cr-bubble-forward::before, .cr-bubble-forward::after { display: none !important; } /* 去掉气泡尾巴 */
 
+/* 语音气泡样式 */
+.cr-bubble-voice-wrap {
+    cursor: pointer;
+}
+.cr-voice-bubble {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 60px;
+    max-width: 200px;
+}
+.cr-bubble-right .cr-voice-bubble {
+    flex-direction: row-reverse;
+}
+
+/* 动态语音波纹 */
+.voice-waves {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 16px;
+}
+/* 自己发的语音，波纹高低起伏方向反转，细节拉满 */
+.voice-waves.me {
+    flex-direction: row-reverse;
+}
+.voice-waves .wave {
+    width: 2px;
+    background-color: currentColor;
+    border-radius: 1px;
+    animation: voiceWaveAnim 1s infinite ease-in-out;
+}
+/* 给4根波纹设置不同的初始高度和动画延迟，产生起伏感 */
+.voice-waves .wave:nth-child(1) { height: 6px; animation-delay: 0s; }
+.voice-waves .wave:nth-child(2) { height: 10px; animation-delay: 0.2s; }
+.voice-waves .wave:nth-child(3) { height: 14px; animation-delay: 0.4s; }
+.voice-waves .wave:nth-child(4) { height: 8px; animation-delay: 0.6s; }
+
+@keyframes voiceWaveAnim {
+    0%, 100% { transform: scaleY(0.6); opacity: 0.6; }
+    50% { transform: scaleY(1.2); opacity: 1; }
+}
+
+.voice-duration {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.cr-voice-text-preview {
+    margin-top: 6px;
+    background: rgba(0,0,0,0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #555;
+    max-width: 240px;
+    word-break: break-all;
+    position: relative;
+}
+.cr-msg-row.me .cr-voice-text-preview {
+    align-self: flex-end;
+    background: rgba(0,0,0,0.08);
+    color: #333;
+}
+
 .cr-forward-title {
     font-size: 15px; font-weight: bold; color: #000;
     margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -2658,4 +2917,587 @@ body.ios-standalone .home-screen {
     padding: calc(20px + env(safe-area-inset-top)) 15px 15px;
     background: #ededed; display: flex; align-items: center; gap: 15px;
     border-bottom: 1px solid #ddd;
+}
+/* =========================================
+   聊天设置手账风 UI 专属样式
+   ========================================= */
+.cs-journal-content {
+    background-color: #fff;
+    font-family: "Times New Roman", "SimSun", serif; /* 增加手账感 */
+}
+
+.cs-journal-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 30px;
+    position: relative;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cs-journal-avatar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* 圆角头像 */
+.cs-journal-avatar-rounded {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    border: 1px solid #eee;
+    background-color: #f4f4f4;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.cs-journal-bubble {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    background: #f0e6e6;
+    color: #888;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: sans-serif;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+.cs-journal-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 10px;
+    border-width: 6px 6px 0;
+    border-style: solid;
+    border-color: #f0e6e6 transparent transparent transparent;
+}
+
+.cs-journal-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #555;
+    max-width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+.cs-journal-section {
+    padding: 25px 20px 10px;
+}
+
+.cs-journal-sec-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333;
+}
+
+.cs-journal-sec-title.dark {
+    background-color: #555;
+    color: #fff;
+    padding: 10px 15px;
+    border-bottom: none;
+    align-items: center;
+}
+
+.cs-journal-sec-sub {
+    font-size: 10px;
+    color: #aaa;
+    font-weight: normal;
+    font-family: sans-serif;
+}
+
+.cs-journal-sec-action {
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: normal;
+    font-family: sans-serif;
+}
+.cs-journal-sec-title.dark .cs-journal-sec-action {
+    color: #ddd;
+}
+
+.cs-journal-sec-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-family: sans-serif;
+}
+
+.cs-journal-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #555;
+}
+
+.cs-dot {
+    font-weight: bold;
+    color: #888;
+}
+
+.cs-label {
+    flex: 1;
+}
+
+.cs-value-btn {
+    font-size: 12px;
+    color: #888;
+    background: #f4f4f4;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.cs-value-input {
+    width: 80px;
+    text-align: right;
+    border: none;
+    border-bottom: 1px dashed #ccc;
+    background: transparent;
+    font-size: 13px;
+    color: #333;
+    outline: none;
+    padding: 2px 0;
+}
+
+.cs-journal-textarea {
+    width: 100%;
+    height: 100px;
+    background: #f9f9f9;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    color: #555;
+}
+
+.cs-journal-btn {
+    text-align: center;
+    padding: 8px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+    margin-top: 5px;
+    border-radius: 4px;
+}
+
+/* 气泡预览框 */
+.cs-css-preview-box {
+    background: #ffffff; /* 改为纯白色 */
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px dashed #ccc;
+}
+.cs-journal-sec-action-box {
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: bold;
+    font-family: sans-serif;
+    border: 1px solid #ccc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #555;
+    transition: all 0.2s;
+}
+.cs-journal-sec-action-box:active {
+    background: #f0f0f0;
+}
+
+/* =========================================
+   新增：转账气泡卡片样式
+   ========================================= */
+.cr-bubble.cr-bubble-transfer {
+    background: transparent !important;
+    padding: 0 !important;
+}
+.cr-bubble.cr-bubble-transfer::before, .cr-bubble.cr-bubble-transfer::after {
+    display: none !important;
+}
+
+.transfer-card {
+    width: 230px;
+    background: #ff9e00;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(255, 158, 0, 0.2);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.transfer-card.received {
+    background: #f4b860;
+}
+
+.transfer-card-top {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    gap: 12px;
+}
+
+.transfer-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.transfer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #fff;
+    overflow: hidden;
+}
+
+.transfer-amount {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.transfer-desc {
+    font-size: 12px;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.transfer-card-bottom {
+    background: rgba(255,255,255,0.1);
+    padding: 6px 15px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.8);
+}
+/* =========================================
+   新增：钱包面板样式
+   ========================================= */
+.wallet-bank-card {
+    width: 100%; height: 200px;
+    background: linear-gradient(135deg, #2c2c2e 0%, #111 100%);
+    border-radius: 24px; padding: 25px; box-sizing: border-box;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden; margin-bottom: 30px; flex-shrink: 0;
+}
+.wallet-bank-card::after {
+    content: ''; position: absolute; top: -50%; right: -20%;
+    width: 200px; height: 300px;
+    background: linear-gradient(to bottom right, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+    transform: rotate(30deg); pointer-events: none;
+}
+.wallet-card-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 2; }
+.wallet-card-label { font-size: 13px; color: rgba(255,255,255,0.6); font-weight: 600; letter-spacing: 1px; }
+.wallet-card-chip {
+    width: 36px; height: 26px; background: linear-gradient(135deg, #e6c27a, #d4af37);
+    border-radius: 6px; opacity: 0.9; position: relative;
+}
+.wallet-card-chip::after { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(0,0,0,0.1); }
+.wallet-card-balance {
+    font-size: 38px; font-weight: 900; color: #fff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    letter-spacing: 1px; position: relative; z-index: 2; margin-top: 10px;
+}
+.wallet-card-balance span:first-child { font-size: 20px; margin-right: 4px; }
+.wallet-card-bottom { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; }
+.wallet-card-number { font-size: 14px; color: rgba(255,255,255,0.5); font-family: monospace; letter-spacing: 2px; }
+.wallet-card-actions { display: flex; gap: 10px; }
+.wallet-card-btn {
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff;
+    font-size: 12px; font-weight: bold; padding: 6px 14px; border-radius: 12px; cursor: pointer;
+}
+.wallet-card-btn:active { background: rgba(255,255,255,0.25); }
+
+.wallet-history-section {
+    width: 100%; background: #fff; border-radius: 24px; padding: 25px 20px;
+    box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.03); flex: 1;
+}
+.wallet-history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.wallet-history-title { font-size: 16px; font-weight: 800; color: #111; }
+.wallet-history-filter { font-size: 13px; color: #888; font-weight: bold; cursor: pointer; }
+.wallet-history-list { display: flex; flex-direction: column; }
+.wallet-history-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #f5f5f5; }
+.wallet-history-item:last-child { border-bottom: none; }
+.wallet-history-icon {
+    width: 40px; height: 40px; border-radius: 50%; background: #f4f4f5;
+    display: flex; justify-content: center; align-items: center; margin-right: 15px; flex-shrink: 0;
+}
+.wallet-icon-out svg { stroke: #111; }
+.wallet-icon-in { background: #e8f5e9; }
+.wallet-icon-in svg { stroke: #34c759; }
+.wallet-icon-refund { background: #fff0f0; }
+.wallet-icon-refund svg { stroke: #ff3b30; }
+.wallet-history-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.wallet-history-name { font-size: 15px; font-weight: bold; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wallet-history-time { font-size: 12px; color: #aaa; font-weight: 600; }
+.wallet-history-amount { font-size: 16px; font-weight: 900; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.wallet-amount-minus { color: #111; }
+.wallet-amount-plus { color: #34c759; }
+/* =========================================
+   新增：亲属卡与支付样式 (高级重绘版)
+   ========================================= */
+/* 钱包里的亲属卡 (白金高级质感) */
+.family-card {
+    width: 100%; height: 130px; background: #ffffff;
+    border-radius: 20px; padding: 20px; box-sizing: border-box; color: #333;
+    margin-bottom: 20px; display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.04); border: 1px solid #f0f0f0;
+    position: relative; overflow: hidden;
+}
+.family-card::before {
+    content: ''; position: absolute; top: 0; right: 0; width: 100px; height: 100px;
+    background: radial-gradient(circle, rgba(255,158,0,0.1) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%; pointer-events: none;
+}
+.family-card-top { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; }
+.family-card-title { font-size: 15px; font-weight: 900; display: flex; align-items: center; gap: 6px; color: #111; }
+.family-card-limit { font-size: 26px; font-weight: 900; color: #ff9e00; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.family-card-user { font-size: 12px; font-weight: bold; color: #888; background: #f9f9f9; padding: 4px 10px; border-radius: 10px; }
+
+/* 聊天气泡里的亲属卡 (仿微信真实卡片) */
+.cr-bubble.cr-bubble-family { background: transparent !important; padding: 0 !important; }
+.cr-bubble.cr-bubble-family::before, .cr-bubble.cr-bubble-family::after { display: none !important; }
+
+.bubble-family-card {
+    width: 240px; background: #fff; border: 1px solid #eaeaea; border-radius: 12px;
+    display: flex; flex-direction: column; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden;
+}
+.bubble-family-top {
+    padding: 15px; display: flex; align-items: center; gap: 12px;
+}
+.bubble-family-icon {
+    width: 40px; height: 40px; background: #ff9e00; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; color: #fff; flex-shrink: 0;
+}
+.bubble-family-info { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.bubble-family-title { font-size: 15px; font-weight: bold; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubble-family-desc { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubble-family-bottom {
+    border-top: 1px solid #f5f5f5; padding: 8px 15px; font-size: 11px; color: #aaa; background: #fafafa;
+}
+/* =========================================
+   高级黑金立体感样式 (仿支付宝/微信)
+   ========================================= */
+
+/* 卡片滑动容器 */
+.wallet-cards-slider {
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 15px;
+    padding: 10px 0 30px;
+    scrollbar-width: none; /* 隐藏进度条 */
+}
+.wallet-cards-slider::-webkit-scrollbar { display: none; }
+
+/* 基础卡片立体效果 */
+.wallet-bank-card, .family-card-gold {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    height: 200px;
+    border-radius: 24px;
+    padding: 25px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    /* 核心立体感：多重阴影 */
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1);
+}
+
+/* 黑金银行卡 */
+.wallet-bank-card {
+    background: linear-gradient(135deg, #333 0%, #000 100%);
+    border: 1px solid #444;
+}
+
+/* 亲属卡 (香槟金立体感 - 完美复刻图片意境) */
+.family-card-gold {
+    background: linear-gradient(135deg, #fdfcf0 0%, #f2e6c9 100%);
+    border: 1px solid #e5d5b5;
+    color: #8a6d3b;
+}
+.family-card-gold .wallet-card-label { color: #b5a383; }
+.family-card-gold .wallet-card-balance { color: #8a6d3b; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+
+/* 聊天气泡：亲属卡 (整体缩小精致版) */
+.bubble-family-premium {
+    width: 210px; /* 宽度从 260 减小到 210 */
+    background: #fff; border-radius: 10px;
+    display: flex; flex-direction: column; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04); overflow: hidden;
+    border: 1px solid #f2f2f2;
+}
+.bfp-top {
+    padding: 12px 12px; /* 减小内边距 */
+    display: flex; align-items: center; gap: 10px; /* 减小间距 */
+}
+.bfp-icon-wrap {
+    width: 36px; height: 36px; /* 图标从 50 缩小到 36 */
+    background: #fff5d7; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+}
+.bfp-icon-wrap svg { 
+    fill: #e5c68b; 
+    width: 20px; height: 20px; /* 内部图标同步缩小 */
+}
+.bfp-info { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.bfp-title { 
+    font-size: 14px; /* 字号从 17 缩小到 14 */
+    font-weight: 500; color: #d4b38a; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bfp-status { 
+    font-size: 11px; /* 字号从 14 缩小到 11 */
+    color: #d4b38a; opacity: 0.8; 
+}
+.bfp-bottom {
+    border-top: 1px solid #fbfbfb; 
+    padding: 6px 12px; /* 减小底部高度 */
+    font-size: 10px; /* 底部文字缩小到 10 */
+    color: #d4b38a; opacity: 0.5;
+}
+
+/* 指示点 */
+.slider-dot { width: 6px; height: 6px; background: #ddd; border-radius: 50%; transition: all 0.3s; }
+.slider-dot.active { width: 15px; background: #111; border-radius: 10px; }
+/* --- Chat 设置页面专属样式补丁 --- */
+.wechat-settings-group {
+    background-color: #fff;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+}
+.wechat-settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background-color: #fff;
+    cursor: pointer;
+    position: relative;
+}
+.wechat-settings-item:active { background-color: #f5f5f5; }
+.wechat-settings-item:not(:last-child)::after {
+    content: ''; position: absolute; bottom: 0; left: 20px; right: 0; height: 1px; background-color: #eee;
+}
+.wechat-settings-left { display: flex; align-items: center; gap: 15px; font-size: 16px; color: #111; }
+
+/* 密码修改页输入框 */
+#chatModifyPasswordPanel .chat-input-row, 
+#chatModifyPayPasswordPanel .chat-input-row {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+}
+#chatModifyPasswordPanel .chat-input-label,
+#chatModifyPayPasswordPanel .chat-input-label {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 5px;
+}
+#chatModifyPasswordPanel input,
+#chatModifyPayPasswordPanel input {
+    font-size: 18px;
+    padding: 8px 0;
+    font-weight: bold;
+    border: none;
+    background: transparent;
+    width: 100%;
+    outline: none;
+}
+/* --- iOS 风格圆角设置卡片 --- */
+.wechat-settings-group {
+    margin: 10px 16px; /* 增加外边距，使其像悬浮卡片 */
+    background-color: #fff;
+    border-radius: 20px; /* iOS 大圆角 */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 确保子项点击态不溢出圆角 */
+    border: none; /* 去掉边框 */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03); /* 微弱阴影 */
+}
+
+.wechat-settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background-color: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+.wechat-settings-item:active {
+    background-color: #f2f2f7; /* iOS 点击灰色 */
+}
+
+/* 内部线条缩进，模仿 iOS 细节 */
+.wechat-settings-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 55px; /* 线条从图标文字间开始 */
+    right: 0;
+    height: 0.5px;
+    background-color: #e5e5ea;
+}
+/* --- 互动标识操作弹窗专属样式 --- */
+.badge-action-big-icon {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+    animation: badgeFloat 3s ease-in-out infinite;
+}
+.badge-action-big-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+@keyframes badgeFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* 佩戴中的卡片高亮样式 */
+.id-badge-card.worn {
+    border: 2px solid #111;
+    background: #f9f9f9;
 }

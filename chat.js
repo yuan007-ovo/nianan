@@ -886,6 +886,255 @@ function switchCharTab(tabName) {
 // ==========================================
 // 渲染会话列表与通讯录
 // ==========================================
+// ==========================================
+// 互动标识与会话管理逻辑 (QQ/iOS 风格)
+// ==========================================
+let sessionPressTimer;
+let currentActionSessionId = null;
+
+// --- 高质量 SVG 路径定义 (用户精选版) ---
+const SVG_PATHS = {
+    FIRE: "M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.08-3.61 5.75-2.39 8.9.04.1.08.2.08.33 0 .22-.15.42-.35.5-.22.1-.47.04-.64-.12-.06-.05-.1-.1-.15-.17-1.1-1.43-1.26-3.59-.39-5.19-1.42.54-2.48 1.64-3.06 3.11-.9 2.02-.48 4.52 1.04 6.06 2.29 2.31 5.92 2.5 8.47.44 2.51-2.02 3.5-5.42 1.6-8.3z",
+    BIG_FIRE: "M12 23c4.418 0 8-3.582 8-8 0-3.285-2.007-6.113-4.886-7.315.213 1.124-.12 2.34-.94 3.22-.82.88-2.036 1.213-3.174 1.094V12c0-3.866-3.134-7-7-7 0 3.866 3.134 7 7 7v3c0 4.418 3.582 8 8 8z",
+    BOAT: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z",
+    SHIP: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z",
+    SPLASH: "M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z",
+    LUCK: "M12,2C9.5,2 7.5,4 7.5,6.5C7.5,7.4 7.8,8.2 8.2,8.9C7.5,8.5 6.7,8.2 5.8,8.2C3.3,8.2 1.3,10.2 1.3,12.7C1.3,15.2 3.3,17.2 5.8,17.2C6.7,17.2 7.5,16.9 8.2,16.5C7.8,17.2 7.5,18 7.5,18.9C7.5,21.4 9.5,23.4 12,23.4C14.5,23.4 16.5,21.4 16.5,18.9C16.5,18 16.2,17.2 15.8,16.5C16.5,16.9 17.3,17.2 18.2,17.2C20.7,17.2 22.7,15.2 22.7,12.7C22.7,10.2 20.7,8.2 18.2,8.2C17.3,8.2 16.5,8.5 15.8,8.9C16.2,8.2 16.5,7.4 16.5,6.5C16.5,4 14.5,2 12,2Z"
+};
+
+// 1. 更新互动数据 (包含小幸运逻辑)
+function updateInteractionStats(charId, isUserSend = true) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    if (!stats[charId]) {
+        stats[charId] = { streak: 0, lastDate: '', count: 0, pinned: false, special: false, userLastMsg: false, charLastMsg: false, addedDate: new Date().toISOString().split('T')[0], littleLuck: false, wornBadge: null };
+    }
+
+    const data = stats[charId];
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    data.count++;
+    if (isUserSend) data.userLastMsg = today;
+    else data.charLastMsg = today;
+
+    // 判定连续互动
+    if (data.userLastMsg === today && data.charLastMsg === today) {
+        if (data.lastDate === yesterday) {
+            data.streak++;
+        } else if (data.lastDate !== today) {
+            data.streak = 1;
+        }
+        data.lastDate = today;
+
+        // 小幸运逻辑：如果是成为好友当天互发消息
+        if (data.addedDate === today) {
+            data.littleLuck = true;
+        }
+    }
+
+    // 断聊逻辑：如果今天还没聊，且最后聊天日期早于昨天，小幸运消失
+    if (data.lastDate && data.lastDate !== today && data.lastDate !== yesterday) {
+        data.littleLuck = false;
+    }
+
+    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+}
+
+// 2. 获取佩戴的互动标识 HTML
+function getWornBadgeHtml(charId) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}')[charId];
+    if (!stats || !stats.wornBadge) return '';
+
+    const badgeType = stats.wornBadge;
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const isExtinguished = stats.lastDate && (stats.lastDate !== today && stats.lastDate !== yesterday);
+
+    let path = "";
+    let badgeClass = "";
+
+    if (badgeType === 'luck' && stats.littleLuck && !isExtinguished) {
+        path = SVG_PATHS.LUCK; badgeClass = "badge-luck";
+    } else if (badgeType === 'fire' && stats.streak >= 3) {
+        path = stats.streak >= 30 ? SVG_PATHS.BIG_FIRE : SVG_PATHS.FIRE;
+        badgeClass = isExtinguished ? 'badge-fire dimmed' : (stats.streak >= 30 ? 'badge-fire big' : 'badge-fire');
+    } else if (badgeType === 'boat' && stats.streak >= 7) {
+        path = stats.streak >= 30 ? SVG_PATHS.SHIP : SVG_PATHS.BOAT;
+        badgeClass = stats.streak >= 30 ? 'badge-ship' : 'badge-boat';
+    } else if (badgeType === 'splash' && stats.count >= 100) {
+        path = SVG_PATHS.SPLASH; badgeClass = "badge-splash";
+    } else {
+        return ''; 
+    }
+
+    return `<div class="badge-icon ${badgeClass}" style="display:inline-flex; vertical-align:middle; margin-left:4px; width:16px; height:16px;"><svg viewBox="0 0 24 24"><path d="${path}"/></svg></div>`;
+}
+
+// 3. 修改设置页渲染逻辑：头像中间显示佩戴的标识
+function openChatSettingsPanel() {
+    document.getElementById('chatSettingsPanel').style.display = 'flex';
+    renderChatBgLibrary();
+    renderChatCssPresets();
+    
+    const currentCss = ChatDB.getItem('chat_current_css') || '';
+    document.getElementById('chatCustomCssInput').value = currentCss;
+
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const me = accounts.find(a => a.id === currentLoginId);
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+
+    document.getElementById('csUserAvatar').style.backgroundImage = "url('" + (me ? me.avatarUrl : '') + "')";
+    document.getElementById('csCharAvatar').style.backgroundImage = "url('" + (char ? char.avatarUrl : '') + "')";
+
+    // 渲染头像间的互动标识：显示当前佩戴的标识，若无则显示默认火花
+    const badgeContainer = document.getElementById('csInteractionBadge');
+    const wornHtml = getWornBadgeHtml(currentChatRoomCharId);
+    
+    if (wornHtml) {
+        badgeContainer.innerHTML = wornHtml.replace('width:16px; height:16px;', 'width:28px; height:28px;');
+    } else {
+        const stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}')[currentChatRoomCharId] || { streak: 0 };
+        const isFireActive = stats.streak >= 3;
+        const fireClass = isFireActive ? (stats.streak >= 30 ? 'badge-fire big' : 'badge-fire') : 'badge-fire dimmed';
+        const firePath = stats.streak >= 30 ? SVG_PATHS.BIG_FIRE : SVG_PATHS.FIRE;
+        badgeContainer.innerHTML = `<div class="badge-icon ${fireClass}" style="width:28px;height:28px;"><svg viewBox="0 0 24 24"><path d="${firePath}"/></svg></div>`;
+    }
+
+    document.getElementById('csCharNameLabel').innerText = char ? (char.netName || char.name) : '未知角色';
+    document.getElementById('csUserNameLabel').innerText = me ? me.netName : '我';
+
+    document.getElementById('csContextLimit').value = ChatDB.getItem(`chat_context_limit_${currentChatRoomCharId}`) || '';
+    document.getElementById('csMinReply').value = ChatDB.getItem(`chat_min_reply_${currentChatRoomCharId}`) || '';
+    document.getElementById('csMaxReply').value = ChatDB.getItem(`chat_max_reply_${currentChatRoomCharId}`) || '';
+    document.getElementById('csTimeAwareToggle').checked = ChatDB.getItem(`chat_time_aware_${currentChatRoomCharId}`) === 'true';
+
+    tempSelectedEmojiGroups = JSON.parse(ChatDB.getItem(`chat_char_emoji_groups_${currentChatRoomCharId}`) || '[]');
+    updateEmojiSelectBtnText();
+}
+
+// --- 互动详情页逻辑 ---
+function openInteractionDetailPanel() {
+    renderInteractionDetail();
+    document.getElementById('interactionDetailPanel').style.display = 'flex';
+}
+
+function closeInteractionDetailPanel() {
+    document.getElementById('interactionDetailPanel').style.display = 'none';
+}
+
+function renderInteractionDetail() {
+    const listEl = document.getElementById('interactionDetailList');
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}')[currentChatRoomCharId] || { streak: 0, count: 0, littleLuck: false, wornBadge: null };
+    
+    listEl.innerHTML = '';
+
+    const badgeConfigs = [
+        { type: 'luck', name: '小幸运', desc: '成为新朋友当天互发消息获得', icon: 'badge-luck', path: SVG_PATHS.LUCK, condition: stats.littleLuck, val: '已点亮' },
+        { type: 'fire', name: '畅聊火花', desc: '连续互动3天获得', icon: 'badge-fire', path: (stats.streak || 0) >= 30 ? SVG_PATHS.BIG_FIRE : SVG_PATHS.FIRE, condition: (stats.streak || 0) >= 3, val: `${stats.streak || 0}天` },
+        { type: 'boat', name: '友谊之船', desc: '连续互动7天获得', icon: 'badge-boat', path: (stats.streak || 0) >= 30 ? SVG_PATHS.SHIP : SVG_PATHS.BOAT, condition: (stats.streak || 0) >= 7, val: (stats.streak || 0) >= 30 ? '已升级巨轮' : '已点亮' },
+        { type: 'splash', name: '闲聊水花', desc: '累计互动消息超过100条点亮', icon: 'badge-splash', path: SVG_PATHS.SPLASH, condition: (stats.count || 0) >= 100, val: `${stats.count || 0}条` }
+    ];
+
+    badgeConfigs.forEach(config => {
+        const isWorn = stats.wornBadge === config.type;
+        const card = document.createElement('div');
+        card.className = `id-badge-card ${config.condition ? '' : 'locked'} ${isWorn ? 'worn' : ''}`;
+        
+        // 核心修复：无论是否达成条件都允许点击，未达成时在弹窗内提示
+        card.onclick = () => openBadgeActionModal(config);
+        
+        card.innerHTML = `
+            <div class="badge-icon ${config.icon}">
+                <svg viewBox="0 0 24 24"><path d="${config.path}"/></svg>
+            </div>
+            <div class="id-badge-info">
+                <div class="id-badge-name">${config.name} ${isWorn ? '<span style="font-size:10px; background:#111; color:#fff; padding:2px 6px; border-radius:4px; margin-left:5px;">佩戴中</span>' : ''}</div>
+                <div class="id-badge-desc">${config.desc} ${config.condition ? `(${config.val})` : ''}</div>
+                <div class="id-badge-status">${config.condition ? '点击查看详情' : '尚未解锁'}</div>
+            </div>
+        `;
+        listEl.appendChild(card);
+    });
+}
+
+// --- 佩戴操作弹窗逻辑 ---
+function openBadgeActionModal(config) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}')[currentChatRoomCharId] || { streak: 0, count: 0, littleLuck: false, wornBadge: null };
+    const isWorn = stats.wornBadge === config.type;
+
+    document.getElementById('badgeActionIcon').innerHTML = `<svg viewBox="0 0 24 24"><path d="${config.path}"/></svg>`;
+    document.getElementById('badgeActionIcon').className = `badge-action-big-icon ${config.icon}`;
+    document.getElementById('badgeActionTitle').innerText = config.name;
+    
+    // 核心修复：根据标识类型显示真实天数/条数
+    let detailText = "";
+    if (config.type === 'luck') {
+        detailText = "成为新朋友当天互发消息获得";
+    } else if (config.type === 'fire') {
+        detailText = `与好友互发消息连续超过 ${stats.streak || 0} 天`;
+    } else if (config.type === 'boat') {
+        detailText = `与好友互发消息连续超过 ${stats.streak || 0} 天`;
+    } else if (config.type === 'splash') {
+        detailText = `与好友累计互发消息超过 ${stats.count || 0} 条`;
+    }
+    document.getElementById('badgeActionDesc').innerText = detailText;
+
+    const btn = document.getElementById('badgeActionBtn');
+    const statusTag = document.getElementById('badgeActionStatusTag');
+    
+    if (config.condition) {
+        btn.style.display = 'flex';
+        btn.innerText = isWorn ? '取消佩戴' : '佩戴';
+        btn.style.background = isWorn ? '#f4f4f4' : '#0095ff';
+        btn.style.color = isWorn ? '#666' : '#fff';
+        btn.onclick = () => toggleWearBadge(config.type);
+        statusTag.innerText = '已获得';
+        statusTag.style.background = '#f0f4ff';
+        statusTag.style.color = '#0095ff';
+    } else {
+        btn.style.display = 'none'; 
+        statusTag.innerText = '尚未获得';
+        statusTag.style.background = '#f5f5f5';
+        statusTag.style.color = '#aaa';
+    }
+
+    document.getElementById('badgeActionModalOverlay').classList.add('show');
+}
+
+function closeBadgeActionModal() {
+    document.getElementById('badgeActionModalOverlay').classList.remove('show');
+}
+
+function toggleWearBadge(badgeType) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let allStats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    let stats = allStats[currentChatRoomCharId];
+
+    if (stats.wornBadge === badgeType) {
+        stats.wornBadge = null; 
+    } else {
+        stats.wornBadge = badgeType; 
+    }
+
+    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(allStats));
+    closeBadgeActionModal();
+    renderInteractionDetail();
+    
+    if (currentChatRoomCharId) {
+        openChatRoom(currentChatRoomCharId); 
+        renderChatList(); 
+    }
+}
+
+// 3. 渲染会话列表
 function renderChatList() {
     const listEl = document.getElementById('chatSessionList');
     if (!listEl) return;
@@ -899,39 +1148,155 @@ function renderChatList() {
 
     let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
     let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
 
     if (sessions.length === 0) {
         listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">暂无聊天记录</div>';
         return;
     }
 
-    // 获取备注列表
-    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+    // 排序逻辑：置顶优先，然后按最后消息时间
+    sessions.sort((a, b) => {
+        const statA = stats[a] || {};
+        const statB = stats[b] || {};
+        if (statA.pinned !== statB.pinned) return statB.pinned ? 1 : -1;
+        return 0; 
+    });
 
     sessions.forEach(charId => {
         const char = allChars.find(c => c.id === charId);
         if (!char) return;
 
-        // 优先级：备注 > 网名 > 角色名
+        const charStat = stats[charId] || {};
         const displayName = remarks[charId] || char.netName || char.name;
+        const wornBadgeHtml = getWornBadgeHtml(charId);
 
-        const card = document.createElement('div');
-        card.className = 'wechat-list-item';
-        card.style.cursor = 'pointer';
-        card.onclick = () => openChatRoom(char.id);
-        card.innerHTML = `
-            <div class="wechat-avatar" style="background-image: url('${char.avatarUrl || ''}');"></div>
+        let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
+        let lastMsgText = '点击进入聊天...';
+        let lastMsgTime = '';
+        
+        if (history.length > 0) {
+            const lastMsg = history[history.length - 1];
+            if (lastMsg.type === 'image') lastMsgText = '[图片]';
+            else if (lastMsg.type === 'voice') lastMsgText = '[语音]';
+            else if (lastMsg.type === 'forward_record') lastMsgText = '[聊天记录]';
+            else if (lastMsg.content.includes('<img')) lastMsgText = '[表情包]';
+            else lastMsgText = lastMsg.content.replace(/<[^>]+>/g, '');
+            
+            const date = new Date(lastMsg.timestamp);
+            const now = new Date();
+            lastMsgTime = date.toDateString() === now.toDateString() 
+                ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+                : `${date.getMonth() + 1}/${date.getDate()}`;
+        }
+
+        const item = document.createElement('div');
+        item.className = `wechat-list-item ${charStat.pinned ? 'is-pinned' : ''}`;
+        
+        // 绑定长按事件
+        item.ontouchstart = (e) => handleSessionPressStart(e, charId);
+        item.ontouchend = handleSessionPressEnd;
+        item.onmousedown = (e) => handleSessionPressStart(e, charId);
+        item.onmouseup = handleSessionPressEnd;
+        item.onclick = () => openChatRoom(charId);
+
+        item.innerHTML = `
+            <div class="wechat-avatar" style="background-image: url('${char.avatarUrl || ''}')"></div>
             <div class="wechat-info">
-                <div class="wechat-name-time">
+                <div class="wechat-name-row">
+                    ${charStat.pinned ? '<span class="top-tag">Top</span>' : ''}
                     <span class="wechat-name">${displayName}</span>
-                    <span class="wechat-time">刚刚</span>
+                    ${charStat.special ? '<svg class="special-concern-star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' : ''}
+                    ${wornBadgeHtml}
                 </div>
-                <div class="wechat-msg">点击进入聊天...</div>
+                <div class="wechat-msg">${lastMsgText}</div>
+            </div>
+            <div class="wechat-right-col">
+                <div class="wechat-time">${lastMsgTime}</div>
             </div>
         `;
-        listEl.appendChild(card);
+        listEl.appendChild(item);
     });
 }
+
+
+// 4. 长按菜单逻辑
+function handleSessionPressStart(e, charId) {
+    sessionPressTimer = setTimeout(() => {
+        currentActionSessionId = charId;
+        showSessionMenu();
+    }, 600);
+}
+
+function handleSessionPressEnd() {
+    clearTimeout(sessionPressTimer);
+}
+
+function showSessionMenu() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}')[currentActionSessionId] || {};
+    
+    document.getElementById('menuPinBtn').querySelector('span').innerText = stats.pinned ? '取消置顶' : '置顶会话';
+    document.getElementById('menuSpecialBtn').querySelector('span').innerText = stats.special ? '取消特别关心' : '特别关心';
+    
+    document.getElementById('sessionMenuOverlay').classList.add('show');
+}
+
+function closeSessionMenu() {
+    document.getElementById('sessionMenuOverlay').classList.remove('show');
+}
+
+function actionTogglePin() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    if (!stats[currentActionSessionId]) stats[currentActionSessionId] = {};
+    stats[currentActionSessionId].pinned = !stats[currentActionSessionId].pinned;
+    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+    renderChatList();
+    closeSessionMenu();
+}
+
+function actionToggleSpecial() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    if (!stats[currentActionSessionId]) stats[currentActionSessionId] = {};
+    stats[currentActionSessionId].special = !stats[currentActionSessionId].special;
+    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+    renderChatList();
+    closeSessionMenu();
+}
+
+function actionDeleteSession() {
+    if (confirm('确定删除该会话吗？聊天记录将保留。')) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
+        sessions = sessions.filter(id => id !== currentActionSessionId);
+        ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
+        renderChatList();
+        closeSessionMenu();
+    }
+}
+
+function actionMarkRead() {
+    closeSessionMenu();
+}
+
+// 5. 劫持发送消息，更新互动数据
+const _originalSendChatMessage_interaction = sendChatMessage;
+sendChatMessage = function() {
+    const charId = currentChatRoomCharId;
+    _originalSendChatMessage_interaction();
+    updateInteractionStats(charId, true);
+};
+
+// 劫持 AI 回复，更新互动数据
+const _originalGenerateApiReply_interaction = generateApiReply;
+generateApiReply = async function() {
+    const charId = currentChatRoomCharId;
+    await _originalGenerateApiReply_interaction();
+    updateInteractionStats(charId, false);
+};
 
 
 // --- 通讯录子 Tab 切换逻辑 ---
@@ -1890,11 +2255,22 @@ function addCharToContacts(charId) {
 
     contacts.push(charId);
     ChatDB.setItem(`contacts_${currentLoginId}`, JSON.stringify(contacts));
+
+    // 初始化互动统计，记录添加日期用于“小幸运”判定
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    if (!stats[charId]) {
+        stats[charId] = { 
+            streak: 0, lastDate: '', count: 0, pinned: false, special: false, 
+            userLastMsg: false, charLastMsg: false, 
+            addedDate: new Date().toISOString().split('T')[0], 
+            littleLuck: false 
+        };
+        ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+    }
     
     alert('添加成功！');
     closeSearchAddPanel();
     
-    // 如果当前在通讯录 Tab，刷新通讯录
     if (document.getElementById('tab-contacts').style.display === 'flex') {
         if (typeof renderContactList === 'function') renderContactList();
     }
@@ -1971,6 +2347,12 @@ function renderChatHistory(charId) {
             historyEl.appendChild(timeEl);
         }
 
+        // 创建一个外层容器，让转文字框可以放在整行的正下方
+        const containerEl = document.createElement('div');
+        containerEl.style.display = 'flex';
+        containerEl.style.flexDirection = 'column';
+        containerEl.style.width = '100%';
+
         const rowEl = document.createElement('div');
         rowEl.className = `cr-msg-row ${msg.role === 'user' ? 'me' : 'other'} ${isFollowUp ? 'continuous' : ''}`;
         
@@ -1989,6 +2371,9 @@ function renderChatHistory(charId) {
         // 判断消息类型 (兼容真实图片和文字描述图片)
         const isImageMsg = msg.content.includes('chat-img-120') || msg.content.includes('chat-desc-img-120') || (msg.content.trim().startsWith('<img') && msg.content.trim().endsWith('>'));
         const isForwardRecord = msg.type === 'forward_record';
+        const isVoiceMsg = msg.type === 'voice';
+        const isTransferMsg = msg.type === 'transfer'; // 新增：判断是否为转账消息
+        const isFamilyCardMsg = msg.type === 'family_card'; // 新增：判断是否为亲属卡消息
 
         // 引用内容渲染
         let quoteHtml = '';
@@ -2001,6 +2386,12 @@ function renderChatHistory(charId) {
 
         // 气泡内容处理
         let bubbleInnerHtml = msg.content;
+        
+        // 兼容旧数据：移除旧的 emoji 图标
+        if (isImageMsg && bubbleInnerHtml.includes('<div class="img-icon">🖼️</div>')) {
+            bubbleInnerHtml = bubbleInnerHtml.replace(/<div class="img-icon">🖼️<\/div>/g, '');
+        }
+
         if (isForwardRecord) {
             bubbleInnerHtml = `
                 <div class="cr-forward-card" onclick="event.stopPropagation(); openForwardDetail(${index})">
@@ -2011,20 +2402,90 @@ function renderChatHistory(charId) {
                     <div class="cr-forward-footer">聊天记录</div>
                 </div>
             `;
+        } else if (isVoiceMsg) {
+            // 语音气泡：显示动态波纹和时长，点击触发转文字
+            const voiceLength = Math.max(1, Math.min(60, Math.floor(msg.content.length / 2))); // 假时长
+            const voiceWidth = 60 + voiceLength * 2; // 根据时长调整宽度
+            bubbleInnerHtml = `
+                <div class="cr-voice-bubble" style="width: ${voiceWidth}px;" onclick="event.stopPropagation(); toggleVoiceText(${index})">
+                    <div class="voice-waves ${msg.role === 'user' ? 'me' : 'other'}">
+                        <span class="wave"></span>
+                        <span class="wave"></span>
+                        <span class="wave"></span>
+                        <span class="wave"></span>
+                    </div>
+                    <span class="voice-duration">${voiceLength}"</span>
+                </div>
+            `;
+        } else if (isTransferMsg) {
+            // 转账气泡渲染 (支持收款、退还状态)
+            const isReceived = msg.status === 'received';
+            const isRejected = msg.status === 'rejected' || msg.status === 'refunded';
+            
+            let iconHtml = `¥`;
+            let descText = msg.note || (msg.role === 'user' ? '转账给对方' : '转账给你');
+            let cardClass = '';
+
+            if (isReceived) {
+                iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                descText = '已收款';
+                cardClass = 'received';
+            } else if (isRejected) {
+                iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path></svg>`;
+                descText = '已退还';
+                cardClass = 'received'; // 退还也使用浅橙色样式
+            }
+
+            bubbleInnerHtml = `
+                <div class="transfer-card ${cardClass}" onclick="event.stopPropagation(); handleTransferClick(${index})">
+                    <div class="transfer-card-top">
+                        <div class="transfer-icon">${iconHtml}</div>
+                        <div class="transfer-info">
+                            <div class="transfer-amount">¥ ${msg.amount}</div>
+                            <div class="transfer-desc">${descText}</div>
+                        </div>
+                    </div>
+                    <div class="transfer-card-bottom">微信转账</div>
+                </div>
+            `;
+        } else if (isFamilyCardMsg) {
+            // 亲属卡气泡渲染 (黑金高级版)
+            const isGift = msg.subType === 'gift';
+            const isReceived = msg.status === 'received';
+            
+            let titleText = isGift ? (msg.role === 'user' ? '送你一张亲属卡' : '送你一张亲属卡') : '向你索要亲属卡';
+            let statusText = isReceived ? '你已领取' : (msg.role === 'user' ? '等待对方领取' : '点击查看详情');
+            if (!isGift && isReceived) statusText = '已开通';
+
+            bubbleInnerHtml = `
+                <div class="bubble-family-premium" onclick="event.stopPropagation(); handleFamilyCardClick(${index})">
+                    <div class="bfp-top">
+                        <div class="bfp-icon-wrap">
+                            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        </div>
+                        <div class="bfp-info">
+                            <div class="bfp-title">${titleText}</div>
+                            <div class="bfp-status">${statusText}</div>
+                        </div>
+                    </div>
+                    <div class="bfp-bottom">亲属卡</div>
+                </div>
+            `;
         }
 
-        // 气泡长按事件绑定
+        // 气泡长按事件绑定 (移除了内部的 voice-text-preview)
         const bubbleHtml = `
             <div class="cr-msg-content-wrapper">
                 ${quoteHtml}
-                <div class="cr-bubble ${msg.role === 'user' ? 'cr-bubble-right' : 'cr-bubble-left'} ${isContinuous ? 'no-tail' : ''} ${isImageMsg ? 'cr-bubble-image' : ''} ${isForwardRecord ? 'cr-bubble-forward' : ''}" 
+                <div class="cr-bubble ${msg.role === 'user' ? 'cr-bubble-right' : 'cr-bubble-left'} ${isContinuous ? 'no-tail' : ''} ${isImageMsg ? 'cr-bubble-image' : ''} ${isForwardRecord ? 'cr-bubble-forward' : ''} ${isVoiceMsg ? 'cr-bubble-voice-wrap' : ''} ${isTransferMsg ? 'cr-bubble-transfer' : ''} ${isFamilyCardMsg ? 'cr-bubble-family' : ''}" 
                      oncontextmenu="return false;" 
                      ontouchstart="handleBubbleTouchStart(event, ${index})" 
                      ontouchend="handleBubbleTouchEnd()" 
                      ontouchmove="handleBubbleTouchEnd()"
                      onmousedown="handleBubbleTouchStart(event, ${index})"
                      onmouseup="handleBubbleTouchEnd()"
-                     onmouseleave="handleBubbleTouchEnd()">
+                     onmouseleave="handleBubbleTouchEnd()"
+                     ${isImageMsg ? `onclick="event.stopPropagation(); openImageDetail(${index})"` : ''}>
                     ${bubbleInnerHtml}
                 </div>
             </div>
@@ -2036,7 +2497,41 @@ function renderChatHistory(charId) {
             rowEl.innerHTML = checkboxHtml + avatarHtml + bubbleHtml;
         }
 
-        historyEl.appendChild(rowEl);
+        containerEl.appendChild(rowEl);
+
+        // 新增：气泡下方的小时间戳 (iOS 风格)
+        const smallTimeEl = document.createElement('div');
+        smallTimeEl.className = 'cr-small-time'; // 添加类名，方便自定义 CSS 隐藏
+        smallTimeEl.style.fontSize = '10px';
+        smallTimeEl.style.color = '#bbb';
+        smallTimeEl.style.marginTop = '2px';
+        smallTimeEl.style.marginBottom = '2px';
+        smallTimeEl.style.fontWeight = '600';
+        if (msg.role === 'user') {
+            smallTimeEl.style.textAlign = 'right';
+            smallTimeEl.style.paddingRight = '52px';
+        } else {
+            smallTimeEl.style.textAlign = 'left';
+            smallTimeEl.style.paddingLeft = '52px';
+        }
+        smallTimeEl.innerText = formatChatTime(msg.timestamp);
+        containerEl.appendChild(smallTimeEl);
+
+        // 将语音转文字的框放在整行的正下方，完美避开头像
+        if (isVoiceMsg) {
+            const voicePreview = document.createElement('div');
+            voicePreview.id = `voice-text-${index}`;
+            voicePreview.className = 'cr-voice-text-preview';
+            voicePreview.style.display = 'none';
+            voicePreview.style.alignSelf = msg.role === 'user' ? 'flex-end' : 'flex-start';
+            voicePreview.style.margin = msg.role === 'user' ? '4px 52px 0 0' : '4px 0 0 52px';
+            voicePreview.style.backgroundColor = msg.role === 'user' ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.05)';
+            voicePreview.style.color = msg.role === 'user' ? '#333' : '#555';
+            voicePreview.innerText = msg.content;
+            containerEl.appendChild(voicePreview);
+        }
+
+        historyEl.appendChild(containerEl);
     });
 
     // 自动滚动到底部
@@ -2099,7 +2594,9 @@ function openChatRoom(charId) {
         // 优先级：备注 > 网名 > 角色名
         const displayName = remarks[charId] || char.netName || char.name || '未命名';
         
-        document.getElementById('chatRoomTitle').innerText = displayName;
+        // 修改：顶栏名称后面显示佩戴的互动标识
+        const wornBadgeHtml = getWornBadgeHtml(charId);
+        document.getElementById('chatRoomTitle').innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${displayName}${wornBadgeHtml}</span>`;
         
         // 渲染顶栏双头像
         document.getElementById('crHeaderAvatarMe').style.backgroundImage = `url('${me ? me.avatarUrl : ''}')`;
@@ -2107,6 +2604,8 @@ function openChatRoom(charId) {
         
         document.getElementById('chatRoomInput').value = '';
         closeChatPanels(); // 打开时确保面板关闭
+        
+        updateChatRoomAppearance(); // 每次打开聊天室时强制刷新外观，防止刷新后背景丢失
         
         renderChatHistory(charId);
         
@@ -2532,8 +3031,51 @@ function handleMoreAction(action) {
     } else if (action === 'camera') {
         // 直接触发隐藏的拍照 input，唤起摄像头
         document.getElementById('chatCameraInput').click();
+    } else if (action === 'voice') {
+        document.getElementById('voiceTextInput').value = '';
+        document.getElementById('sendVoiceModalOverlay').classList.add('show');
+    } else if (action === 'transfer') {
+        openTransferPanel(); // 新增：打开转账面板
     } else {
         alert(`功能 [${action}] 正在开发中...`);
+    }
+}
+
+function closeSendVoiceModal() {
+    document.getElementById('sendVoiceModalOverlay').classList.remove('show');
+}
+
+function confirmSendVoice() {
+    const text = document.getElementById('voiceTextInput').value.trim();
+    if (text) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        if (!currentLoginId || !currentChatRoomCharId) return;
+        let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+        
+        // 存入语音类型的消息
+        history.push({ 
+            role: 'user', 
+            type: 'voice', 
+            content: text, 
+            timestamp: Date.now() 
+        });
+        
+        ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+        renderChatHistory(currentChatRoomCharId);
+        closeSendVoiceModal();
+    } else {
+        alert('请输入语音内容！');
+    }
+}
+
+function toggleVoiceText(index) {
+    const textEl = document.getElementById(`voice-text-${index}`);
+    if (textEl) {
+        if (textEl.style.display === 'none') {
+            textEl.style.display = 'block';
+        } else {
+            textEl.style.display = 'none';
+        }
     }
 }
 
@@ -2546,14 +3088,11 @@ function closeChatPanels() {
     document.getElementById('chatRoomHistory').style.transform = 'translateY(0)';
 }
 
-// 新增：监听输入框获取焦点事件，延迟滚动到底部，避开键盘弹出的动画期，解决卡顿
-document.getElementById('chatRoomInput').addEventListener('focus', () => {
-    closeChatPanels();
-    setTimeout(() => {
-        const historyEl = document.getElementById('chatRoomHistory');
-        historyEl.scrollTop = historyEl.scrollHeight;
-    }, 300); // 延迟 300ms 等待键盘完全弹出
+// ✅ 修复：使用可选链绑定事件，避免重复声明 const 导致报错
+document.getElementById('chatRoomInput')?.addEventListener('focus', () => {
+    closeChatPanels(); // 聚焦时只负责关闭表情/更多面板
 });
+
 // Roll重回逻辑：以用户最新消息为标准重新生成
 function executeRollRedo() {
     const currentLoginId = ChatDB.getItem('current_login_account');
@@ -2586,6 +3125,35 @@ function executeRollRedo() {
 // --- 发送图片相关逻辑 ---
 function closeSendImageModal() {
     document.getElementById('sendImageModalOverlay').classList.remove('show');
+}
+
+function openImageDetail(index) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    const msg = history[index];
+    if (!msg) return;
+
+    const contentEl = document.getElementById('imageDetailContent');
+    contentEl.innerHTML = '';
+
+    if (msg.content.includes('chat-img-120') || (msg.content.trim().startsWith('<img') && msg.content.trim().endsWith('>'))) {
+        const match = msg.content.match(/src="([^"]+)"/);
+        if (match && match[1]) {
+            contentEl.innerHTML = `<img src="${match[1]}">`;
+        }
+    } else if (msg.content.includes('chat-desc-img-120')) {
+        let cleanContent = msg.content.replace(/<div class="img-icon">🖼️<\/div>/g, '');
+        const match = cleanContent.match(/<div class="img-text">([\s\S]*?)<\/div>/);
+        if (match && match[1]) {
+            contentEl.innerHTML = `<div class="image-detail-text-card">${match[1]}</div>`;
+        }
+    }
+
+    document.getElementById('imageDetailOverlay').classList.add('show');
+}
+
+function closeImageDetail() {
+    document.getElementById('imageDetailOverlay').classList.remove('show');
 }
 
 function triggerLocalImageUpload() {
@@ -2624,7 +3192,7 @@ function triggerDescImageUpload() {
     closeSendImageModal();
     const desc = prompt('请输入图片画面的文字描述：');
     if (desc && desc.trim() !== '') {
-        const content = `<div class="chat-desc-img-120"><div class="img-icon">🖼️</div><div class="img-text">${desc.trim()}</div></div>`;
+        const content = `<div class="chat-desc-img-120"><div class="img-text">${desc.trim()}</div></div>`;
         saveAndRenderUserMessage(content);
     }
 }
@@ -2637,15 +3205,6 @@ function saveAndRenderUserMessage(content) {
     ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
     renderChatHistory(currentChatRoomCharId);
 }
-
-// 监听输入框获取焦点事件，延迟滚动到底部，避开键盘弹出的动画期，解决卡顿
-document.getElementById('chatRoomInput').addEventListener('focus', () => {
-    closeChatPanels();
-    setTimeout(() => {
-        const historyEl = document.getElementById('chatRoomHistory');
-        historyEl.scrollTop = historyEl.scrollHeight;
-    }, 300);
-});
 
 // 渲染聊天室内的表情包面板 (带分组)
 function renderChatRoomEmojis() {
@@ -2742,7 +3301,20 @@ function openChatSettingsPanel() {
     document.getElementById('csUserAvatar').style.backgroundImage = "url('" + (me ? me.avatarUrl : '') + "')";
     document.getElementById('csCharAvatar').style.backgroundImage = "url('" + (char ? char.avatarUrl : '') + "')";
 
-    // 新增：填充名称显示
+    // 渲染头像间的互动标识：显示当前佩戴的标识，若无则显示默认火花
+    const badgeContainer = document.getElementById('csInteractionBadge');
+    const wornHtml = getWornBadgeHtml(currentChatRoomCharId);
+    
+    if (wornHtml) {
+        badgeContainer.innerHTML = wornHtml.replace('width:16px; height:16px;', 'width:28px; height:28px;');
+    } else {
+        const stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}')[currentChatRoomCharId] || { streak: 0 };
+        const isFireActive = stats.streak >= 3;
+        const fireClass = isFireActive ? (stats.streak >= 30 ? 'badge-fire big' : 'badge-fire') : 'badge-fire dimmed';
+        const firePath = stats.streak >= 30 ? SVG_PATHS.BIG_FIRE : SVG_PATHS.FIRE;
+        badgeContainer.innerHTML = `<div class="badge-icon ${fireClass}" style="width:28px;height:28px;"><svg viewBox="0 0 24 24"><path d="${firePath}"/></svg></div>`;
+    }
+
     document.getElementById('csCharNameLabel').innerText = char ? (char.netName || char.name) : '未知角色';
     document.getElementById('csUserNameLabel').innerText = me ? me.netName : '我';
 
@@ -2751,7 +3323,6 @@ function openChatSettingsPanel() {
     document.getElementById('csMaxReply').value = ChatDB.getItem(`chat_max_reply_${currentChatRoomCharId}`) || '';
     document.getElementById('csTimeAwareToggle').checked = ChatDB.getItem(`chat_time_aware_${currentChatRoomCharId}`) === 'true';
 
-    // 更新表情包按钮文字
     tempSelectedEmojiGroups = JSON.parse(ChatDB.getItem(`chat_char_emoji_groups_${currentChatRoomCharId}`) || '[]');
     updateEmojiSelectBtnText();
 }
@@ -2900,7 +3471,8 @@ function saveChatCssPreset() {
 }
 
 function renderChatCssPresets() {
-    const list = document.getElementById('chatCssPresetList');
+    const list = document.getElementById('modalCssPresetList');
+    if (!list) return;
     list.innerHTML = '';
     let presets = JSON.parse(ChatDB.getItem('chat_css_presets') || '[]');
     
@@ -2920,12 +3492,22 @@ function renderChatCssPresets() {
     });
 }
 
+function openCssPresetModal() {
+    renderChatCssPresets();
+    document.getElementById('cssPresetModalOverlay').classList.add('show');
+}
+
+function closeCssPresetModal() {
+    document.getElementById('cssPresetModalOverlay').classList.remove('show');
+}
+
 function loadChatCssPreset(id) {
     let presets = JSON.parse(ChatDB.getItem('chat_css_presets') || '[]');
     const preset = presets.find(p => p.id === id);
     if (preset) {
         document.getElementById('chatCustomCssInput').value = preset.css;
         applyChatCustomCss();
+        closeCssPresetModal(); // 加载后自动关闭弹窗
     }
 }
 
@@ -2934,7 +3516,7 @@ function deleteChatCssPreset(id) {
         let presets = JSON.parse(ChatDB.getItem('chat_css_presets') || '[]');
         presets = presets.filter(p => p.id !== id);
         ChatDB.setItem('chat_css_presets', JSON.stringify(presets));
-        renderChatCssPresets();
+        renderChatCssPresets(); // 删除后刷新弹窗内的列表
     }
 }
 
@@ -2955,21 +3537,37 @@ function updateChatRoomAppearance() {
         }
     }
 
-    // 2. 更新 CSS
-    const css = ChatDB.getItem('chat_current_css') || '';
+    // 2. 更新 CSS (利用 CSS Nesting 防止全局污染)
+    const rawCss = ChatDB.getItem('chat_current_css') || '';
     let styleTag = document.getElementById('customChatCssTag');
     if (!styleTag) {
         styleTag = document.createElement('style');
         styleTag.id = 'customChatCssTag';
         document.head.appendChild(styleTag);
     }
-    styleTag.innerHTML = css;
+    
+    // 将用户输入的 CSS 强制包裹在聊天室面板和预览框的作用域内
+    // 这样用户写的任何样式，都绝对不会影响到其他页面
+    if (rawCss.trim() !== '') {
+        styleTag.innerHTML = `
+            #chatRoomPanel, .cs-css-preview-box {
+                ${rawCss}
+            }
+        `;
+    } else {
+        styleTag.innerHTML = '';
+    }
 }
 
 // 页面加载时初始化外观
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        updateChatRoomAppearance();
+    });
+} else {
+    // 如果脚本执行时页面已经加载完毕，直接调用
     updateChatRoomAppearance();
-});
+}
 // ==========================================
 // 终极整合版 API 联机回复逻辑 (JSON协议 + 正则过滤 + 深度设定)
 // ==========================================
@@ -3071,6 +3669,8 @@ async function generateApiReply() {
     systemPrompt += `你必须且只能输出一个合法的 JSON 数组，数组中的每个对象代表一个独立的聊天气泡。\n`;
     systemPrompt += `文本消息格式: {"type":"text", "quote":"引用的对方的话(可选，仅在需要针对性回复时使用)", "content":"完整的一句话。"}\n`;
     systemPrompt += `图片消息格式: {"type":"image", "content":"图片画面的详细文字描述"}\n`; // 新增 AI 发送图片指令
+    systemPrompt += `转账消息格式: {"type":"transfer", "amount":"转账金额(纯数字)", "note":"转账说明"}\n`; // 新增 AI 发送转账指令
+    systemPrompt += `处理收款格式: {"type":"transfer_action", "action":"received" 或 "rejected", "content":"收款/拒收时的回复(必须符合人设)"}\n`; // 新增 AI 处理收款指令
     if (charEmojis.length > 0) {
         systemPrompt += `表情包格式: {"type":"sticker", "content":"表情包描述名称"}\n`;
         systemPrompt += `可用的表情包描述有：${charEmojis.map(e => e.desc).join(', ')}。请自然地穿插在对话中，不要滥用。\n`;
@@ -3093,6 +3693,17 @@ async function generateApiReply() {
             content = `*${userName} 转发了一段聊天记录*:\n${recordText}`;
         } else if (content.includes('<img')) {
             content = `*${userName} 发送了一个表情包*`;
+        } else if (msg.type === 'voice') {
+            content = `*${userName} 发送了一条语音*:\n${msg.content}`;
+        } else if (msg.type === 'transfer') {
+            // 告诉 AI 当前转账的状态
+            if (msg.role === 'user') {
+                if (msg.status === 'pending') content = `*${userName} 向你转账 ¥${msg.amount}，备注：${msg.note} (等待你收款/退还)*`;
+                else if (msg.status === 'received') content = `*${userName} 向你转账 ¥${msg.amount} (你已收款)*`;
+                else content = `*${userName} 向你转账 ¥${msg.amount} (你已退还)*`;
+            } else {
+                content = `*你向 ${userName} 转账 ¥${msg.amount}*`;
+            }
         }
         messages.push({ role: msg.role === 'user' ? 'user' : 'assistant', content: content });
     });
@@ -3148,26 +3759,62 @@ async function generateApiReply() {
                 let msgObj = messagesArray[i];
                 let finalContent = "";
 
+                let newMsg = { role: 'char', timestamp: Date.now() };
+
                 if (msgObj.type === 'sticker') {
                     const url = charEmojiMap[msgObj.content];
                     if (url) {
-                        finalContent = `<img src="${url}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block; margin: 5px 0;">`;
+                        newMsg.content = `<img src="${url}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block; margin: 5px 0;">`;
                     } else {
                         continue; // 如果表情包描述匹配不上，跳过这条消息
                     }
                 } else if (msgObj.type === 'image') {
-                    // 新增：处理 AI 发送的文字描述图片 (120x120px)
-                    finalContent = `<div class="chat-desc-img-120"><div class="img-icon">🖼️</div><div class="img-text">${msgObj.content}</div></div>`;
+                    newMsg.content = `<div class="chat-desc-img-120"><div class="img-text">${msgObj.content}</div></div>`;
+                } else if (msgObj.type === 'transfer') {
+                    // AI 发送转账
+                    newMsg.type = 'transfer';
+                    newMsg.amount = msgObj.amount || '0.00';
+                    newMsg.note = msgObj.note || '转账';
+                    newMsg.status = 'pending';
+                    newMsg.content = '[转账]';
+                } else if (msgObj.type === 'transfer_action') {
+                    // AI 处理收款/拒收
+                    let updatedHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+                    // 从后往前找，找到最后一条等待收款的转账
+                    for (let j = updatedHistory.length - 1; j >= 0; j--) {
+                        if (updatedHistory[j].role === 'user' && updatedHistory[j].type === 'transfer' && updatedHistory[j].status === 'pending') {
+                            updatedHistory[j].status = (msgObj.action === 'rejected') ? 'rejected' : 'received';
+                            
+                            // --- 新增：如果 AI 拒收，退钱到我的钱包 ---
+                            if (msgObj.action === 'rejected') {
+                                let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+                                const char = chars.find(c => c.id === currentChatRoomCharId);
+                                const charName = char ? (char.netName || char.name) : '对方';
+                                addWalletRecord(currentLoginId, 'refund', `转账退还 - ${charName}`, updatedHistory[j].amount);
+                            }
+                            // ---------------------------------------
+                            break;
+                        }
+                    }
+                    ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(updatedHistory));
+                    renderChatHistory(currentChatRoomCharId); // 立即刷新界面，让转账气泡变色
+
+                    // 如果 AI 收款时还附带了说话内容，就转为普通文本气泡
+                    if (msgObj.content) {
+                        newMsg.content = msgObj.content;
+                    } else {
+                        continue; // 如果没说话，就跳过，不生成新气泡
+                    }
                 } else {
-                    finalContent = msgObj.content;
-                    if (!finalContent) continue; // 跳过空消息
+                    newMsg.content = msgObj.content;
+                    if (!newMsg.content) continue; // 跳过空消息
                 }
 
-                let finalQuote = msgObj.quote || '';
+                newMsg.quote = msgObj.quote || '';
 
                 // 存入历史记录
                 let updatedHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-                updatedHistory.push({ role: 'char', content: finalContent, quote: finalQuote, timestamp: Date.now() });
+                updatedHistory.push(newMsg);
                 ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(updatedHistory));
                 
                 // 渲染到界面
@@ -3490,3 +4137,833 @@ function openForwardDetail(indexOrData) {
 function closeForwardDetail() {
     document.getElementById('forwardDetailOverlay').classList.remove('show');
 }
+// ==========================================
+// 转账功能逻辑
+// ==========================================
+let currentTransferNote = ''; // 临时保存转账说明
+
+function openTransferPanel() {
+    if (!currentChatRoomCharId) return;
+    
+    // 获取当前聊天对象的信息
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+    if (!char) return;
+
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+    const displayName = remarks[char.id] || char.netName || char.name || '未命名';
+
+    // 填充头像和名字
+    document.getElementById('transferTargetAvatar').style.backgroundImage = `url('${char.avatarUrl || ''}')`;
+    document.getElementById('transferTargetName').innerText = displayName;
+    
+    // 重置输入框和说明
+    document.getElementById('transferAmountInput').value = '';
+    currentTransferNote = '';
+    document.getElementById('transferNoteText').innerText = '添加转账说明';
+
+    document.getElementById('transferPanel').style.display = 'flex';
+}
+
+function closeTransferPanel() {
+    document.getElementById('transferPanel').style.display = 'none';
+}
+
+// --- 转账说明弹窗 ---
+function openTransferNoteModal() {
+    document.getElementById('transferNoteInput').value = currentTransferNote;
+    document.getElementById('transferNoteModalOverlay').classList.add('show');
+    setTimeout(() => document.getElementById('transferNoteInput').focus(), 100);
+}
+
+function closeTransferNoteModal() {
+    document.getElementById('transferNoteModalOverlay').classList.remove('show');
+}
+
+function saveTransferNote() {
+    const note = document.getElementById('transferNoteInput').value.trim();
+    currentTransferNote = note;
+    
+    const noteTextEl = document.getElementById('transferNoteText');
+    if (note) {
+        noteTextEl.innerText = `转账说明：${note}`;
+        noteTextEl.style.color = '#333';
+    } else {
+        noteTextEl.innerText = '添加转账说明';
+        noteTextEl.style.color = '#576b95';
+    }
+    closeTransferNoteModal();
+}
+
+// --- 确认转账 ---
+let pendingTransferAmount = 0;
+
+function confirmTransfer() {
+    const amount = document.getElementById('transferAmountInput').value;
+    if (!amount || parseFloat(amount) <= 0) {
+        return alert('请输入正确的转账金额！');
+    }
+    pendingTransferAmount = parseFloat(amount).toFixed(2);
+    openPaymentPanel(pendingTransferAmount);
+}
+
+// --- 点击转账气泡逻辑 ---
+let currentActionTransferIndex = null;
+
+function handleTransferClick(index) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId || !currentChatRoomCharId) return;
+
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    const msg = history[index];
+
+    if (!msg || msg.type !== 'transfer') return;
+
+    // 如果已经收款或退还，点击无反应
+    if (msg.status === 'received' || msg.status === 'rejected' || msg.status === 'refunded') {
+        return;
+    }
+
+    if (msg.role === 'user') {
+        // 我发出的转账，不能自己收，只能等 AI 处理
+        alert('等待对方收款...');
+        return;
+    }
+
+    // 只有对方发出的转账，才弹出我的操作菜单
+    currentActionTransferIndex = index;
+    const modal = document.getElementById('transferActionModalOverlay');
+    const receiveBtn = document.getElementById('transferBtnReceive');
+    const rejectBtn = document.getElementById('transferBtnReject');
+
+    receiveBtn.innerText = '确认收款';
+    rejectBtn.innerText = '退还';
+    modal.classList.add('show');
+}
+
+function closeTransferActionModal() {
+    document.getElementById('transferActionModalOverlay').classList.remove('show');
+}
+
+function processTransferAction(action) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId || !currentChatRoomCharId || currentActionTransferIndex === null) return;
+
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    const msg = history[currentActionTransferIndex];
+
+    if (msg && msg.type === 'transfer') {
+        msg.status = action; // 'received' 或 'rejected'
+        
+        // --- 新增：处理钱包余额与账单 ---
+        let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+        const char = chars.find(c => c.id === currentChatRoomCharId);
+        const charName = char ? (char.netName || char.name) : '对方';
+
+        if (msg.role === 'user' && action === 'rejected') {
+            // 我发出的转账，对方退还了 -> 钱回到我的钱包
+            addWalletRecord(currentLoginId, 'refund', `转账退还 - ${charName}`, msg.amount);
+        } else if (msg.role === 'char' && action === 'received') {
+            // 对方发出的转账，我确认收款了 -> 钱进入我的钱包
+            addWalletRecord(currentLoginId, 'in', `收到转账 - ${charName}`, msg.amount);
+        }
+        // 注意：我发出的转账对方收款，或者对方发出的转账我退还，都不需要动我的余额
+        // ------------------------------
+
+        ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+        renderChatHistory(currentChatRoomCharId);
+    }
+    closeTransferActionModal();
+}
+// ==========================================
+// 钱包功能核心逻辑
+// ==========================================
+function openWalletPanel() {
+    document.getElementById('walletPanel').style.display = 'flex';
+    renderWallet();
+}
+
+function closeWalletPanel() {
+    document.getElementById('walletPanel').style.display = 'none';
+}
+
+function renderWallet() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    // 1. 渲染主余额
+    let balance = parseFloat(ChatDB.getItem(`wallet_balance_${currentLoginId}`) || '0');
+    document.getElementById('walletBalanceText').innerText = balance.toFixed(2);
+
+    // 2. 渲染卡片列表 (银行卡 + 亲属卡)
+    const slider = document.getElementById('walletCardsSlider');
+    const dotsContainer = document.getElementById('walletSliderDots');
+    
+    // 保留第一张银行卡，移除后面的
+    const bankCard = slider.querySelector('.wallet-bank-card');
+    slider.innerHTML = '';
+    slider.appendChild(bankCard);
+    dotsContainer.innerHTML = '<div class="slider-dot active"></div>';
+
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    chars.forEach(char => {
+        const receivedCard = JSON.parse(ChatDB.getItem(`family_card_received_${currentLoginId}_${char.id}`) || 'null');
+        if (receivedCard) {
+            const charName = char.netName || char.name;
+            const cardEl = document.createElement('div');
+            cardEl.className = 'family-card-gold';
+            cardEl.innerHTML = `
+                <div class="wallet-card-top">
+                    <div class="wallet-card-label">FAMILY CARD</div>
+                    <div class="wallet-card-chip" style="background: linear-gradient(135deg, #d4af37, #aa8a2e);"></div>
+                </div>
+                <div class="wallet-card-balance"><span>¥</span>${receivedCard.limit.toFixed(2)}</div>
+                <div class="wallet-card-bottom">
+                    <div class="wallet-card-number">赠予人：${charName}</div>
+                    <div class="family-card-user">可用额度</div>
+                </div>
+            `;
+            slider.appendChild(cardEl);
+            
+            // 添加指示点
+            const dot = document.createElement('div');
+            dot.className = 'slider-dot';
+            dotsContainer.appendChild(dot);
+        }
+    });
+
+    // 3. 监听滑动更新指示点
+    slider.onscroll = () => {
+        const index = Math.round(slider.scrollLeft / slider.offsetWidth);
+        const dots = dotsContainer.querySelectorAll('.slider-dot');
+        dots.forEach((d, i) => d.classList.toggle('active', i === index));
+    };
+
+    // 4. 渲染账单记录 (保持原样)
+    const listEl = document.getElementById('walletHistoryList');
+    listEl.innerHTML = '';
+    let history = JSON.parse(ChatDB.getItem(`wallet_history_${currentLoginId}`) || '[]');
+    if (history.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; color:#aaa; font-size:12px; padding:20px 0;">暂无账单记录</div>';
+    } else {
+        history.slice().reverse().forEach(record => {
+            const item = document.createElement('div');
+            item.className = 'wallet-history-item';
+            let iconClass = record.type === 'out' ? 'wallet-icon-out' : (record.type === 'in' ? 'wallet-icon-in' : 'wallet-icon-refund');
+            let iconSvg = record.type === 'out' ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>` : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`;
+            const date = new Date(record.timestamp);
+            const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+            item.innerHTML = `
+                <div class="wallet-history-icon ${iconClass}">${iconSvg}</div>
+                <div class="wallet-history-info">
+                    <div class="wallet-history-name">${record.title}</div>
+                    <div class="wallet-history-time">${timeStr}</div>
+                </div>
+                <div class="wallet-history-amount ${record.type === 'out' ? 'wallet-amount-minus' : 'wallet-amount-plus'}">${record.type === 'out' ? '-' : '+'}${parseFloat(record.amount).toFixed(2)}</div>
+            `;
+            listEl.appendChild(item);
+        });
+    }
+}
+
+// 添加账单记录并更新余额的通用函数
+function addWalletRecord(accountId, type, title, amount) {
+    let balance = parseFloat(ChatDB.getItem(`wallet_balance_${accountId}`) || '0');
+    let parsedAmount = parseFloat(amount);
+
+    if (type === 'out') {
+        balance -= parsedAmount;
+    } else {
+        balance += parsedAmount;
+    }
+
+    ChatDB.setItem(`wallet_balance_${accountId}`, balance.toFixed(2));
+
+    let history = JSON.parse(ChatDB.getItem(`wallet_history_${accountId}`) || '[]');
+    history.push({
+        id: Date.now().toString(),
+        type: type, // 'out', 'in', 'refund'
+        title: title,
+        amount: parsedAmount.toFixed(2),
+        timestamp: Date.now()
+    });
+    ChatDB.setItem(`wallet_history_${accountId}`, JSON.stringify(history));
+}
+
+function handleWalletRecharge() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+    const amount = prompt('请输入充值金额：');
+    if (amount && parseFloat(amount) > 0) {
+        addWalletRecord(currentLoginId, 'in', '系统充值', amount);
+        renderWallet();
+        alert('充值成功！');
+    }
+}
+
+function handleWalletWithdraw() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+    let balance = parseFloat(ChatDB.getItem(`wallet_balance_${currentLoginId}`) || '0');
+    const amount = prompt(`当前可提现余额: ¥${balance.toFixed(2)}\n请输入提现金额：`);
+    if (amount && parseFloat(amount) > 0) {
+        if (parseFloat(amount) > balance) return alert('余额不足！');
+        addWalletRecord(currentLoginId, 'out', '余额提现', amount);
+        renderWallet();
+        alert('提现成功！');
+    }
+}
+
+function clearWalletHistory() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+    if (confirm('确定要清空所有账单记录吗？（余额不会清空）')) {
+        ChatDB.setItem(`wallet_history_${currentLoginId}`, '[]');
+        renderWallet();
+    }
+}
+//// ==========================================
+// 支付密码与亲属卡核心逻辑 (严格数据隔离)
+// ==========================================
+let currentPaymentMethod = 'wallet'; // 'wallet' 或 'family_card'
+
+function openPaymentPanel(amount) {
+    document.getElementById('paymentAmountText').innerText = `¥ ${amount}`;
+    document.getElementById('payPasswordInput').value = '';
+    updatePasswordDots(0);
+    
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    // 检查我收到的亲属卡 (对方赠送给我的)
+    const familyCard = JSON.parse(ChatDB.getItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`) || 'null');
+    
+    const methodTextEl = document.getElementById('paymentMethodText');
+    if (familyCard && familyCard.limit >= parseFloat(amount)) {
+        currentPaymentMethod = 'family_card';
+        methodTextEl.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#ff9e00"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> 亲属卡 (剩余 ¥${familyCard.limit.toFixed(2)})`;
+    } else {
+        currentPaymentMethod = 'wallet';
+        methodTextEl.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg> 钱包余额`;
+    }
+
+    document.getElementById('paymentPanelOverlay').classList.add('show');
+    setTimeout(() => document.getElementById('payPasswordInput').focus(), 100);
+}
+
+function closePaymentPanel() {
+    document.getElementById('paymentPanelOverlay').classList.remove('show');
+}
+
+function togglePaymentMethod() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const familyCard = JSON.parse(ChatDB.getItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`) || 'null');
+    const methodTextEl = document.getElementById('paymentMethodText');
+
+    if (currentPaymentMethod === 'wallet') {
+        if (familyCard) {
+            currentPaymentMethod = 'family_card';
+            methodTextEl.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#ff9e00"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> 亲属卡 (剩余 ¥${familyCard.limit.toFixed(2)})`;
+        } else {
+            alert('对方尚未赠送你亲属卡！');
+        }
+    } else {
+        currentPaymentMethod = 'wallet';
+        methodTextEl.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg> 钱包余额`;
+    }
+}
+
+function handlePasswordInput() {
+    const val = document.getElementById('payPasswordInput').value;
+    updatePasswordDots(val.length);
+    
+    if (val.length === 6) {
+        setTimeout(() => {
+            executePayment();
+        }, 200);
+    }
+}
+
+function updatePasswordDots(length) {
+    const boxes = document.querySelectorAll('#pwdDotsContainer .pwd-box');
+    boxes.forEach((box, idx) => {
+        if (idx < length) {
+            box.innerHTML = '<div style="width: 12px; height: 12px; background: #111; border-radius: 50%;"></div>';
+        } else {
+            box.innerHTML = '';
+        }
+    });
+}
+
+function executePayment() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId || !currentChatRoomCharId) return;
+
+    // 1. 获取当前账号信息校验支付密码
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    if (!account) return;
+
+    const inputPass = document.getElementById('payPasswordInput').value;
+
+    if (!account.payPassword) {
+        alert('您尚未设置支付密码，请前往“我-设置-支付密码管理”进行设置。');
+        document.getElementById('payPasswordInput').value = '';
+        updatePasswordDots(0);
+        return;
+    }
+
+    if (inputPass !== account.payPassword) {
+        alert('支付密码错误！');
+        document.getElementById('payPasswordInput').value = '';
+        updatePasswordDots(0);
+        return;
+    }
+
+    // 2. 校验通过，执行原有支付逻辑
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+    const charName = char ? (char.netName || char.name) : '对方';
+    const transferAmount = parseFloat(pendingTransferAmount);
+
+    if (currentPaymentMethod === 'wallet') {
+        let balance = parseFloat(ChatDB.getItem(`wallet_balance_${currentLoginId}`) || '0');
+        if (balance < transferAmount) {
+            document.getElementById('payPasswordInput').value = '';
+            updatePasswordDots(0);
+            return alert('钱包余额不足，请充值！');
+        }
+        addWalletRecord(currentLoginId, 'out', `转账 - ${charName}`, transferAmount);
+    } else if (currentPaymentMethod === 'family_card') {
+        let familyCard = JSON.parse(ChatDB.getItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`) || 'null');
+        if (!familyCard || familyCard.limit < transferAmount) {
+            document.getElementById('payPasswordInput').value = '';
+            updatePasswordDots(0);
+            return alert('亲属卡额度不足！');
+        }
+        familyCard.limit -= transferAmount;
+        ChatDB.setItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(familyCard));
+    }
+
+    // 支付成功，发送转账消息
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    history.push({
+        role: 'user', type: 'transfer', amount: pendingTransferAmount,
+        note: currentTransferNote || '转账给对方', status: 'pending', content: '[转账]', timestamp: Date.now()
+    });
+    ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+    
+    closePaymentPanel();
+    closeTransferPanel();
+    renderChatHistory(currentChatRoomCharId);
+}
+
+// --- 亲属卡发送/索要逻辑 ---
+let currentFcTab = 'gift';
+
+function switchFcTab(tab) {
+    currentFcTab = tab;
+    if (tab === 'gift') {
+        document.getElementById('fcTabGift').style.color = '#111';
+        document.getElementById('fcTabGift').style.borderBottomColor = '#111';
+        document.getElementById('fcTabRequest').style.color = '#888';
+        document.getElementById('fcTabRequest').style.borderBottomColor = 'transparent';
+        document.getElementById('fcGiftContent').style.display = 'flex';
+        document.getElementById('fcRequestContent').style.display = 'none';
+    } else {
+        document.getElementById('fcTabRequest').style.color = '#111';
+        document.getElementById('fcTabRequest').style.borderBottomColor = '#111';
+        document.getElementById('fcTabGift').style.color = '#888';
+        document.getElementById('fcTabGift').style.borderBottomColor = 'transparent';
+        document.getElementById('fcRequestContent').style.display = 'flex';
+        document.getElementById('fcGiftContent').style.display = 'none';
+    }
+}
+
+const _originalHandleMoreAction = handleMoreAction;
+handleMoreAction = function(action) {
+    if (action === 'familycard') {
+        closeChatPanels();
+        switchFcTab('gift');
+        document.getElementById('familyCardLimitInput').value = '';
+        document.getElementById('sendFamilyCardModalOverlay').classList.add('show');
+    } else {
+        _originalHandleMoreAction(action);
+    }
+};
+
+function closeSendFamilyCardModal() {
+    document.getElementById('sendFamilyCardModalOverlay').classList.remove('show');
+}
+
+function confirmSendFamilyCard() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId || !currentChatRoomCharId) return;
+
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    
+    if (currentFcTab === 'gift') {
+        const limit = document.getElementById('familyCardLimitInput').value;
+        if (!limit || parseFloat(limit) <= 0) return alert('请输入正确的额度！');
+        history.push({
+            role: 'user', type: 'family_card', subType: 'gift', limit: parseFloat(limit).toFixed(2),
+            status: 'pending', content: '[赠送亲属卡]', timestamp: Date.now()
+        });
+    } else {
+        history.push({
+            role: 'user', type: 'family_card', subType: 'request',
+            status: 'pending', content: '[索要亲属卡]', timestamp: Date.now()
+        });
+    }
+    
+    ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+    closeSendFamilyCardModal();
+    renderChatHistory(currentChatRoomCharId);
+}
+
+function handleFamilyCardClick(index) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId || !currentChatRoomCharId) return;
+
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    const msg = history[index];
+
+    if (!msg || msg.type !== 'family_card' || msg.status === 'received') return;
+
+    if (msg.role === 'user') {
+        alert('等待对方处理...');
+    } else {
+        if (msg.subType === 'gift') {
+            // 对方赠送给我，我点击领取
+            if (confirm(`是否领取对方赠送的亲属卡？\n额度：¥${msg.limit}`)) {
+                msg.status = 'received';
+                ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+                // 存入我收到的亲属卡库
+                ChatDB.setItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify({ limit: parseFloat(msg.limit) }));
+                renderChatHistory(currentChatRoomCharId);
+                alert('领取成功！支付时可选择使用亲属卡。');
+            }
+        } else if (msg.subType === 'request') {
+            // 对方索要，我点击同意并设置额度
+            const limit = prompt('对方请求开通亲属卡，请输入你愿意给的每月额度：');
+            if (limit && parseFloat(limit) > 0) {
+                msg.status = 'received'; // 标记索要请求已处理
+                // 发送一张赠送卡
+                history.push({
+                    role: 'user', type: 'family_card', subType: 'gift', limit: parseFloat(limit).toFixed(2),
+                    status: 'pending', content: '[赠送亲属卡]', timestamp: Date.now()
+                });
+                ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+                renderChatHistory(currentChatRoomCharId);
+            }
+        }
+    }
+}
+
+// 劫持 renderWallet，在钱包里渲染亲属卡 (区分赠出和收到)
+const _originalRenderWallet = renderWallet;
+renderWallet = function() {
+    // 先执行原始渲染逻辑（渲染银行卡和收到的亲属卡）
+    _originalRenderWallet();
+    
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const slider = document.getElementById('walletCardsSlider');
+    const dotsContainer = document.getElementById('walletSliderDots');
+    
+    if (!slider || !dotsContainer) return;
+
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    
+    chars.forEach(char => {
+        // 渲染我赠出的卡 (我给别人的)，将其添加到滑动容器中
+        const giftedCard = JSON.parse(ChatDB.getItem(`family_card_gifted_${currentLoginId}_${char.id}`) || 'null');
+        if (giftedCard) {
+            const charName = char.netName || char.name;
+            const cardEl = document.createElement('div');
+            cardEl.className = 'family-card-gold';
+            cardEl.style.background = '#fff'; 
+            cardEl.style.color = '#333';
+            cardEl.style.border = '1px solid #eee';
+            cardEl.innerHTML = `
+                <div class="wallet-card-top">
+                    <div class="wallet-card-label" style="color: #aaa;">GIFTED CARD</div>
+                    <div class="wallet-card-chip" style="background: #eee;"></div>
+                </div>
+                <div class="wallet-card-balance" style="color: #111;"><span>¥</span>${giftedCard.limit.toFixed(2)}</div>
+                <div class="wallet-card-bottom">
+                    <div class="wallet-card-number" style="color: #aaa;">使用者：${charName}</div>
+                    <div class="family-card-user">剩余额度</div>
+                </div>
+            `;
+            slider.appendChild(cardEl);
+            
+            // 同步添加底部的滑动指示点
+            const dot = document.createElement('div');
+            dot.className = 'slider-dot';
+            dotsContainer.appendChild(dot);
+        }
+    });
+};
+
+// 劫持 AI 回复逻辑，让 AI 也能发亲属卡和领亲属卡
+const _originalGenerateApiReply = generateApiReply;
+generateApiReply = async function() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    
+    let hasPendingGift = history.some(m => m.role === 'user' && m.type === 'family_card' && m.subType === 'gift' && m.status === 'pending');
+    let hasPendingRequest = history.some(m => m.role === 'user' && m.type === 'family_card' && m.subType === 'request' && m.status === 'pending');
+    
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+        if (url.includes('/chat/completions') && options.body) {
+            let bodyObj = JSON.parse(options.body);
+            let sysMsg = bodyObj.messages.find(m => m.role === 'system');
+            if (sysMsg) {
+                sysMsg.content += `\n【亲属卡互动规则】\n`;
+                sysMsg.content += `1. 赠送亲属卡: {"type":"family_card_gift", "limit":"额度(纯数字)"}\n`;
+                sysMsg.content += `2. 索要亲属卡: {"type":"family_card_request"}\n`;
+                sysMsg.content += `3. 领取亲属卡: {"type":"family_card_action", "action":"received", "content":"感谢的话"}\n`;
+                if (hasPendingGift) {
+                    sysMsg.content += `- 对方送了你一张亲属卡，请务必输出 {"type":"family_card_action", "action":"received"} 来领取，并表达符合人设的反应！\n`;
+                }
+                if (hasPendingRequest) {
+                    sysMsg.content += `- 对方正在向你索要亲属卡，你可以根据人设选择赠送(输出 family_card_gift) 或 拒绝(直接输出普通文本骂他/拒绝)。\n`;
+                }
+            }
+            options.body = JSON.stringify(bodyObj);
+        }
+        return originalFetch.apply(this, arguments);
+    };
+
+    await _originalGenerateApiReply();
+    window.fetch = originalFetch;
+    
+    let newHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    let modified = false;
+    
+    newHistory.forEach(msg => {
+        if (msg.role === 'char' && msg.content && msg.content.includes('"type":"family_card_gift"')) {
+            try {
+                let parsed = JSON.parse(msg.content);
+                msg.type = 'family_card'; msg.subType = 'gift';
+                msg.limit = parsed.limit || '1000.00';
+                msg.status = 'pending'; msg.content = '[赠送亲属卡]';
+                modified = true;
+                // 如果是回应索要，把索要状态改为已处理
+                for (let j = newHistory.length - 1; j >= 0; j--) {
+                    if (newHistory[j].role === 'user' && newHistory[j].type === 'family_card' && newHistory[j].subType === 'request' && newHistory[j].status === 'pending') {
+                        newHistory[j].status = 'received'; break;
+                    }
+                }
+            } catch(e){}
+        } else if (msg.role === 'char' && msg.content && msg.content.includes('"type":"family_card_request"')) {
+            try {
+                msg.type = 'family_card'; msg.subType = 'request';
+                msg.status = 'pending'; msg.content = '[索要亲属卡]';
+                modified = true;
+            } catch(e){}
+        } else if (msg.role === 'char' && msg.content && msg.content.includes('"type":"family_card_action"')) {
+            try {
+                let parsed = JSON.parse(msg.content);
+                for (let j = newHistory.length - 1; j >= 0; j--) {
+                    if (newHistory[j].role === 'user' && newHistory[j].type === 'family_card' && newHistory[j].subType === 'gift' && newHistory[j].status === 'pending') {
+                        newHistory[j].status = 'received';
+                        // 存入我赠出的亲属卡库
+                        ChatDB.setItem(`family_card_gifted_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify({ limit: parseFloat(newHistory[j].limit) }));
+                        modified = true; break;
+                    }
+                }
+                msg.content = parsed.content || '谢谢你的亲属卡！';
+            } catch(e){}
+        }
+    });
+    
+    if (modified) {
+        ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(newHistory));
+        renderChatHistory(currentChatRoomCharId);
+    }
+};
+// ==========================================
+// Chat APP 专属设置、安全管理与主题逻辑
+// ==========================================
+
+// 1. 设置主面板开关
+function openChatAppSettingsPanel() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return alert('请先登录！');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    if (account) {
+        document.getElementById('payPassStatusText').innerText = account.payPassword ? '已设置' : '未设置';
+    }
+    document.getElementById('chatAppSettingsPanel').style.display = 'flex';
+}
+function closeChatAppSettingsPanel() { document.getElementById('chatAppSettingsPanel').style.display = 'none'; }
+
+// 2. 登录密码修改逻辑
+function openModifyPasswordPanel() {
+    document.getElementById('oldPassInput').value = '';
+    document.getElementById('newPassInput1').value = '';
+    document.getElementById('newPassInput2').value = '';
+    document.getElementById('chatModifyPasswordPanel').style.display = 'flex';
+}
+function closeModifyPasswordPanel() { document.getElementById('chatModifyPasswordPanel').style.display = 'none'; }
+
+function executeModifyPassword() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const idx = accounts.findIndex(a => a.id === currentLoginId);
+    const oldP = document.getElementById('oldPassInput').value.trim();
+    const n1 = document.getElementById('newPassInput1').value.trim();
+    const n2 = document.getElementById('newPassInput2').value.trim();
+
+    if (!oldP || !n1 || !n2) return alert('请填写完整！');
+    if (oldP !== accounts[idx].password) return alert('旧密码错误！');
+    if (oldP === n1) return alert('旧密码不能和新密码一样！');
+    if (n1 !== n2) return alert('两次输入的新密码不一致！');
+
+    accounts[idx].password = n1;
+    ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    alert('登录密码修改成功！');
+    closeModifyPasswordPanel();
+}
+
+// 3. 支付密码管理逻辑 (首次设置 vs 修改)
+function openModifyPayPasswordPanel() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+
+    const isFirstTime = !account.payPassword;
+    document.getElementById('payPassTitle').innerText = isFirstTime ? '设置支付密码' : '修改支付密码';
+    document.getElementById('payOldPassSection').style.display = isFirstTime ? 'none' : 'block';
+    document.getElementById('payForgetHint').style.display = isFirstTime ? 'none' : 'flex';
+    
+    document.getElementById('oldPayPassInput').value = '';
+    document.getElementById('newPayPassInput1').value = '';
+    document.getElementById('newPayPassInput2').value = '';
+    document.getElementById('chatModifyPayPasswordPanel').style.display = 'flex';
+}
+function closeModifyPayPasswordPanel() { document.getElementById('chatModifyPayPasswordPanel').style.display = 'none'; }
+
+function executeModifyPayPassword() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const idx = accounts.findIndex(a => a.id === currentLoginId);
+    const account = accounts[idx];
+
+    const oldP = document.getElementById('oldPayPassInput').value.trim();
+    const n1 = document.getElementById('newPayPassInput1').value.trim();
+    const n2 = document.getElementById('newPayPassInput2').value.trim();
+
+    if (!n1 || !n2) return alert('请填写新密码！');
+    if (!/^\d{6}$/.test(n1)) return alert('支付密码必须是6位数字！');
+
+    if (account.payPassword) {
+        // 修改模式
+        if (oldP !== account.payPassword) return alert('旧支付密码错误！');
+        if (oldP === n1) return alert('旧密码不能和新密码一样！');
+    }
+
+    if (n1 !== n2) return alert('两次输入不一致！');
+
+    accounts[idx].payPassword = n1;
+    ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    alert('支付密码设置成功！');
+    document.getElementById('payPassStatusText').innerText = '已设置';
+    closeModifyPayPasswordPanel();
+}
+
+// 忘记密码找回
+function showOldPasswordHint(type) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    if (type === 'login') alert(`您的登录密码是：${account.password}`);
+    else alert(`您的支付密码是：${account.payPassword}`);
+}
+
+// 4. 个性化主题逻辑
+function openChatThemeSettingsPanel() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    document.getElementById('chatThemeCssInput').value = ChatDB.getItem(`chat_theme_css_${currentLoginId}`) || '';
+    document.getElementById('chatThemeSettingsPanel').style.display = 'flex';
+}
+function closeChatThemeSettingsPanel() { document.getElementById('chatThemeSettingsPanel').style.display = 'none'; }
+
+function applyChatThemeCss() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const css = document.getElementById('chatThemeCssInput').value;
+    let styleTag = document.getElementById('chat-custom-theme-style');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'chat-custom-theme-style';
+        document.head.appendChild(styleTag);
+    }
+    // 限制作用域在 wechatPanel 内
+    styleTag.innerHTML = css.trim() ? `#wechatPanel { ${css} }` : '';
+}
+
+function saveChatThemeSettings() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const css = document.getElementById('chatThemeCssInput').value;
+    ChatDB.setItem(`chat_theme_css_${currentLoginId}`, css);
+    applyChatThemeCss();
+    alert('主题设置已保存！');
+    closeChatThemeSettingsPanel();
+}
+
+// 预设库逻辑
+function saveChatThemePreset() {
+    const css = document.getElementById('chatThemeCssInput').value.trim();
+    if (!css) return alert('内容为空！');
+    const name = prompt('预设名称：');
+    if (name) {
+        let ps = JSON.parse(ChatDB.getItem('chat_theme_presets') || '[]');
+        ps.push({ id: Date.now().toString(), name, css });
+        ChatDB.setItem('chat_theme_presets', JSON.stringify(ps));
+        alert('已存入预设库');
+    }
+}
+
+function openChatThemePresetModal() {
+    const listEl = document.getElementById('chatThemePresetList');
+    listEl.innerHTML = '';
+    let ps = JSON.parse(ChatDB.getItem('chat_theme_presets') || '[]');
+    if (ps.length === 0) listEl.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px;">暂无预设</div>';
+    ps.forEach(p => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#f9f9f9;padding:12px;border-radius:10px;';
+        item.innerHTML = `<span style="cursor:pointer;flex:1;font-weight:bold;" onclick="loadChatThemePreset('${p.id}')">${p.name}</span><span style="color:red;cursor:pointer;padding:0 5px;" onclick="deleteChatThemePreset('${p.id}')">×</span>`;
+        listEl.appendChild(item);
+    });
+    document.getElementById('chatThemePresetModalOverlay').classList.add('show');
+}
+function closeChatThemePresetModal() { document.getElementById('chatThemePresetModalOverlay').classList.remove('show'); }
+function loadChatThemePreset(id) {
+    let ps = JSON.parse(ChatDB.getItem('chat_theme_presets') || '[]');
+    const p = ps.find(x => x.id === id);
+    if (p) { document.getElementById('chatThemeCssInput').value = p.css; applyChatThemeCss(); closeChatThemePresetModal(); }
+}
+function deleteChatThemePreset(id) {
+    if (confirm('删除？')) {
+        let ps = JSON.parse(ChatDB.getItem('chat_theme_presets') || '[]');
+        ChatDB.setItem('chat_theme_presets', JSON.stringify(ps.filter(x => x.id !== id)));
+        openChatThemePresetModal();
+    }
+}
+
+// 自动加载主题
+window.addEventListener('ChatDBReady', () => {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (currentLoginId) {
+        const savedCss = ChatDB.getItem(`chat_theme_css_${currentLoginId}`);
+        if (savedCss) {
+            let styleTag = document.getElementById('chat-custom-theme-style') || document.createElement('style');
+            styleTag.id = 'chat-custom-theme-style';
+            document.head.appendChild(styleTag);
+            styleTag.innerHTML = `#wechatPanel { ${savedCss} }`;
+        }
+    }
+});
+;
