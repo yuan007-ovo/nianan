@@ -126,9 +126,10 @@ input, textarea, select {
     font-size: 15px;
     font-weight: 600;
     color: var(--text-main);
-    z-index: 1000; /* 保证在全屏面板之上 */
+    /* 关键修改：确保 z-index 高于面板的 500 */
+    z-index: 9999; 
     transition: opacity 0.3s ease;
-    pointer-events: none; /* 防止遮挡面板的点击事件 */
+    pointer-events: none; 
 }
 
 .status-right { display: flex; align-items: center; gap: 5px; }
@@ -230,15 +231,20 @@ input, textarea, select {
 
 .app-name { font-size: 12px; color: var(--text-main); font-weight: 500; text-shadow: 0 1px 2px rgba(255,255,255,0.5); }
 
-/* --- 主题美化全屏面板 --- */
+/* --- 修改后的面板基础样式 --- */
 .theme-panel {
-    position: fixed; /* 改为 fixed，脱离文档流 */
-    top: 0; left: 0; width: 100%; height: 100dvh;
+    position: absolute; /* 关键修改：从 fixed 改为 absolute */
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    /* 高度直接继承父元素 .iphone 的高度 */
+    height: 100%; 
     background-color: var(--panel-bg);
-    z-index: 100;
+    z-index: 500; /* 确保在桌面组件之上 */
     display: none; 
     flex-direction: column;
     overflow: hidden;
+    /* 这里的 padding 依然保留，用于适配刘海 */
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
@@ -796,23 +802,31 @@ input, textarea, select {
 /* =========================================
    Standalone 模式下的专属样式 (全屏适配)
    ========================================= */
+/* 当开启全屏（沉浸模式）时 */
 body.ios-standalone .iphone.immersive-mode { 
-    width: 100vw; 
-    height: var(--app-height, 100vh); 
-    border: none; 
-    border-radius: 0; 
-    box-shadow: none; 
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    width: 100vw !important; 
+    height: var(--app-height, 100vh) !important; 
+    border: none !important; 
+    border-radius: 0 !important; 
+    margin: 0 !important;
 }
+
+/* 当关闭全屏（显示手机边框）时 */
 body.ios-standalone .iphone:not(.immersive-mode) {
-    margin: auto;
-    height: calc(var(--app-height) - 40px);
-    width: 390px;
+    width: 390px; /* 模拟 iPhone 宽度 */
+    height: 844px; /* 模拟 iPhone 高度 */
     max-width: 95vw;
+    max-height: 90vh;
+    margin: auto; /* 垂直水平居中 */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 12px solid #333; /* 更有质感的深色边框 */
+    border-radius: 50px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
 }
+
 body.ios-standalone .status-bar { 
     display: flex;
     opacity: 1;
