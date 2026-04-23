@@ -85,11 +85,9 @@ function initStandaloneMode() {
     if (isIosStandalone || isMatchMediaStandalone) {
         document.body.classList.add('ios-standalone');
         console.log("✅ 当前运行在 Standalone 全屏模式");
-    } else {
-        console.log("⚠️ 当前运行在普通浏览器模式，请添加到主屏幕体验全屏");
     }
 
-    // 彻底禁止双指缩放
+    // 彻底禁止双指缩放 (Pinch-to-zoom)
     document.addEventListener('touchmove', function(event) {
         if (event.touches.length > 1) {
             event.preventDefault();
@@ -98,19 +96,23 @@ function initStandaloneMode() {
 }
 
 initStandaloneMode();
+
 // ==========================================
-// iOS / PWA 全屏与键盘自适应最终版 (极简流畅防卡顿)
+// iOS / PWA 全屏与键盘自适应最终版 (兼容安卓防黑屏)
 // ==========================================
 function updateAppViewportVars() {
     const docStyle = document.documentElement.style;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
     if (isIOS && window.visualViewport) {
+        // 🍎 iOS 专属逻辑：用 screen.height 减去 visualViewport.height 来精准判断键盘！
         const isKeyboardOpen = (window.screen.height - window.visualViewport.height) > 150;
         
         if (isKeyboardOpen) {
+            // 键盘弹起时，高度缩小到可视区域，把弹窗、输入框完美“托”上来
             docStyle.setProperty('--app-height', `${window.visualViewport.height}px`);
         } else {
+            // 键盘收起时，恢复最大高度，彻底消灭底部的黑边！
             const candidates = [
                 window.innerHeight,
                 document.documentElement.clientHeight,
@@ -123,27 +125,34 @@ function updateAppViewportVars() {
             docStyle.setProperty('--app-height', `${fullHeight}px`);
         }
         
+        // 强制回滚到顶部，防止 iOS 默认的滚动推移导致错位
         window.scrollTo(0, 0);
         document.body.scrollTop = 0;
     } else {
-        docStyle.setProperty('--app-height', `${window.innerHeight}px`);
+        // 🤖 安卓及其他设备逻辑：安卓键盘弹出时会自动调整 innerHeight，直接使用即可
+        const fallbackHeight = window.innerHeight;
+        docStyle.setProperty('--app-height', `${fallbackHeight}px`);
     }
 }
 
-let viewportResizeTimer = null;
+// 监听可视区域变化（键盘弹出/收起）
+let viewportResizeTimer = null; 
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
+        // 核心修复：加入防抖逻辑，防止打开APP时疯狂触发重绘导致卡顿
         if (viewportResizeTimer) clearTimeout(viewportResizeTimer);
         viewportResizeTimer = setTimeout(() => {
             updateAppViewportVars();
-            // 【性能优化】：只有在聊天室显示时才去操作滚动，避免后台无效计算
+            
+            // 只有在聊天室显示时才去操作滚动，避免后台无效计算
             const chatHistory = document.getElementById('chatRoomHistory');
             if (chatHistory && document.getElementById('chatRoomPanel').style.display === 'flex') {
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
-        }, 100); // 延迟缩短到 100ms，让键盘跟随更丝滑
+        }, 150); // 延迟 150ms，等屏幕完全稳定后再计算
     });
     
+    // 恢复防滚动机制，配合正确的键盘高度计算，实现原生 App 体验
     window.visualViewport.addEventListener('scroll', () => {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
@@ -155,6 +164,7 @@ if (window.visualViewport) {
     window.addEventListener('resize', updateAppViewportVars);
 }
 
+// 监听输入框失去焦点（键盘收起），强制重置页面位置，防止页面卡在半空中漏出白边
 document.addEventListener('focusout', () => {
     setTimeout(() => {
         window.scrollTo(0, 0);
@@ -288,8 +298,15 @@ async function confirmExport() {
         for (let key in window.ChatMemoryCache) {
             chatDBData[key] = window.ChatMemoryCache[key];
         }
+
+        // 收集所有 localStorage 数据 (双重保险，确保没有任何遗漏)
+        const localData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            localData[key] = localStorage.getItem(key);
+        }
         
-        const allData = { state, presets, chatDBData };
+        const allData = { state, presets, chatDBData, localData };
         const dataStr = JSON.stringify(allData, null, 2);
         downloadJson(dataStr, fileName);
     }
@@ -383,10 +400,12 @@ function hideStorageAnalysisModal() {
 function importAllData(e) {
     if(e) e.stopPropagation();
     uploadJson(async (data) => {
-        if (data && data.state) {
+        if (data && (data.state || data.chatDBData || data.localData)) {
             // 恢复状态
-            applyFullState(data.state);
-            await saveGlobalStateToDB(data.state);
+            if (data.state) {
+                applyFullState(data.state);
+                await saveGlobalStateToDB(data.state);
+            }
             
             // 恢复预设
             if (data.presets && Array.isArray(data.presets)) {
@@ -404,6 +423,13 @@ function importAllData(e) {
                 // 兼容老版本备份
                 if (data.apiConfig) ChatDB.setItem('current_api_config', JSON.stringify(data.apiConfig));
                 if (data.apiPresets) ChatDB.setItem('api_presets', JSON.stringify(data.apiPresets));
+            }
+
+            // 恢复 localStorage 数据 (双重保险恢复)
+            if (data.localData) {
+                for (let key in data.localData) {
+                    localStorage.setItem(key, data.localData[key]);
+                }
             }
             
             alert('所有数据导入成功！即将刷新页面...');

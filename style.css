@@ -1,5 +1,6 @@
 /* --- 基础样式与变量 --- */
 :root {
+    --app-height: 100vh; /* 默认值，会被 JS 动态覆盖 */
     --bg-color: #f4f4f5;
     --panel-bg: #ffffff;
     --gray-light: #f7f7f7;
@@ -30,8 +31,8 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: #FFFFFF;
-    overscroll-behavior: none;
+    background-color: #FFFFFF; /* 防止 iOS 全屏模式下露出黑色系统背景 */
+    overscroll-behavior: none; /* 阻止橡皮筋效果 */
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation;
     -webkit-user-select: none;
@@ -48,10 +49,22 @@ body {
     height: 100%;
 }
 
+/* 允许输入框被选中和点击 */
+input, textarea, select {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
+}
+
 /* 🔪 iOS Safari 和 PWA Standalone 专属全屏修复 */
+/* 注意：不再使用 -webkit-fill-available，因为它在 iOS PWA standalone 模式下经常计算错误 */
 @supports (-webkit-touch-callout: none) {
-    /* 统一将所有全屏容器绑定到 JS 计算的真实高度，抛弃 100% 和 100dvh */
-    html, body, #app-root, #activation-overlay, #wc-view-phone-sim, .screen, .settings-modal, .dream-fullscreen-view {
+    html, body {
+        height: var(--app-height, 100vh) !important;
+        min-height: var(--app-height, 100vh) !important;
+    }
+    
+    /* 将项目中所有需要全屏的顶级容器都加上这个高度限制 */
+    #app-root, .theme-panel, .screen, #activation-overlay, #wc-view-phone-sim, .settings-modal, .dream-fullscreen-view {
         height: var(--app-height, 100vh) !important;
         min-height: var(--app-height, 100vh) !important;
     }
@@ -60,18 +73,14 @@ body {
 /* 🔪 核心修复：给所有内部允许滚动的容器加上防回弹穿透，防止滑动时把整个页面带跑 */
 .panel-content, .chat-room-history, .wc-chat-scroll-area, .ls-content, .ins-forum-view {
     overscroll-behavior: contain;
-}
-
-input, textarea, select {
-    -webkit-user-select: auto !important;
-    user-select: auto !important;
+    -webkit-overflow-scrolling: touch;
 }
 
 #app-root {
     position: absolute; 
     inset: 0;
     width: 100%;
-    height: var(--app-height, 100vh); /* 🔪 终极修复 v3：统一使用 --app-height，确保 iOS 全屏覆盖 */
+    height: var(--app-height, 100vh);
     min-height: var(--app-height, 100vh);
     overflow: hidden;
     background-color: transparent;
