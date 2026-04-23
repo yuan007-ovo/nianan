@@ -1726,11 +1726,11 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// 页面加载时初始化分组
-document.addEventListener('DOMContentLoaded', () => {
+// 页面加载时初始化分组 (等待数据库就绪)
+window.addEventListener('ChatDBReady', () => {
+    charGroups = JSON.parse(ChatDB.getItem('chat_char_groups') || '["默认分组"]');
     renderCharGroups();
 });
-
 
 // 2. Create 弹窗逻辑
 const charCreatePopup = document.getElementById('charCreatePopup');
@@ -2307,8 +2307,12 @@ function formatChatTime(timestamp) {
     return `${hours}:${minutes} ${ampm}`;
 }
 
-// 渲染真实聊天记录
-function renderChatHistory(charId) {
+// ==========================================
+// 聊天记录分页与渲染逻辑 (融合小元机极致性能优化版)
+// ==========================================
+let chatDisplayCount = 80; // 每次最多渲染 80 条
+
+function renderChatHistory(charId, keepScroll = false) {
     const historyEl = document.getElementById('chatRoomHistory');
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
@@ -2320,10 +2324,13 @@ function renderChatHistory(charId) {
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
     const me = accounts.find(a => a.id === currentLoginId);
 
+    // 记录旧的滚动高度，用于加载更多时保持位置不跳动
+    const oldScrollHeight = historyEl.scrollHeight;
+    const oldScrollTop = historyEl.scrollTop;
+
     historyEl.innerHTML = '';
 
     if (history.length === 0) {
-        // 如果没有记录，自动插入角色的开场白
         if (char && char.firstMessage) {
             history.push({ role: 'char', content: char.firstMessage, timestamp: Date.now() });
             ChatDB.setItem(`chat_history_${currentLoginId}_${charId}`, JSON.stringify(history));
@@ -2333,29 +2340,38 @@ function renderChatHistory(charId) {
         }
     }
 
-    // 【性能优化核心】：限制最多渲染最近的 60 条消息，防止 DOM 节点过多导致严重卡顿
-    const MAX_RENDER = 60;
-    const startIndex = history.length > MAX_RENDER ? history.length - MAX_RENDER : 0;
+    // 【性能优化】：分页切片计算，只渲染最后 chatDisplayCount 条
+    if (!chatDisplayCount) chatDisplayCount = 80;
+    const startIndex = Math.max(0, history.length - chatDisplayCount);
     const renderHistory = history.slice(startIndex);
 
+    // 如果还有更早的历史记录，在顶部插入“加载更多”按钮
+    if (startIndex > 0) {
+        const loadMoreBtn = document.createElement('div');
+        loadMoreBtn.style.cssText = 'text-align: center; padding: 15px 0; color: #576b95; font-size: 13px; cursor: pointer; font-weight: bold;';
+        loadMoreBtn.innerText = '点击加载更多历史记录';
+        loadMoreBtn.onclick = () => {
+            chatDisplayCount += 80;
+            renderChatHistory(charId, true); // 传入 true 保持滚动位置
+        };
+        historyEl.appendChild(loadMoreBtn);
+    }
+
     renderHistory.forEach((msg, i) => {
-        const index = startIndex + i; // 保持真实的全局索引，用于点击、撤回等操作
+        const index = startIndex + i; // 保持真实的全局索引
         const prevMsg = renderHistory[i - 1];
         const nextMsg = renderHistory[i + 1];
 
-        // 判断是否显示时间戳 (间隔超过5分钟显示一次)
         let showTime = false;
         if (!prevMsg || msg.timestamp - prevMsg.timestamp > 5 * 60 * 1000) {
             showTime = true;
         }
 
-        // 判断是否是连续消息的中间部分 (隐藏尾巴和头像)
         let isContinuous = false;
         if (nextMsg && nextMsg.role === msg.role && (nextMsg.timestamp - msg.timestamp < 5 * 60 * 1000)) {
             isContinuous = true;
         }
         
-        // 判断是否紧接上一条同角色消息 (用于拉近间距)
         let isFollowUp = false;
         if (prevMsg && prevMsg.role === msg.role && (msg.timestamp - prevMsg.timestamp < 5 * 60 * 1000)) {
             isFollowUp = true;
@@ -2368,7 +2384,6 @@ function renderChatHistory(charId) {
             historyEl.appendChild(timeEl);
         }
 
-        // 创建一个外层容器，让转文字框可以放在整行的正下方
         const containerEl = document.createElement('div');
         containerEl.style.display = 'flex';
         containerEl.style.flexDirection = 'column';
@@ -2377,7 +2392,6 @@ function renderChatHistory(charId) {
         const rowEl = document.createElement('div');
         rowEl.className = `cr-msg-row ${msg.role === 'user' ? 'me' : 'other'} ${isFollowUp ? 'continuous' : ''}`;
         
-        // 多选模式点击事件
         rowEl.onclick = () => {
             if (isChatMultiSelecting) toggleMsgSelection(index, rowEl);
         };
@@ -2389,26 +2403,21 @@ function renderChatHistory(charId) {
             </div>
         `;
 
-        // 判断消息类型 (兼容真实图片和文字描述图片)
         const isImageMsg = msg.content.includes('chat-img-120') || msg.content.includes('chat-desc-img-120') || (msg.content.trim().startsWith('<img') && msg.content.trim().endsWith('>'));
         const isForwardRecord = msg.type === 'forward_record';
         const isVoiceMsg = msg.type === 'voice';
         const isTransferMsg = msg.type === 'transfer'; 
         const isFamilyCardMsg = msg.type === 'family_card'; 
 
-        // 引用内容渲染
         let quoteHtml = '';
         if (msg.quote) {
             quoteHtml = `<div class="cr-quote-block">${msg.quote}</div>`;
         }
 
-        // 多选框
         const checkboxHtml = `<input type="checkbox" class="cr-msg-checkbox" value="${index}">`;
 
-        // 气泡内容处理
         let bubbleInnerHtml = msg.content;
         
-        // 兼容旧数据：移除旧的 emoji 图标
         if (isImageMsg && bubbleInnerHtml.includes('<div class="img-icon">🖼️</div>')) {
             bubbleInnerHtml = bubbleInnerHtml.replace(/<div class="img-icon">🖼️<\/div>/g, '');
         }
@@ -2479,7 +2488,7 @@ function renderChatHistory(charId) {
                 <div class="bubble-family-premium" onclick="event.stopPropagation(); handleFamilyCardClick(${index})">
                     <div class="bfp-top">
                         <div class="bfp-icon-wrap">
-                            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                         </div>
                         <div class="bfp-info">
                             <div class="bfp-title">${titleText}</div>
@@ -2549,9 +2558,16 @@ function renderChatHistory(charId) {
         historyEl.appendChild(containerEl);
     });
 
-    setTimeout(() => {
-        historyEl.scrollTop = historyEl.scrollHeight;
-    }, 50);
+    // 滚动控制逻辑
+    requestAnimationFrame(() => {
+        if (keepScroll) {
+            // 加载更多后，保持原来的可视位置，防止画面跳动
+            historyEl.scrollTop = historyEl.scrollHeight - oldScrollHeight + oldScrollTop;
+        } else {
+            // 正常打开或发送新消息，滚动到底部
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+    });
 }
 
 // 发送消息逻辑
@@ -2565,11 +2581,10 @@ function sendChatMessage() {
 
     let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
     
-    // 附带引用内容
     let newMsg = { role: 'user', content: content, timestamp: Date.now() };
     if (currentQuoteText) {
         newMsg.quote = currentQuoteText;
-        cancelQuote(); // 发送后清空引用
+        cancelQuote(); 
     }
     
     history.push(newMsg);
@@ -2582,6 +2597,9 @@ function sendChatMessage() {
     if (typeof renderChatList === 'function') renderChatList();
 
     inputEl.value = '';
+    
+    // 【性能优化】：发送消息后，强制重置为第一页（最新消息），并重新渲染
+    chatDisplayCount = 80;
     renderChatHistory(currentChatRoomCharId);
 }
 
@@ -2595,6 +2613,8 @@ function handleChatInputKeydown(e) {
 
 function openChatRoom(charId) {
     currentChatRoomCharId = charId;
+    chatDisplayCount = 80; // 每次进入重置为第一页
+    
     let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
     const char = chars.find(c => c.id === charId);
     
@@ -2603,27 +2623,25 @@ function openChatRoom(charId) {
     const me = accounts.find(a => a.id === currentLoginId);
     
     if (char) {
-        // 获取当前登录账号对该角色的备注
         let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
-        // 优先级：备注 > 网名 > 角色名
         const displayName = remarks[charId] || char.netName || char.name || '未命名';
         
-        // 修改：顶栏名称后面显示佩戴的互动标识
         const wornBadgeHtml = getWornBadgeHtml(charId);
         document.getElementById('chatRoomTitle').innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${displayName}${wornBadgeHtml}</span>`;
         
-        // 渲染顶栏双头像
         document.getElementById('crHeaderAvatarMe').style.backgroundImage = `url('${me ? me.avatarUrl : ''}')`;
         document.getElementById('crHeaderAvatarChar').style.backgroundImage = `url('${char.avatarUrl || ''}')`;
         
         document.getElementById('chatRoomInput').value = '';
-        closeChatPanels(); // 打开时确保面板关闭
+        closeChatPanels(); 
         
-        updateChatRoomAppearance(); // 每次打开聊天室时强制刷新外观，防止刷新后背景丢失
-        
-        renderChatHistory(charId);
-        
+        // 【性能优化】：先让面板弹出来，再利用 requestAnimationFrame 延迟渲染繁重的 DOM，彻底消除点击卡顿
         document.getElementById('chatRoomPanel').style.display = 'flex';
+        
+        requestAnimationFrame(() => {
+            updateChatRoomAppearance(); 
+            renderChatHistory(charId);
+        });
     }
 }
 
@@ -2738,15 +2756,29 @@ function deleteContactChar() {
     if (!currentLoginId) return alert('请先登录！');
 
     if (confirm('确定要将该角色从通讯录中删除吗？（删除后可通过搜索账号重新添加）')) {
+        // 1. 从通讯录中移除
         let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
         contacts = contacts.filter(id => id !== currentProfileCharId);
         ChatDB.setItem(`contacts_${currentLoginId}`, JSON.stringify(contacts));
         
+        // 2. 从会话列表中一并移除
+        let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
+        sessions = sessions.filter(id => id !== currentProfileCharId);
+        ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
+
+        // 3. 彻底清除该角色的互动标识统计数据 (确保重新添加时完全重置)
+        let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+        if (stats[currentProfileCharId]) {
+            delete stats[currentProfileCharId];
+            ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+        }
+        
         alert('已删除好友！');
         closeCharProfilePanel();
         
-        // 刷新通讯录列表
+        // 4. 同步刷新通讯录和会话列表
         if (typeof renderContactList === 'function') renderContactList();
+        if (typeof renderChatList === 'function') renderChatList();
     }
 }
 
@@ -3572,28 +3604,22 @@ function updateChatRoomAppearance() {
         document.head.appendChild(styleTag);
     }
     
-    // 将用户输入的 CSS 强制包裹在聊天室面板和预览框的作用域内
-    // 这样用户写的任何样式，都绝对不会影响到其他页面
-    if (rawCss.trim() !== '') {
-        styleTag.innerHTML = `
-            #chatRoomPanel, .cs-css-preview-box {
-                ${rawCss}
-            }
-        `;
-    } else {
-        styleTag.innerHTML = '';
+    const newCss = rawCss.trim() !== '' ? `
+        #chatRoomPanel, .cs-css-preview-box {
+            ${rawCss}
+        }
+    ` : '';
+    
+    // 【性能优化】：只有当 CSS 真正发生变化时才重新赋值，避免每次打开聊天室都触发全局重绘
+    if (styleTag.innerHTML !== newCss) {
+        styleTag.innerHTML = newCss;
     }
 }
 
-// 页面加载时初始化外观
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        updateChatRoomAppearance();
-    });
-} else {
-    // 如果脚本执行时页面已经加载完毕，直接调用
+// 页面加载时初始化外观 (等待数据库就绪)
+window.addEventListener('ChatDBReady', () => {
     updateChatRoomAppearance();
-}
+});
 // ==========================================
 // 终极整合版 API 联机回复逻辑 (JSON协议 + 正则过滤 + 深度设定)
 // ==========================================
@@ -4993,3 +5019,7 @@ window.addEventListener('ChatDBReady', () => {
     }
 });
 ;
+// 页面加载时初始化表情包分组 (等待数据库就绪)
+window.addEventListener('ChatDBReady', () => {
+    emojiGroups = JSON.parse(ChatDB.getItem('chat_emoji_groups') || '["默认分组"]');
+});
