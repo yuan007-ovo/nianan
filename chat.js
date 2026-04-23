@@ -1129,8 +1129,23 @@ function toggleWearBadge(badgeType) {
     renderInteractionDetail();
     
     if (currentChatRoomCharId) {
-        openChatRoom(currentChatRoomCharId); 
+        // 【性能优化】：不要重新 openChatRoom 全量渲染，只更新标题栏的标识即可
+        updateChatRoomTitleBadge(currentChatRoomCharId);
         renderChatList(); 
+    }
+}
+
+// 新增辅助函数：仅更新标题栏标识
+function updateChatRoomTitleBadge(charId) {
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === charId);
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+    const displayName = remarks[charId] || (char ? (char.netName || char.name) : '未命名');
+    const wornBadgeHtml = getWornBadgeHtml(charId);
+    const titleEl = document.getElementById('chatRoomTitle');
+    if (titleEl) {
+        titleEl.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${displayName}${wornBadgeHtml}</span>`;
     }
 }
 
@@ -2318,9 +2333,15 @@ function renderChatHistory(charId) {
         }
     }
 
-    history.forEach((msg, index) => {
-        const prevMsg = history[index - 1];
-        const nextMsg = history[index + 1];
+    // 【性能优化核心】：限制最多渲染最近的 60 条消息，防止 DOM 节点过多导致严重卡顿
+    const MAX_RENDER = 60;
+    const startIndex = history.length > MAX_RENDER ? history.length - MAX_RENDER : 0;
+    const renderHistory = history.slice(startIndex);
+
+    renderHistory.forEach((msg, i) => {
+        const index = startIndex + i; // 保持真实的全局索引，用于点击、撤回等操作
+        const prevMsg = renderHistory[i - 1];
+        const nextMsg = renderHistory[i + 1];
 
         // 判断是否显示时间戳 (间隔超过5分钟显示一次)
         let showTime = false;
@@ -2372,8 +2393,8 @@ function renderChatHistory(charId) {
         const isImageMsg = msg.content.includes('chat-img-120') || msg.content.includes('chat-desc-img-120') || (msg.content.trim().startsWith('<img') && msg.content.trim().endsWith('>'));
         const isForwardRecord = msg.type === 'forward_record';
         const isVoiceMsg = msg.type === 'voice';
-        const isTransferMsg = msg.type === 'transfer'; // 新增：判断是否为转账消息
-        const isFamilyCardMsg = msg.type === 'family_card'; // 新增：判断是否为亲属卡消息
+        const isTransferMsg = msg.type === 'transfer'; 
+        const isFamilyCardMsg = msg.type === 'family_card'; 
 
         // 引用内容渲染
         let quoteHtml = '';
@@ -2403,9 +2424,8 @@ function renderChatHistory(charId) {
                 </div>
             `;
         } else if (isVoiceMsg) {
-            // 语音气泡：显示动态波纹和时长，点击触发转文字
-            const voiceLength = Math.max(1, Math.min(60, Math.floor(msg.content.length / 2))); // 假时长
-            const voiceWidth = 60 + voiceLength * 2; // 根据时长调整宽度
+            const voiceLength = Math.max(1, Math.min(60, Math.floor(msg.content.length / 2))); 
+            const voiceWidth = 60 + voiceLength * 2; 
             bubbleInnerHtml = `
                 <div class="cr-voice-bubble" style="width: ${voiceWidth}px;" onclick="event.stopPropagation(); toggleVoiceText(${index})">
                     <div class="voice-waves ${msg.role === 'user' ? 'me' : 'other'}">
@@ -2418,7 +2438,6 @@ function renderChatHistory(charId) {
                 </div>
             `;
         } else if (isTransferMsg) {
-            // 转账气泡渲染 (支持收款、退还状态)
             const isReceived = msg.status === 'received';
             const isRejected = msg.status === 'rejected' || msg.status === 'refunded';
             
@@ -2433,7 +2452,7 @@ function renderChatHistory(charId) {
             } else if (isRejected) {
                 iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path></svg>`;
                 descText = '已退还';
-                cardClass = 'received'; // 退还也使用浅橙色样式
+                cardClass = 'received'; 
             }
 
             bubbleInnerHtml = `
@@ -2449,7 +2468,6 @@ function renderChatHistory(charId) {
                 </div>
             `;
         } else if (isFamilyCardMsg) {
-            // 亲属卡气泡渲染 (黑金高级版)
             const isGift = msg.subType === 'gift';
             const isReceived = msg.status === 'received';
             
@@ -2473,7 +2491,6 @@ function renderChatHistory(charId) {
             `;
         }
 
-        // 气泡长按事件绑定 (移除了内部的 voice-text-preview)
         const bubbleHtml = `
             <div class="cr-msg-content-wrapper">
                 ${quoteHtml}
@@ -2499,9 +2516,8 @@ function renderChatHistory(charId) {
 
         containerEl.appendChild(rowEl);
 
-        // 新增：气泡下方的小时间戳 (iOS 风格)
         const smallTimeEl = document.createElement('div');
-        smallTimeEl.className = 'cr-small-time'; // 添加类名，方便自定义 CSS 隐藏
+        smallTimeEl.className = 'cr-small-time'; 
         smallTimeEl.style.fontSize = '10px';
         smallTimeEl.style.color = '#bbb';
         smallTimeEl.style.marginTop = '2px';
@@ -2517,7 +2533,6 @@ function renderChatHistory(charId) {
         smallTimeEl.innerText = formatChatTime(msg.timestamp);
         containerEl.appendChild(smallTimeEl);
 
-        // 将语音转文字的框放在整行的正下方，完美避开头像
         if (isVoiceMsg) {
             const voicePreview = document.createElement('div');
             voicePreview.id = `voice-text-${index}`;
@@ -2534,7 +2549,6 @@ function renderChatHistory(charId) {
         historyEl.appendChild(containerEl);
     });
 
-    // 自动滚动到底部
     setTimeout(() => {
         historyEl.scrollTop = historyEl.scrollHeight;
     }, 50);
@@ -3083,9 +3097,20 @@ function toggleVoiceText(index) {
 function closeChatPanels() {
     const morePanel = document.getElementById('crMorePanel');
     const emojiPanel = document.getElementById('crEmojiPanel');
-    if (morePanel.classList.contains('show')) morePanel.classList.remove('show');
-    if (emojiPanel.classList.contains('show')) emojiPanel.classList.remove('show');
-    document.getElementById('chatRoomHistory').style.transform = 'translateY(0)';
+    let isChanged = false;
+    
+    if (morePanel && morePanel.classList.contains('show')) { 
+        morePanel.classList.remove('show'); 
+        isChanged = true;
+    }
+    if (emojiPanel && emojiPanel.classList.contains('show')) { 
+        emojiPanel.classList.remove('show'); 
+        isChanged = true;
+    }
+    
+    if (isChanged) {
+        document.getElementById('chatRoomHistory').style.transform = 'translateY(0)';
+    }
 }
 
 // ✅ 修复：使用可选链绑定事件，避免重复声明 const 导致报错
@@ -3530,7 +3555,8 @@ function updateChatRoomAppearance() {
             historyEl.style.backgroundImage = "url('" + bgUrl + "')";
             historyEl.style.backgroundSize = 'cover';
             historyEl.style.backgroundPosition = 'center';
-            historyEl.style.backgroundAttachment = 'fixed';
+            // 【性能优化】：移除 backgroundAttachment = 'fixed'，改为 scroll 防止移动端重绘卡顿
+            historyEl.style.backgroundAttachment = 'scroll'; 
         } else {
             historyEl.style.backgroundImage = 'none';
             historyEl.style.backgroundColor = 'transparent';

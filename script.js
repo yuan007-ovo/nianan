@@ -136,9 +136,11 @@ if (window.visualViewport) {
         if (viewportResizeTimer) clearTimeout(viewportResizeTimer);
         viewportResizeTimer = setTimeout(() => {
             updateAppViewportVars();
-            // 统一在这里处理聊天列表滚动到底部，避免冲突
+            // 【性能优化】：只有在聊天室显示时才去操作滚动，避免后台无效计算
             const chatHistory = document.getElementById('chatRoomHistory');
-            if (chatHistory) chatHistory.scrollTop = chatHistory.scrollHeight;
+            if (chatHistory && document.getElementById('chatRoomPanel').style.display === 'flex') {
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
         }, 100); // 延迟缩短到 100ms，让键盘跟随更丝滑
     });
     
