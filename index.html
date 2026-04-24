@@ -99,6 +99,14 @@
     <div class="dock-container">
         <div class="dock-bg"></div>
         <div class="dock-apps">
+            <!-- 新增：Music APP -->
+            <div class="app-item" onclick="openMusicApp()">
+                <div class="app-icon" id="icon-app-dock-music" style="border-radius: 18px;">
+                    <svg viewBox="0 0 24 24" width="28" height="28"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                </div>
+                <div class="app-name" id="name-app-dock-music" style="display: none;">Music</div>
+            </div>
+            <!-- 原有的 Chars APP -->
             <div class="app-item" onclick="openCharLibraryPanel()">
                 <div class="app-icon" id="icon-app-dock1" style="border-radius: 18px;">
                     <svg viewBox="0 0 24 24" width="28" height="28"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -107,6 +115,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- 主题美化全屏面板 -->
     <div class="theme-panel" id="themePanel">
@@ -2485,6 +2494,320 @@
         </div>
     </div>
 
+    <!-- =========================================
+         新增：Music 全屏面板 (黑白灰极简风)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="musicPanel" style="z-index: 160; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeMusicPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">Music</div>
+            </div>
+            <!-- 动态右上角图标区 -->
+            <div style="width: 40px; display: flex; justify-content: flex-end; align-items: center;">
+                <!-- 好友页：添加好友图标 -->
+                <svg id="music-header-add-friend" onclick="openMusicAddFriendModal()" style="display: none; width: 22px; height: 22px; stroke: #111; fill: none; stroke-width: 2; cursor: pointer;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <!-- 个人主页：设置图标 -->
+                <svg id="music-header-settings" onclick="openMusicSettingsPanel()" style="display: none; width: 22px; height: 22px; stroke: #111; fill: none; stroke-width: 2; cursor: pointer;" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+            </div>
+        </div>
+
+        <div class="panel-content music-content" style="padding: 20px; padding-bottom: 140px;">
+            <!-- 1. 发现页 (主页) -->
+            <div class="music-tab-page active" id="music-page-home">
+                <div class="music-search-wrapper">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#bbb" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="music-search-input" placeholder="搜索音乐、歌手 (回车搜索)" onkeypress="musicHandleSearchEnter(event)">
+                </div>
+                
+                <!-- 搜索结果容器 -->
+                <div id="music-search-results" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+                <div class="music-banner-card" id="music-home-banner">
+                    <div class="music-banner-title">BLACK & WHITE</div>
+                    <div class="music-banner-sub">极简主义音乐美学</div>
+                </div>
+
+                <div class="music-nav-icons">
+                    <div class="music-nav-item"><div class="music-nav-icon-circle">FM</div><span>私人FM</span></div>
+                    <div class="music-nav-item"><div class="music-nav-icon-circle">★</div><span>每日推荐</span></div>
+                    <div class="music-nav-item"><div class="music-nav-icon-circle">≡</div><span>歌单</span></div>
+                    <div class="music-nav-item"><div class="music-nav-icon-circle">#</div><span>排行榜</span></div>
+                </div>
+
+                <div>
+                    <div class="music-section-title">推荐歌单 <div class="music-section-more">更多</div></div>
+                    <div class="music-playlist-grid" style="margin-top: 15px;">
+                        <div class="music-playlist-card"><div class="music-playlist-cover"></div><div class="music-playlist-name">深夜沉思：极简白噪音</div></div>
+                        <div class="music-playlist-card"><div class="music-playlist-cover"></div><div class="music-playlist-name">黑白灰的节奏感</div></div>
+                        <div class="music-playlist-card"><div class="music-playlist-cover"></div><div class="music-playlist-name">纯音乐：放空大脑</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 好友页 -->
+            <div class="music-tab-page" id="music-page-friends">
+                <div class="music-section-title">音乐好友</div>
+                <div class="music-friend-list-card" id="musicFriendListContainer">
+                    <!-- 动态渲染好友列表 -->
+                    <div style="text-align: center; padding: 40px 20px; color: #aaa; font-size: 13px;">暂无好友，快去添加吧</div>
+                </div>
+            </div>
+
+            <!-- 3. 个人主页 -->
+            <div class="music-tab-page" id="music-page-me">
+                <div class="music-profile-card">
+                    <div class="music-profile-avatar" id="musicMeAvatar"></div>
+                    <div class="music-profile-name" id="musicMeName">未登录用户</div>
+                    <div class="music-profile-stats">
+                        <div><span>0</span> 关注</div>
+                        <div><span>0</span> 粉丝</div>
+                    </div>
+                </div>
+                
+                <!-- 歌单列表容器 (仿网易云样式) -->
+                <div id="music-my-playlist-container" style="display: flex; flex-direction: column; padding: 0 5px;">
+                    <!-- 动态渲染 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 悬浮播放栏 (增加点击事件) -->
+        <div class="music-mini-player" onclick="openMusicPlayer()">
+            <div class="music-player-disc"><div class="music-player-disc-inner"></div></div>
+            <div class="music-player-info">
+                <div class="music-player-title">Not Playing</div>
+                <div class="music-player-sub">Music App</div>
+            </div>
+            <div class="music-player-controls">
+                <div class="music-player-btn">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#111"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </div>
+                <div class="music-player-btn">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="#111" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- 悬浮底部导航栏 -->
+        <div class="music-bottom-nav">
+            <div class="music-nav-btn active" onclick="switchMusicTab('home')">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+            </div>
+            <div class="music-nav-btn" onclick="switchMusicTab('friends')">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div class="music-nav-btn" onclick="switchMusicTab('me')">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：Music 独立登录面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="musicLoginPanel" style="z-index: 170; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeMusicLoginPanel()">Back</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">Music Login</div></div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 30px 20px; align-items: center;">
+            <div style="font-size: 24px; font-weight: 900; color: #111; margin-bottom: 10px;">选择账号登录</div>
+            <div style="font-size: 13px; color: #888; margin-bottom: 30px; text-align: center;">请选择已在 Chat 中注册的账号<br>作为您的音乐账号</div>
+            
+            <div id="musicAccountSelectList" style="width: 100%; display: flex; flex-direction: column; gap: 15px;">
+                <!-- 动态渲染账号列表 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：Music 全屏播放器面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="musicPlayerPanel" style="z-index: 180; background-color: #111;">
+        <div class="panel-header" style="background: transparent; border-bottom: none;">
+            <div class="header-close" onclick="closeMusicPlayer()" style="color: #fff;">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="header-title-wrapper">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div id="mpSongName" style="font-size: 16px; font-weight: bold; color: #fff;">Nocturne op.9 No.2</div>
+                    <div id="mpArtistName" style="font-size: 12px; color: #aaa;">Chopin</div>
+                </div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        
+        <div class="panel-content" style="padding: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;">
+            <!-- 一起听歌状态提示 -->
+            <div id="mpListenTogetherStatus" style="display: none; justify-content: center; margin-top: 10px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 20px; font-size: 12px; color: #fff; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px);">
+                    <div style="width: 8px; height: 8px; background: #34c759; border-radius: 50%; box-shadow: 0 0 8px #34c759;"></div>
+                    <span id="mpListenTogetherText">正在与 Doris 一起听歌</span>
+                </div>
+            </div>
+
+            <!-- 旋转黑胶唱片 -->
+            <div style="flex: 1; display: flex; justify-content: center; align-items: center; position: relative;">
+                <div class="mp-disc-outer">
+                    <div class="mp-disc-inner" id="mpDiscCover"></div>
+                </div>
+            </div>
+
+            <!-- 底部控制区 -->
+            <div style="padding: 20px 30px 50px; display: flex; flex-direction: column; gap: 25px;">
+                <!-- 进度条 -->
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 10px; color: #888;">
+                    <span>01:24</span>
+                    <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; position: relative;">
+                        <div style="position: absolute; left: 0; top: 0; height: 100%; width: 30%; background: #fff; border-radius: 2px;"></div>
+                        <div style="position: absolute; left: 30%; top: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: #fff; border-radius: 50%;"></div>
+                    </div>
+                    <span>04:30</span>
+                </div>
+                <!-- 按钮区 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; color: #fff;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
+                    <div style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid #fff; display: flex; justify-content: center; align-items: center;">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="margin-left: 4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    </div>
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加音乐好友弹窗 -->
+    <div class="preset-modal-overlay" id="musicAddFriendModalOverlay">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">添加音乐好友</div>
+            <div class="preset-modal-desc">输入角色账号进行搜索</div>
+            <input type="text" id="musicSearchFriendInput" class="preset-modal-input" placeholder="请输入账号..." style="width: 85%; margin-top: 10px;" oninput="searchMusicFriend()">
+            
+            <div id="musicSearchResult" style="width: 100%; max-height: 200px; overflow-y: auto; padding: 0 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- 搜索结果 -->
+            </div>
+
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeMusicAddFriendModal()" style="width: 100%; border-right: none;">关闭</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 切换音乐源弹窗 -->
+    <div class="preset-modal-overlay" id="musicApiToggleModal">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">切换音乐接口</div>
+            <div class="preset-modal-desc">如果搜索失败或无法播放，请切换接口</div>
+            
+            <div style="text-align: left; padding: 10px 20px; font-size: 13px; font-weight: bold; color: #888;">搜索接口 (Search API)</div>
+            <div style="display: flex; flex-direction: column; gap: 5px; padding: 0 20px;">
+                <div onclick="musicSetSearchApi('primary')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-primary">小狗源 (Primary)</div>
+                <div onclick="musicSetSearchApi('secondary')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-secondary">小猫源 (Secondary)</div>
+                <div onclick="musicSetSearchApi('tertiary')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-tertiary">小元源 (Tertiary)</div>
+                <div onclick="musicSetSearchApi('api4')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-api4">小兔源 (API 4)</div>
+                <div onclick="musicSetSearchApi('api5')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-api5">小鱼源 (API 5)</div>
+            </div>
+
+            <div style="text-align: left; padding: 15px 20px 10px; font-size: 13px; font-weight: bold; color: #888;">播放接口 (Play API)</div>
+            <div style="display: flex; flex-direction: column; gap: 5px; padding: 0 20px; margin-bottom: 15px;">
+                <div onclick="musicSetPlayApi('miemie')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-play-miemie">咩咩源 (Miemie)</div>
+                <div onclick="musicSetPlayApi('zhizhi')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-play-zhizhi">吱吱源 (Zhizhi)</div>
+            </div>
+
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicApiToggleModal').classList.remove('show')" style="width: 100%; border-right: none;">关闭</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 网易云 UID 导入弹窗 -->
+    <div class="preset-modal-overlay" id="musicWyyLoginModal">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">导入网易云歌单</div>
+            <div class="preset-modal-desc">请输入您的网易云音乐 UID</div>
+            <input type="text" id="wyy-uid-input" class="preset-modal-input" placeholder="例如: 123456789" style="width: 85%; margin-top: 10px;">
+            
+            <div class="preset-modal-actions" style="margin-top: 20px;">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicWyyLoginModal').classList.remove('show')">取消</div>
+                <div class="preset-btn-confirm" onclick="musicDoWyyLogin()" id="wyy-login-btn">获取歌单</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：Music 设置全屏面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="musicSettingsPanel" style="z-index: 170; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeMusicSettingsPanel()">Back</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">设置</div></div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <div style="background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #eee;">
+                <div onclick="musicOpenApiToggleModal()" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; cursor: pointer;">
+                    <span style="font-size: 15px; color: #111; font-weight: bold;">切换音乐源</span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div onclick="logoutMusicApp()" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                    <span style="font-size: 15px; color: #ff3b30; font-weight: bold;">退出当前账号</span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建歌单弹窗 (支持本地上传) -->
+    <div class="preset-modal-overlay" id="musicCreatePlaylistModal">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">新建歌单</div>
+            <div style="width: 100%; padding: 15px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <input type="text" id="music-create-pl-name" class="preset-modal-input" placeholder="输入歌单标题" style="width: 100%; margin: 0;">
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="music-create-pl-cover" class="preset-modal-input" placeholder="封面 URL (选填)" style="flex: 1; margin: 0;">
+                    <div onclick="document.getElementById('music-local-cover-input').click()" style="background: #f0f0f0; color: #333; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap;">本地上传</div>
+                    <input type="file" id="music-local-cover-input" accept="image/*" style="display: none;" onchange="musicHandleLocalCoverUpload(event)">
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicCreatePlaylistModal').classList.remove('show')">取消</div>
+                <div class="preset-btn-confirm" onclick="musicCreatePlaylist()">完成</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 综合导入歌单弹窗 (UID + URL) -->
+    <div class="preset-modal-overlay" id="musicImportModal">
+        <div class="preset-modal" style="width: 320px;">
+            <div class="preset-modal-title">导入外部歌单</div>
+            
+            <div style="width: 100%; padding: 15px 20px; display: flex; flex-direction: column; gap: 20px;">
+                <!-- 方式一：URL 导入 -->
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
+                    <div style="font-size: 13px; font-weight: bold; color: #111; margin-bottom: 8px;">方式一：通过链接导入单歌单</div>
+                    <input type="text" id="music-import-url-input" class="preset-modal-input" placeholder="粘贴网易云歌单分享链接" style="width: 100%; margin: 0 0 10px 0;">
+                    <div onclick="musicImportByUrl()" id="music-btn-import-url" style="background: #111; color: #fff; text-align: center; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer;">解析并导入</div>
+                </div>
+
+                <!-- 方式二：UID 导入 -->
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
+                    <div style="font-size: 13px; font-weight: bold; color: #111; margin-bottom: 8px;">方式二：通过 UID 批量导入</div>
+                    <input type="text" id="wyy-uid-input" class="preset-modal-input" placeholder="输入网易云 UID" style="width: 100%; margin: 0 0 10px 0;">
+                    <div onclick="musicDoWyyLogin()" id="wyy-login-btn" style="background: #111; color: #fff; text-align: center; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer;">获取公开歌单</div>
+                </div>
+            </div>
+
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicImportModal').classList.remove('show')" style="width: 100%; border-right: none;">关闭</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 </div>
     <script>
@@ -2506,5 +2829,6 @@
 <!-- 引入外部 JS 文件 -->
 <script src="script.js"></script>
 <script src="chat.js"></script>
+<script src="music.js"></script>
 </body>
 </html>
