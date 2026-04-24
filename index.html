@@ -2504,17 +2504,17 @@
                 <div class="header-title" style="cursor: default;">Music</div>
             </div>
             <!-- 动态右上角图标区 -->
-            <div style="width: 40px; display: flex; justify-content: flex-end; align-items: center;">
+            <div style="width: 60px; display: flex; justify-content: flex-end; align-items: center;">
                 <!-- 好友页：添加好友图标 -->
                 <svg id="music-header-add-friend" onclick="openMusicAddFriendModal()" style="display: none; width: 22px; height: 22px; stroke: #111; fill: none; stroke-width: 2; cursor: pointer;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <!-- 个人主页：设置图标 -->
-                <svg id="music-header-settings" onclick="openMusicSettingsPanel()" style="display: none; width: 22px; height: 22px; stroke: #111; fill: none; stroke-width: 2; cursor: pointer;" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                <!-- 个人主页：设置图标改为文字 -->
+                <div id="music-header-settings" onclick="openMusicSettingsPanel()" style="display: none; font-size: 14px; color: #aaa; font-weight: bold; cursor: pointer;">Settings</div>
             </div>
         </div>
 
-        <div class="panel-content music-content" style="padding: 20px; padding-bottom: 140px;">
+        <div class="panel-content music-content" style="padding: 0; padding-bottom: 140px;">
             <!-- 1. 发现页 (主页) -->
-            <div class="music-tab-page active" id="music-page-home">
+            <div class="music-tab-page active" id="music-page-home" style="padding: 20px;">
                 <div class="music-search-wrapper">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="#bbb" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="music-search-input" placeholder="搜索音乐、歌手 (回车搜索)" onkeypress="musicHandleSearchEnter(event)">
@@ -2546,35 +2546,63 @@
             </div>
 
             <!-- 2. 好友页 -->
-            <div class="music-tab-page" id="music-page-friends">
-                <div class="music-section-title">音乐好友</div>
-                <div class="music-friend-list-card" id="musicFriendListContainer">
+            <div class="music-tab-page" id="music-page-friends" style="padding: 20px;">
+                <!-- 删除了音乐好友字样，去除了 music-friend-list-card 类名以去掉白色卡片背景 -->
+                <div id="musicFriendListContainer" style="display: flex; flex-direction: column; gap: 10px;">
                     <!-- 动态渲染好友列表 -->
                     <div style="text-align: center; padding: 40px 20px; color: #aaa; font-size: 13px;">暂无好友，快去添加吧</div>
                 </div>
             </div>
 
-            <!-- 3. 个人主页 -->
-            <div class="music-tab-page" id="music-page-me">
-                <div class="music-profile-card">
-                    <div class="music-profile-avatar" id="musicMeAvatar"></div>
-                    <div class="music-profile-name" id="musicMeName">未登录用户</div>
-                    <div class="music-profile-stats">
-                        <div><span>0</span> 关注</div>
-                        <div><span>0</span> 粉丝</div>
+            <!-- 3. 个人主页 (网易云风格) - 彻底去掉负 margin，直接完美铺满 -->
+            <div class="music-tab-page" id="music-page-me" style="padding: 0; gap: 0; background-color: #fff; min-height: 100%;">
+                <!-- 上半部分背景与信息 -->
+                <div id="musicMeBg" style="position: relative; width: 100%; padding: 60px 20px 40px; display: flex; flex-direction: column; align-items: center; background-color: #ccc; background-size: cover; background-position: center;">
+                    
+                    <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; width: 100%;">
+                        <div class="music-profile-avatar" id="musicMeAvatar" style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.5); margin-bottom: 10px; background-color: #eee; background-size: cover; background-position: center;"></div>
+                        <div class="music-profile-name" id="musicMeName" style="font-size: 18px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">未登录用户</div>
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.8); margin-top: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">这个人很懒，什么都没写~</div>
+                        
+                        <div style="display: flex; gap: 15px; font-size: 12px; color: rgba(255,255,255,0.9); font-weight: bold; margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                            <div><span>10</span> 关注</div>
+                            <div><span>7</span> 粉丝</div>
+                            <div>Lv.6</div>
+                            <div><span>133</span> 小时</div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; width: 100%; margin-top: 20px; gap: 10px;">
+                            <div class="music-me-btn"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 最近</div>
+                            <!-- 【修改】：给本地按钮绑定点击事件 -->
+                            <div class="music-me-btn" onclick="openLocalImportModal()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> 本地</div>
+                            <div class="music-me-btn"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg> 网盘</div>
+                            <div class="music-me-btn" onclick="document.getElementById('musicMeBgInput').click()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="6.5"></line></svg> 装扮</div>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- 歌单列表容器 (仿网易云样式) -->
-                <div id="music-my-playlist-container" style="display: flex; flex-direction: column; padding: 0 5px;">
-                    <!-- 动态渲染 -->
+                <!-- 下半部分歌单 -->
+                <div style="flex: 1; background: #fff; border-radius: 20px 20px 0 0; margin-top: -15px; position: relative; z-index: 3; padding: 20px 15px;">
+                    <div style="font-size: 16px; font-weight: bold; color: #111; margin-bottom: 15px;">音乐</div>
+                    <div id="music-my-playlist-container" style="display: flex; flex-direction: column;">
+                        <!-- 动态渲染 -->
+                    </div>
                 </div>
             </div>
+            <input type="file" id="musicMeBgInput" accept="image/*" style="display: none;" onchange="handleMusicMeBgUpload(event)">
         </div>
 
         <!-- 悬浮播放栏 (增加点击事件) -->
         <div class="music-mini-player" onclick="openMusicPlayer()">
-            <div class="music-player-disc"><div class="music-player-disc-inner"></div></div>
+            <!-- 默认的黑胶唱片 -->
+            <div class="music-player-disc" id="miniPlayerDisc"><div class="music-player-disc-inner"></div></div>
+            
+            <!-- 【新增】：一起听歌时的双头像 (默认隐藏) -->
+            <div id="miniPlayerTogetherAvatars" style="display: none; align-items: center; margin-right: 10px;">
+                <div id="miniAvatar1" style="width: 36px; height: 36px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #fff; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                <div id="miniAvatar2" style="width: 36px; height: 36px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #fff; margin-left: -15px; z-index: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+            </div>
+
             <div class="music-player-info">
                 <div class="music-player-title">Not Playing</div>
                 <div class="music-player-sub">Music App</div>
@@ -2603,6 +2631,66 @@
         </div>
     </div>
 
+    <!-- 【新增】：添加到歌单弹窗 -->
+    <div class="preset-modal-overlay" id="musicAddToPlaylistModal">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">添加到歌单</div>
+            <div style="width: 100%; padding: 15px 20px;">
+                <select id="addToPlaylistSelect" style="width: 100%; padding: 10px; border: 1px solid #eee; border-radius: 8px; outline: none; font-size: 13px; background: #f9f9f9;">
+                    <!-- 动态渲染 -->
+                </select>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicAddToPlaylistModal').classList.remove('show')">取消</div>
+                <div class="preset-btn-confirm" onclick="confirmAddToPlaylist()">确定</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 【新增】：编辑歌单弹窗 -->
+    <div class="preset-modal-overlay" id="musicEditPlaylistModal">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">编辑歌单</div>
+            <input type="hidden" id="editPlaylistId">
+            <div style="width: 100%; padding: 15px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <input type="text" id="editPlaylistName" class="preset-modal-input" placeholder="歌单名称" style="width: 100%; margin: 0;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="editPlaylistCover" class="preset-modal-input" placeholder="封面 URL" style="flex: 1; margin: 0;">
+                    <div onclick="document.getElementById('editPlaylistLocalCover').click()" style="background: #f0f0f0; color: #333; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap;">本地上传</div>
+                    <input type="file" id="editPlaylistLocalCover" accept="image/*" style="display: none;" onchange="handleEditPlaylistCover(event)">
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="deletePlaylist()" style="color: #ff3b30;">删除歌单</div>
+                <div class="preset-btn-confirm" onclick="confirmEditPlaylist()">保存修改</div>
+            </div>
+            <div class="preset-modal-actions" style="border-top: none;">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicEditPlaylistModal').classList.remove('show')" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 【新增】：歌单详情全屏面板 -->
+    <div class="theme-panel instant-panel" id="musicPlaylistDetailPanel" style="z-index: 165; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closePlaylistDetail()">Back</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">歌单详情</div></div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 0;">
+            <div style="padding: 20px; display: flex; gap: 15px; background: #fff; border-bottom: 1px solid #eee;">
+                <div id="playlistDetailCover" style="width: 100px; height: 100px; border-radius: 12px; background-size: cover; background-position: center; background-color: #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px;">
+                    <div id="playlistDetailName" style="font-size: 18px; font-weight: bold; color: #111;"></div>
+                    <div id="playlistDetailCount" style="font-size: 12px; color: #888;"></div>
+                </div>
+            </div>
+            <div id="playlistDetailTracks" style="padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 100px;">
+                <!-- 动态渲染歌曲列表 -->
+            </div>
+        </div>
+    </div>
+
     <!-- =========================================
          新增：Music 独立登录面板
          ========================================= -->
@@ -2623,62 +2711,159 @@
     </div>
 
     <!-- =========================================
-         新增：Music 全屏播放器面板
+         新增：Music 全屏播放器面板 (网易云风格)
          ========================================= -->
-    <div class="theme-panel instant-panel" id="musicPlayerPanel" style="z-index: 180; background-color: #111;">
-        <div class="panel-header" style="background: transparent; border-bottom: none;">
-            <div class="header-close" onclick="closeMusicPlayer()" style="color: #fff;">
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    <div class="theme-panel instant-panel" id="musicPlayerPanel" style="z-index: 180; background-color: #111; background-size: cover; background-position: center; background-repeat: no-repeat;">
+        <!-- 【新增】：轻度半透明黑色遮罩层，压暗背景保证文字清晰，但不加重度磨砂 -->
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 1;"></div>
+        
+        <!-- 顶部导航 -->
+        <div class="panel-header" style="background: transparent; border-bottom: none; z-index: 2; position: relative; padding-top: calc(20px + env(safe-area-inset-top)); height: auto; min-height: auto;">
+
+            <div class="header-close" onclick="closeMusicPlayer()" style="color: #fff; padding: 10px;">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-            <div class="header-title-wrapper">
-                <div style="display: flex; flex-direction: column; align-items: center;">
-                    <div id="mpSongName" style="font-size: 16px; font-weight: bold; color: #fff;">Nocturne op.9 No.2</div>
-                    <div id="mpArtistName" style="font-size: 12px; color: #aaa;">Chopin</div>
+            <div class="header-title-wrapper" style="position: static; transform: none; flex: 1;">
+                <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                    <!-- 【修改】：去除默认歌名和歌手 -->
+                    <div id="mpSongName" style="font-size: 16px; font-weight: 500; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">暂无播放</div>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                        <div id="mpArtistName" style="font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">未知歌手</div>
+                        <span style="font-size: 10px; color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px;">关注</span>
+                    </div>
                 </div>
             </div>
-            <div class="header-close" style="visibility: hidden;">Done</div>
+            <!-- 删掉菜单，直接点击三个点换背景 -->
+            <div class="header-close" style="color: #fff; padding: 10px; position: relative; z-index: 9999;">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" onclick="triggerMpBgUpload(event)" style="cursor: pointer;"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>
+            </div>
         </div>
         
-        <div class="panel-content" style="padding: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;">
-            <!-- 一起听歌状态提示 -->
-            <div id="mpListenTogetherStatus" style="display: none; justify-content: center; margin-top: 10px;">
-                <div style="background: rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 20px; font-size: 12px; color: #fff; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px);">
-                    <div style="width: 8px; height: 8px; background: #34c759; border-radius: 50%; box-shadow: 0 0 8px #34c759;"></div>
-                    <span id="mpListenTogetherText">正在与 Doris 一起听歌</span>
+        <div class="panel-content" style="padding: 0; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; z-index: 2; position: relative;">
+            
+            <!-- 一起听歌状态提示 (网易云风格) -->
+            <div id="mpListenTogetherStatus" onclick="endListenTogether(event)" style="display: none; flex-direction: column; align-items: center; margin-top: 10px; cursor: pointer;" title="点击结束一起听歌">
+                <div style="display: flex; justify-content: center; align-items: center;">
+                    <!-- 进一步放大头像尺寸到 70px -->
+                    <div id="mpListenTogetherAvatar1" style="width: 70px; height: 70px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid rgba(255,255,255,0.2); z-index: 2;"></div>
+                    <div id="mpListenTogetherAvatar2" style="width: 70px; height: 70px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid rgba(255,255,255,0.2); margin-left: -20px; z-index: 1;"></div>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                    <span id="mpListenTogetherText">正在一起听歌</span>，已听<span id="mpListenTime">0</span>分钟
                 </div>
             </div>
 
-            <!-- 旋转黑胶唱片 -->
-            <div style="flex: 1; display: flex; justify-content: center; align-items: center; position: relative;">
-                <div class="mp-disc-outer">
-                    <div class="mp-disc-inner" id="mpDiscCover"></div>
+            <!-- 【修改】：旋转黑胶唱片与歌词切换区 -->
+            <div style="flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-top: -20px; width: 100%; cursor: pointer;" onclick="toggleMpLyric()">
+                <!-- 黑胶唱片 -->
+                <div id="mpDiscArea" style="display: flex; justify-content: center; align-items: center; width: 100%;">
+                    <div class="mp-disc-outer" style="width: 280px; height: 280px; border: 8px solid rgba(255,255,255,0.1); background: #111; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+                        <div style="position: absolute; width: 100%; height: 100%; border-radius: 50%; background: repeating-radial-gradient(#111, #111 4px, #1a1a1a 5px, #1a1a1a 6px);"></div>
+                        <div class="mp-disc-inner" id="mpDiscCover" style="width: 180px; height: 180px; border: none; z-index: 2;"></div>
+                    </div>
+                </div>
+                
+                <!-- 歌词/信息显示区 (默认隐藏) -->
+                <div id="mpLyricArea" style="display: none; flex-direction: column; align-items: center; justify-content: center; width: 80%; height: 100%; text-align: center;">
+                    <div id="mpLyricTitle" style="font-size: 24px; font-weight: bold; color: #fff; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">暂无播放</div>
+                    <div id="mpLyricArtist" style="font-size: 16px; color: rgba(255,255,255,0.8); margin-bottom: 30px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">未知歌手</div>
+                    <div style="font-size: 14px; color: rgba(255,255,255,0.6); line-height: 2; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                        (暂无歌词数据)<br>
+                        享受纯净音乐时光...
+                    </div>
                 </div>
             </div>
 
             <!-- 底部控制区 -->
-            <div style="padding: 20px 30px 50px; display: flex; flex-direction: column; gap: 25px;">
-                <!-- 进度条 -->
-                <div style="display: flex; align-items: center; gap: 10px; font-size: 10px; color: #888;">
-                    <span>01:24</span>
-                    <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; position: relative;">
-                        <div style="position: absolute; left: 0; top: 0; height: 100%; width: 30%; background: #fff; border-radius: 2px;"></div>
-                        <div style="position: absolute; left: 30%; top: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: #fff; border-radius: 50%;"></div>
+            <div style="padding: 0 20px 40px; display: flex; flex-direction: column; gap: 20px;">
+                
+                <!-- 进度条上方功能按钮组 -->
+                <div style="display: flex; justify-content: space-around; align-items: center; padding: 0 10px;">
+                    <!-- 分享 -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;" onclick="openMusicShareModal()">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; cursor: pointer;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 14l5-5-5-5"></path>
+                                <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"></path>
+                            </svg>
+                        </div>
                     </div>
-                    <span>04:30</span>
+                    <!-- 评论 -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        </div>
+                    </div>
+                    <!-- 音效 -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2" fill="none"><path d="M12 2v20M17 5v14M7 9v6M22 9v6M2 11v2"></path></svg>
+                        </div>
+                    </div>
+                    <!-- 歌词 -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; font-size: 12px; color: #fff; font-weight: bold;">
+                            字
+                        </div>
+                    </div>
+                    <!-- 更多 -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>
+                    </div>
                 </div>
-                <!-- 按钮区 -->
-                <div style="display: flex; justify-content: space-between; align-items: center; color: #fff;">
-                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
-                    <div style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid #fff; display: flex; justify-content: center; align-items: center;">
-                        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="margin-left: 4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+
+                <!-- 进度条 -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="width: 100%; height: 2px; background: rgba(255,255,255,0.2); border-radius: 1px; position: relative; cursor: pointer;" id="mpProgressBar" onclick="seekMusic(event)">
+                        <div id="mpProgressFill" style="position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #fff; border-radius: 1px;"></div>
+                        <div id="mpProgressDot" style="position: absolute; left: 0%; top: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background: #fff; border-radius: 50%; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>
                     </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.5);">
+                        <span id="mpCurrentTime">00:00</span>
+                        <span id="mpDuration">00:00</span>
+                    </div>
+                </div>
+
+                <!-- 底部播放控制按钮 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; color: #fff; padding: 0 10px;">
+                    <!-- 播放模式切换按钮 -->
+                    <div id="mpPlayModeBtn" onclick="togglePlayMode()" style="cursor: pointer; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                    </div>
+                    
+                    <!-- 上一首 -->
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
+                    <!-- 播放/暂停 -->
+                    <div style="width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; cursor: pointer;" onclick="toggleMusicPlay()">
+                        <svg id="mpPlayBtn" viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                        <svg id="mpPauseBtn" viewBox="0 0 24 24" width="48" height="48" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    </div>
+                    <!-- 下一首 -->
                     <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
-                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    
+                    <!-- 播放列表按钮 -->
+                    <div onclick="openMpPlaylist()" style="cursor: pointer; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- 从下向上弹出的播放列表面板 -->
+        <div id="mpPlaylistModal" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 60%; background: rgba(30,30,30,0.95); backdrop-filter: blur(20px); border-radius: 24px 24px 0 0; z-index: 1000; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; box-shadow: 0 -5px 20px rgba(0,0,0,0.3);">
+            <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 16px; font-weight: bold; color: #fff;">当前播放列表</div>
+                <div onclick="closeMpPlaylist()" style="color: rgba(255,255,255,0.6); cursor: pointer; padding: 5px;">关闭</div>
+            </div>
+            <div id="mpPlaylistContent" style="flex: 1; overflow-y: auto; padding: 10px 20px;">
+                <div style="text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; margin-top: 20px;">暂无歌曲</div>
+            </div>
+        </div>
     </div>
+    
+    <!-- 隐藏的背景上传 input -->
+    <input type="file" id="mpBgUploadInput" accept="image/*" style="display: none;" onchange="handleMpBgUpload(event)">
+
 
     <!-- 添加音乐好友弹窗 -->
     <div class="preset-modal-overlay" id="musicAddFriendModalOverlay">
@@ -2697,44 +2882,23 @@
         </div>
     </div>
 
-    <!-- 切换音乐源弹窗 -->
-    <div class="preset-modal-overlay" id="musicApiToggleModal">
-        <div class="preset-modal" style="width: 300px;">
-            <div class="preset-modal-title">切换音乐接口</div>
-            <div class="preset-modal-desc">如果搜索失败或无法播放，请切换接口</div>
-            
-            <div style="text-align: left; padding: 10px 20px; font-size: 13px; font-weight: bold; color: #888;">搜索接口 (Search API)</div>
-            <div style="display: flex; flex-direction: column; gap: 5px; padding: 0 20px;">
-                <div onclick="musicSetSearchApi('primary')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-primary">小狗源 (Primary)</div>
-                <div onclick="musicSetSearchApi('secondary')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-secondary">小猫源 (Secondary)</div>
-                <div onclick="musicSetSearchApi('tertiary')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-tertiary">小元源 (Tertiary)</div>
-                <div onclick="musicSetSearchApi('api4')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-api4">小兔源 (API 4)</div>
-                <div onclick="musicSetSearchApi('api5')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-search-api5">小鱼源 (API 5)</div>
-            </div>
+    <!-- 删除了 musicApiToggleModal 弹窗，将其内容移至设置面板 -->
 
-            <div style="text-align: left; padding: 15px 20px 10px; font-size: 13px; font-weight: bold; color: #888;">播放接口 (Play API)</div>
-            <div style="display: flex; flex-direction: column; gap: 5px; padding: 0 20px; margin-bottom: 15px;">
-                <div onclick="musicSetPlayApi('miemie')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-play-miemie">咩咩源 (Miemie)</div>
-                <div onclick="musicSetPlayApi('zhizhi')" style="padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer; font-weight: bold;" id="api-play-zhizhi">吱吱源 (Zhizhi)</div>
-            </div>
-
-            <div class="preset-modal-actions">
-                <div class="preset-btn-cancel" onclick="document.getElementById('musicApiToggleModal').classList.remove('show')" style="width: 100%; border-right: none;">关闭</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 网易云 UID 导入弹窗 -->
+    <!-- 【修改】：仿网易云登录样式的 UID 导入弹窗 -->
     <div class="preset-modal-overlay" id="musicWyyLoginModal">
-        <div class="preset-modal" style="width: 300px;">
-            <div class="preset-modal-title">导入网易云歌单</div>
-            <div class="preset-modal-desc">请输入您的网易云音乐 UID</div>
-            <input type="text" id="wyy-uid-input" class="preset-modal-input" placeholder="例如: 123456789" style="width: 85%; margin-top: 10px;">
-            
-            <div class="preset-modal-actions" style="margin-top: 20px;">
-                <div class="preset-btn-cancel" onclick="document.getElementById('musicWyyLoginModal').classList.remove('show')">取消</div>
-                <div class="preset-btn-confirm" onclick="musicDoWyyLogin()" id="wyy-login-btn">获取歌单</div>
+        <div class="preset-modal" style="width: 320px; background: #fff; border-radius: 20px; padding: 30px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <div style="width: 60px; height: 60px; background: #ff3b30; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-7.5c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                </div>
             </div>
+            <div style="text-align: center; font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">网易云音乐登录</div>
+            <div style="text-align: center; font-size: 12px; color: #888; margin-bottom: 25px;">请输入您的网易云 UID 获取公开歌单</div>
+            
+            <input type="text" id="wyy-uid-input-modal" style="width: 100%; padding: 12px 15px; border: 1px solid #eee; border-radius: 24px; font-size: 14px; outline: none; background: #f9f9f9; text-align: center; margin-bottom: 20px;" placeholder="输入 UID (例如: 123456789)">
+            
+            <div onclick="musicDoWyyLogin()" id="wyy-login-btn" style="width: 100%; background: #ff3b30; color: #fff; text-align: center; padding: 12px; border-radius: 24px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(255,59,48,0.3);">登录并获取</div>
+            <div onclick="document.getElementById('musicWyyLoginModal').classList.remove('show')" style="width: 100%; text-align: center; padding: 12px; font-size: 13px; color: #888; cursor: pointer; margin-top: 10px;">取消</div>
         </div>
     </div>
 
@@ -2748,11 +2912,23 @@
             <div class="header-close" style="visibility: hidden;">Done</div>
         </div>
         <div class="panel-content" style="padding: 20px;">
+            
+            <div style="font-size: 13px; font-weight: bold; color: #888; margin-bottom: 10px; padding-left: 5px;">搜索接口 (Search API)</div>
+            <div style="background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #eee; margin-bottom: 20px;">
+                <div onclick="musicSetSearchApi('primary')" class="music-api-item" id="api-search-primary">小狗源 (Primary)</div>
+                <div onclick="musicSetSearchApi('secondary')" class="music-api-item" id="api-search-secondary">小猫源 (Secondary)</div>
+                <div onclick="musicSetSearchApi('tertiary')" class="music-api-item" id="api-search-tertiary">小元源 (Tertiary)</div>
+                <div onclick="musicSetSearchApi('api4')" class="music-api-item" id="api-search-api4">小兔源 (API 4)</div>
+                <div onclick="musicSetSearchApi('api5')" class="music-api-item" id="api-search-api5" style="border-bottom: none;">小鱼源 (API 5)</div>
+            </div>
+
+            <div style="font-size: 13px; font-weight: bold; color: #888; margin-bottom: 10px; padding-left: 5px;">播放接口 (Play API)</div>
+            <div style="background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #eee; margin-bottom: 30px;">
+                <div onclick="musicSetPlayApi('miemie')" class="music-api-item" id="api-play-miemie">咩咩源 (Miemie)</div>
+                <div onclick="musicSetPlayApi('zhizhi')" class="music-api-item" id="api-play-zhizhi" style="border-bottom: none;">吱吱源 (Zhizhi)</div>
+            </div>
+
             <div style="background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #eee;">
-                <div onclick="musicOpenApiToggleModal()" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; cursor: pointer;">
-                    <span style="font-size: 15px; color: #111; font-weight: bold;">切换音乐源</span>
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </div>
                 <div onclick="logoutMusicApp()" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
                     <span style="font-size: 15px; color: #ff3b30; font-weight: bold;">退出当前账号</span>
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -2781,29 +2957,143 @@
         </div>
     </div>
 
-    <!-- 综合导入歌单弹窗 (UID + URL) -->
-    <div class="preset-modal-overlay" id="musicImportModal">
-        <div class="preset-modal" style="width: 320px;">
-            <div class="preset-modal-title">导入外部歌单</div>
-            
-            <div style="width: 100%; padding: 15px 20px; display: flex; flex-direction: column; gap: 20px;">
-                <!-- 方式一：URL 导入 -->
-                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
-                    <div style="font-size: 13px; font-weight: bold; color: #111; margin-bottom: 8px;">方式一：通过链接导入单歌单</div>
-                    <input type="text" id="music-import-url-input" class="preset-modal-input" placeholder="粘贴网易云歌单分享链接" style="width: 100%; margin: 0 0 10px 0;">
-                    <div onclick="musicImportByUrl()" id="music-btn-import-url" style="background: #111; color: #fff; text-align: center; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer;">解析并导入</div>
+    <!-- 【修改】：导入外部歌单选择弹窗 -->
+    <div class="preset-modal-overlay" id="musicImportSelectModal">
+        <div class="preset-modal" style="width: 280px;">
+            <div class="preset-modal-title">选择导入方式</div>
+            <div class="preset-list" style="width: 100%; margin-top: 10px;">
+                <div class="preset-item" onclick="document.getElementById('musicImportSelectModal').classList.remove('show'); document.getElementById('musicImportUrlModal').classList.add('show');">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">URL 链接导入</span>
                 </div>
-
-                <!-- 方式二：UID 导入 -->
-                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
-                    <div style="font-size: 13px; font-weight: bold; color: #111; margin-bottom: 8px;">方式二：通过 UID 批量导入</div>
-                    <input type="text" id="wyy-uid-input" class="preset-modal-input" placeholder="输入网易云 UID" style="width: 100%; margin: 0 0 10px 0;">
-                    <div onclick="musicDoWyyLogin()" id="wyy-login-btn" style="background: #111; color: #fff; text-align: center; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer;">获取公开歌单</div>
+                <div class="preset-item" onclick="document.getElementById('musicImportSelectModal').classList.remove('show'); document.getElementById('musicWyyLoginModal').classList.add('show');">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">网易云 UID 导入</span>
                 </div>
             </div>
-
             <div class="preset-modal-actions">
-                <div class="preset-btn-cancel" onclick="document.getElementById('musicImportModal').classList.remove('show')" style="width: 100%; border-right: none;">关闭</div>
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicImportSelectModal').classList.remove('show')" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- URL 导入弹窗 -->
+    <div class="preset-modal-overlay" id="musicImportUrlModal">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">URL 导入歌单</div>
+            <div style="width: 100%; padding: 15px 20px;">
+                <input type="text" id="music-import-url-input" class="preset-modal-input" placeholder="粘贴网易云歌单分享链接" style="width: 100%; margin: 0 0 10px 0;">
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicImportUrlModal').classList.remove('show')">取消</div>
+                <div class="preset-btn-confirm" onclick="musicImportByUrl()" id="music-btn-import-url">解析导入</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 【新增】：本地导入歌曲弹窗 -->
+    <div class="preset-modal-overlay" id="musicLocalImportModal">
+        <div class="preset-modal" style="width: 320px;">
+            <div class="preset-modal-title">导入本地歌曲</div>
+            <div style="width: 100%; padding: 15px 20px; display: flex; flex-direction: column; gap: 12px;">
+                
+                <div style="display: flex; gap: 10px;">
+                    <div id="localImportTabUrl" onclick="switchLocalImportTab('url')" style="flex: 1; text-align: center; padding: 8px; background: #111; color: #fff; border-radius: 8px; font-size: 12px; cursor: pointer;">URL 导入</div>
+                    <div id="localImportTabFile" onclick="switchLocalImportTab('file')" style="flex: 1; text-align: center; padding: 8px; background: #f0f0f0; color: #333; border-radius: 8px; font-size: 12px; cursor: pointer;">本地文件</div>
+                </div>
+
+                <input type="text" id="localImportUrlInput" class="preset-modal-input" placeholder="输入歌曲直链 URL" style="width: 100%; margin: 0;">
+                
+                <div id="localImportFileArea" style="display: none; align-items: center; gap: 10px;">
+                    <div onclick="document.getElementById('localImportFileInput').click()" style="flex: 1; background: #f9f9f9; border: 1px dashed #ccc; text-align: center; padding: 10px; border-radius: 8px; font-size: 12px; color: #666; cursor: pointer;">选择音频文件</div>
+                    <input type="file" id="localImportFileInput" accept="audio/*" style="display: none;" onchange="document.getElementById('localImportFileName').innerText = this.files[0]?.name || '未选择'">
+                    <div id="localImportFileName" style="font-size: 10px; color: #aaa; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">未选择</div>
+                </div>
+
+                <input type="text" id="localImportName" class="preset-modal-input" placeholder="歌名 (必填)" style="width: 100%; margin: 0;">
+                <input type="text" id="localImportArtist" class="preset-modal-input" placeholder="歌手 (选填)" style="width: 100%; margin: 0;">
+                
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div onclick="document.getElementById('localImportLrcInput').click()" style="background: #f0f0f0; color: #333; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; white-space: nowrap;">导入歌词 (.lrc)</div>
+                    <input type="file" id="localImportLrcInput" accept=".lrc" style="display: none;" onchange="document.getElementById('localImportLrcName').innerText = this.files[0]?.name || '未选择'">
+                    <div id="localImportLrcName" style="font-size: 10px; color: #aaa; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">未选择</div>
+                </div>
+
+                <select id="localImportPlaylistSelect" style="width: 100%; padding: 10px; border: 1px solid #eee; border-radius: 8px; outline: none; font-size: 13px; background: #f9f9f9;">
+                    <option value="">请选择要添加到的歌单</option>
+                    <!-- 动态渲染 -->
+                </select>
+
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="document.getElementById('musicLocalImportModal').classList.remove('show')">取消</div>
+                <div class="preset-btn-confirm" onclick="confirmLocalImport()">确认导入</div>
+            </div>
+        </div>
+    </div>
+    <!-- 音乐分享弹窗 -->
+    <div class="preset-modal-overlay" id="musicShareModalOverlay">
+        <div class="preset-modal" style="width: 280px;">
+            <div class="preset-modal-title">分享音乐</div>
+            <div class="preset-list" style="width: 100%; margin-top: 10px;">
+                <div class="preset-item" onclick="shareMusicToChat()">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">分享给好友</span>
+                </div>
+                <div class="preset-item" onclick="shareMusicToMoment()">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">分享到朋友圈</span>
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeMusicShareModal()" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 音乐分享给好友选择弹窗 -->
+    <div class="preset-modal-overlay" id="musicShareChatModalOverlay">
+        <div class="preset-modal" style="width: 300px; max-height: 70vh;">
+            <div class="preset-modal-title">选择发送给：</div>
+            <div id="musicShareContactList" style="width: 100%; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- 动态渲染联系人 -->
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeMusicShareChatModal()" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+    <!-- =========================================
+         新增：Char 主动邀请一起听歌弹窗 (高度还原图片)
+         ========================================= -->
+    <div class="preset-modal-overlay" id="musicInviteModalOverlay" style="z-index: 9999; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);">
+        <div style="width: 300px; background: #2c2c2e; border-radius: 24px; padding: 40px 20px 30px; display: flex; flex-direction: column; align-items: center; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+            
+            <!-- 头像与连线区域 -->
+            <div style="position: relative; width: 100%; height: 100px; display: flex; justify-content: center; margin-bottom: 20px;">
+                <!-- SVG 连线 -->
+                <svg style="position: absolute; top: 40px; left: 0; width: 100%; height: 100px; z-index: 1;" viewBox="0 0 300 100">
+                    <path d="M 90 40 Q 90 100 150 100" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></path>
+                    <path d="M 210 40 Q 210 100 150 100" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></path>
+                </svg>
+                
+                <!-- 左侧 Char 头像 -->
+                <div id="inviteModalCharAvatar" style="position: absolute; left: 50px; top: 0; width: 80px; height: 80px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #fff; z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"></div>
+                
+                <!-- 右侧 User 头像 -->
+                <div id="inviteModalUserAvatar" style="position: absolute; right: 50px; top: 0; width: 80px; height: 80px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #fff; z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"></div>
+            </div>
+
+            <!-- 文字信息 -->
+            <div id="inviteModalCharName" style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 8px; letter-spacing: 1px;">爱意_DvWY</div>
+            <div style="font-size: 15px; color: rgba(255,255,255,0.7); margin-bottom: 40px;">邀请你一起听</div>
+
+            <!-- 按钮区域 -->
+            <div style="display: flex; gap: 30px;">
+                <!-- 拒绝按钮 (灰色 X) -->
+                <div onclick="handleMusicInviteResponse(false)" style="width: 60px; height: 60px; border-radius: 50%; background: #7a7a7a; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                    <svg viewBox="0 0 24 24" width="30" height="30" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+                <!-- 同意按钮 (红色 √) -->
+                <div onclick="handleMusicInviteResponse(true)" style="width: 60px; height: 60px; border-radius: 50%; background: #ff3b30; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(255,59,48,0.4);">
+                    <svg viewBox="0 0 24 24" width="36" height="36" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
             </div>
         </div>
     </div>

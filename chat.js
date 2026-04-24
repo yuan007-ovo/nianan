@@ -2451,6 +2451,7 @@ function renderChatHistory(charId, keepScroll = false) {
         const isVoiceMsg = msg.type === 'voice';
         const isTransferMsg = msg.type === 'transfer'; 
         const isFamilyCardMsg = msg.type === 'family_card'; 
+        const isMusicInviteMsg = msg.type === 'music_invite';
 
         let quoteHtml = '';
         if (msg.quote) {
@@ -2536,12 +2537,28 @@ function renderChatHistory(charId, keepScroll = false) {
                     <div class="bfp-bottom">亲属卡</div>
                 </div>
             `;
+        } else if (isMusicInviteMsg) {
+            let statusText = msg.status === 'accepted' ? '已同意' : (msg.status === 'rejected' ? '已拒绝' : '等待回复...');
+            bubbleInnerHtml = `
+                <div class="music-invite-card">
+                    <div class="music-invite-card-top">
+                        <div class="music-invite-icon">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </div>
+                        <div class="music-invite-info">
+                            <div class="music-invite-title">邀请你一起听歌</div>
+                            <div class="music-invite-desc">${statusText}</div>
+                        </div>
+                    </div>
+                    <div class="music-invite-card-bottom">网易云音乐</div>
+                </div>
+            `;
         }
 
         const bubbleHtml = `
             <div class="cr-msg-content-wrapper">
                 ${quoteHtml}
-                <div class="cr-bubble ${msg.role === 'user' ? 'cr-bubble-right' : 'cr-bubble-left'} ${isContinuous ? 'no-tail' : ''} ${isImageMsg ? 'cr-bubble-image' : ''} ${isForwardRecord ? 'cr-bubble-forward' : ''} ${isVoiceMsg ? 'cr-bubble-voice-wrap' : ''} ${isTransferMsg ? 'cr-bubble-transfer' : ''} ${isFamilyCardMsg ? 'cr-bubble-family' : ''}" 
+                <div class="cr-bubble ${msg.role === 'user' ? 'cr-bubble-right' : 'cr-bubble-left'} ${isContinuous ? 'no-tail' : ''} ${isImageMsg ? 'cr-bubble-image' : ''} ${isForwardRecord ? 'cr-bubble-forward' : ''} ${isVoiceMsg ? 'cr-bubble-voice-wrap' : ''} ${isTransferMsg ? 'cr-bubble-transfer' : ''} ${isFamilyCardMsg ? 'cr-bubble-family' : ''} ${isMusicInviteMsg ? 'cr-bubble-music-invite' : ''}" 
                      oncontextmenu="return false;" 
                      ontouchstart="handleBubbleTouchStart(event, ${index})" 
                      ontouchend="handleBubbleTouchEnd()" 
@@ -3359,7 +3376,7 @@ function renderChatRoomEmojis() {
         item.style.width = '50px';
         item.onclick = (e) => {
             e.stopPropagation(); // 防止触发关闭面板
-            sendEmojiMessage(em.url);
+            sendEmojiMessage(em.url, em.desc);
         };
 
         item.innerHTML = `
@@ -3371,13 +3388,13 @@ function renderChatRoomEmojis() {
 }
 
 // 发送表情包消息
-function sendEmojiMessage(url) {
+function sendEmojiMessage(url, desc) {
     if (!currentChatRoomCharId) return;
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
     let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-    const content = `<img src="${url}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block;">`;
+    const content = `<img src="${url}" alt="${desc || '表情包'}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block;">`;
     
     history.push({ role: 'user', content: content, timestamp: Date.now() });
     ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
@@ -3950,7 +3967,23 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
             const recordText = msg.forwardData.map(d => `${d.name}: ${d.content}`).join('\n');
             content = `*${senderName} 转发了一段聊天记录*:\n${recordText}`;
         } else if (content.includes('<img')) {
-            content = `*${senderName} 发送了一个表情包*`;
+            if (content.includes('chat-img-120')) {
+                // 真实图片：提取 Base64 并转换为大模型 Vision 格式
+                const match = content.match(/src="([^"]+)"/);
+                if (match && match[1]) {
+                    content = [
+                        { type: "text", text: `*${senderName} 发送了一张真实图片*` },
+                        { type: "image_url", image_url: { url: match[1] } }
+                    ];
+                } else {
+                    content = `*${senderName} 发送了一张真实图片*`;
+                }
+            } else {
+                // 表情包：提取 alt 属性中的描述
+                const altMatch = content.match(/alt="([^"]+)"/);
+                const desc = altMatch ? altMatch[1] : "未知表情";
+                content = `*${senderName} 发送了一个表情包：[${desc}]*`;
+            }
         } else if (msg.type === 'voice') {
             content = `*${senderName} 发送了一条语音*:\n${msg.content}`;
         } else if (msg.type === 'transfer') {
@@ -3971,9 +4004,21 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
 
         let role = isUser ? 'user' : 'assistant';
         
-        // 核心修复：合并连续的同角色消息，满足 Gemini 严格的 user/assistant 交替规则
+        // 核心修复：合并连续的同角色消息，并兼容多模态数组格式
         if (mergedHistory.length > 0 && mergedHistory[mergedHistory.length - 1].role === role) {
-            mergedHistory[mergedHistory.length - 1].content += `\n${content}`;
+            let prevContent = mergedHistory[mergedHistory.length - 1].content;
+            if (Array.isArray(content)) {
+                if (!Array.isArray(prevContent)) {
+                    mergedHistory[mergedHistory.length - 1].content = [{ type: "text", text: prevContent }];
+                }
+                mergedHistory[mergedHistory.length - 1].content = mergedHistory[mergedHistory.length - 1].content.concat(content);
+            } else {
+                if (Array.isArray(prevContent)) {
+                    mergedHistory[mergedHistory.length - 1].content.push({ type: "text", text: `\n${content}` });
+                } else {
+                    mergedHistory[mergedHistory.length - 1].content += `\n${content}`;
+                }
+            }
         } else {
             mergedHistory.push({ role: role, content: content });
         }
@@ -5207,6 +5252,17 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
                     sysMsg.content += `- 对方正在向你索要亲属卡，你可以根据人设选择赠送(输出 family_card_gift) 或 拒绝(直接输出普通文本骂他/拒绝)。\n`;
                 }
 
+                // 注入一起听歌规则
+                let hasPendingMusicInvite = history.some(m => m.role === 'user' && m.type === 'music_invite' && m.status === 'pending');
+                sysMsg.content += `\n【一起听歌互动规则】\n`;
+                sysMsg.content += `1. 同意一起听歌: {"type":"music_invite_action", "action":"accept", "content":"同意的话"}\n`;
+                sysMsg.content += `2. 拒绝一起听歌: {"type":"music_invite_action", "action":"reject", "content":"拒绝的话"}\n`;
+                sysMsg.content += `3. 主动邀请一起听歌: {"type":"music_invite_proactive", "content":"邀请的话"}\n`;
+                if (hasPendingMusicInvite) {
+                    sysMsg.content += `- 对方邀请你一起听歌，请务必输出 {"type":"music_invite_action", "action":"accept" 或 "reject"} 来回应！\n`;
+                }
+                sysMsg.content += `- 如果你想和对方一起听歌，可以随时输出 {"type":"music_invite_proactive"} 发起邀请。\n`;
+
                 // 注入朋友圈规则
                 sysMsg.content += momentsContext;
                 sysMsg.content += `\n【朋友圈深度互动指南】\n`;
@@ -5336,7 +5392,45 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
                         modified = true; break;
                     }
                 }
-                msg.content = parsed.content || '谢谢你的亲属卡！';
+                msg.content = parsed.content || '';
+            } catch(e){}
+        } else if (msg.role === 'char' && msg.content && msg.content.includes('"type":"music_invite_action"')) {
+            try {
+                let parsed = JSON.parse(msg.content);
+                for (let j = newHistory.length - 1; j >= 0; j--) {
+                    if (newHistory[j].role === 'user' && newHistory[j].type === 'music_invite' && newHistory[j].status === 'pending') {
+                        newHistory[j].status = parsed.action === 'accept' ? 'accepted' : 'rejected';
+                        modified = true;
+                        if (parsed.action === 'accept') {
+                            setTimeout(() => {
+                                if (typeof window.startListenTogether === 'function') window.startListenTogether(targetCharId);
+                            }, 500);
+                        }
+                        break;
+                    }
+                }
+                msg.content = parsed.content || '';
+            } catch(e){}
+        } else if (msg.role === 'char' && msg.content && msg.content.includes('"type":"music_invite_proactive"')) {
+            try {
+                let parsed = JSON.parse(msg.content);
+                msg.content = parsed.content || '';
+                
+                setTimeout(() => {
+                    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+                    const char = chars.find(c => c.id === targetCharId);
+                    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+                    const me = accounts.find(a => a.id === currentLoginId);
+                    
+                    if (char) {
+                        document.getElementById('inviteModalCharAvatar').style.backgroundImage = `url('${char.avatarUrl || ''}')`;
+                        document.getElementById('inviteModalCharName').innerText = char.netName || char.name;
+                        document.getElementById('inviteModalUserAvatar').style.backgroundImage = `url('${me ? me.avatarUrl : ''}')`;
+                        
+                        window.currentListenTogetherCharId = targetCharId;
+                        document.getElementById('musicInviteModalOverlay').classList.add('show');
+                    }
+                }, 1000);
             } catch(e){}
         }
     });
