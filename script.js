@@ -22,11 +22,10 @@ window.ChatDB = {
     },
     removeItem: function(key) {
         delete window.ChatMemoryCache[key];
+        try { localStorage.removeItem(key); } catch(e){} // 强制清理 localStorage 中的残留，防止老数据变成“僵尸”复活
         if (chatDBInstance) {
             const tx = chatDBInstance.transaction(CHAT_STORE_NAME, 'readwrite');
             tx.objectStore(CHAT_STORE_NAME).delete(key);
-        } else {
-            try { localStorage.removeItem(key); } catch(e){}
         }
     }
 };
@@ -505,6 +504,87 @@ window.addEventListener('ChatDBReady', () => {
     }
 });
 
+// ==========================================
+// 系统通知与提示音设置逻辑
+// ==========================================
+let tempSoundData = '';
+
+function openNotifSettingsModal() {
+    // 读取通知模式
+    const notifMode = ChatDB.getItem('sys_notif_mode') || 'off';
+    document.getElementById('modalSysNotifMode').value = notifMode;
+
+    // 读取提示音
+    const savedSound = ChatDB.getItem('sys_notif_sound') || '';
+    document.getElementById('soundUrlInput').value = savedSound.startsWith('data:audio') ? '' : savedSound;
+    const preview = document.getElementById('soundPreview');
+    if (savedSound) {
+        preview.src = savedSound;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+    
+    tempSoundData = ''; // 重置临时音频数据
+    document.getElementById('notifSettingsModalOverlay').classList.add('show');
+}
+
+function closeNotifSettingsModal() {
+    document.getElementById('notifSettingsModalOverlay').classList.remove('show');
+    document.getElementById('soundPreview').pause();
+}
+
+function handleSoundFileUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            tempSoundData = e.target.result;
+            const preview = document.getElementById('soundPreview');
+            preview.src = tempSoundData;
+            preview.style.display = 'block';
+            preview.play();
+            document.getElementById('soundUrlInput').value = ''; // 清空URL
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function saveNotifSettings() {
+    // 1. 保存通知模式
+    const mode = document.getElementById('modalSysNotifMode').value;
+    if (mode !== 'off') {
+        if ("Notification" in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission !== "granted") {
+                    alert("请在浏览器设置中允许通知权限！");
+                    ChatDB.setItem('sys_notif_mode', 'off');
+                } else {
+                    ChatDB.setItem('sys_notif_mode', mode);
+                }
+            });
+        } else {
+            alert("您的浏览器不支持系统通知！");
+            ChatDB.setItem('sys_notif_mode', 'off');
+        }
+    } else {
+        ChatDB.setItem('sys_notif_mode', mode);
+    }
+
+    // 2. 保存提示音
+    const urlVal = document.getElementById('soundUrlInput').value.trim();
+    if (urlVal) {
+        ChatDB.setItem('sys_notif_sound', urlVal);
+    } else if (tempSoundData) {
+        ChatDB.setItem('sys_notif_sound', tempSoundData);
+    } else {
+        ChatDB.removeItem('sys_notif_sound');
+    }
+
+    alert('通知与提示音设置保存成功！');
+    closeNotifSettingsModal();
+}
+
 // 监听全屏开关
 if (fsToggle) {
     fsToggle.addEventListener('change', (e) => {
@@ -672,7 +752,7 @@ function deleteWbEntryFromList(id) {
 function importWbEntry() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.txt,.json,.doc,.docx'; // 支持多种格式
+    input.accept = '.txt,.json,.doc,.docx';
     input.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -680,15 +760,43 @@ function importWbEntry() {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target.result;
-            const fileName = file.name.replace(/\.[^/.]+$/, ""); // 去除后缀名作为标题
+            const fileName = file.name.replace(/\.[^/.]+$/, "");
+            
+            // 确保全局 wbData 是最新状态
+            wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || { groups: ['默认分组'], entries: [] };
             
             if (file.name.endsWith('.json')) {
                 try {
                     const data = JSON.parse(content);
-                    if (Array.isArray(data)) {
-                        // 批量导入 JSON 数组
+                    let entriesToImport = [];
+
+                    // 1. 兼容酒馆 (SillyTavern) 的 Lorebook 格式
+                    if (data.entries) {
+                        const entriesArray = Array.isArray(data.entries) ? data.entries : Object.values(data.entries);
+                        entriesArray.forEach(item => {
+                            let kw = '';
+                            if (Array.isArray(item.key)) kw = item.key.join(', ');
+                            else if (Array.isArray(item.keys)) kw = item.keys.join(', ');
+                            else if (typeof item.key === 'string') kw = item.key;
+                            else if (typeof item.keys === 'string') kw = item.keys;
+
+                            entriesToImport.push({
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                                active: item.enabled !== false && item.disable !== true,
+                                title: item.comment || item.name || '未命名',
+                                group: currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter,
+                                position: 'before',
+                                constant: !!item.constant,
+                                exact: true,
+                                keywords: kw,
+                                content: item.content || ''
+                            });
+                        });
+                    } 
+                    // 2. 兼容普通的 JSON 数组格式
+                    else if (Array.isArray(data)) {
                         data.forEach(item => {
-                            wbData.entries.push({
+                            entriesToImport.push({
                                 id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
                                 active: item.active !== false,
                                 title: item.title || '未命名',
@@ -700,10 +808,10 @@ function importWbEntry() {
                                 content: item.content || ''
                             });
                         });
-                        alert(`成功导入 ${data.length} 个词条！`);
-                    } else {
-                        // 导入单个 JSON 对象
-                        wbData.entries.push({
+                    }
+                    // 3. 兼容单个 JSON 对象
+                    else {
+                        entriesToImport.push({
                             id: Date.now().toString(),
                             active: data.active !== false,
                             title: data.title || fileName,
@@ -714,18 +822,26 @@ function importWbEntry() {
                             keywords: data.keywords || '',
                             content: data.content || ''
                         });
-                        alert('成功导入 1 个词条！');
                     }
+
+                    if (entriesToImport.length > 0) {
+                        wbData.entries.push(...entriesToImport);
+                        alert(`成功导入 ${entriesToImport.length} 个词条！`);
+                    } else {
+                        alert('未在 JSON 中找到有效的词条数据。');
+                    }
+
                 } catch (err) {
+                    console.error(err);
                     alert('JSON 解析失败，将作为普通文本导入');
                     importAsText(fileName, content);
                 }
             } else {
-                // TXT 或其他格式，直接作为文本导入
                 importAsText(fileName, content);
             }
             
-            saveWbData();
+            // 强制同步写入数据库
+            ChatDB.setItem('worldbook_data', JSON.stringify(wbData));
             renderWbList();
         };
         reader.readAsText(file);

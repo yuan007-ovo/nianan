@@ -2347,6 +2347,8 @@ body.ios-standalone .home-screen {
     position: relative;
     z-index: 20;
     border-top: 1px solid #e5e5e5;
+    width: 100%; /* 新增：强制宽度为100% */
+    box-sizing: border-box; /* 新增：确保 padding 不会撑破宽度 */
 }
 
 /* 更多功能悬浮面板样式 (黑白灰简约风) */
@@ -2589,6 +2591,7 @@ body.ios-standalone .home-screen {
 .cr-input-container {
     flex: 1; background-color: #fff; border-radius: 24px; display: flex;
     align-items: center; padding: 4px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    min-width: 0; /* 新增：防止 flex 子项内容过长撑破容器 */
 }
 .cr-icon-left { padding: 0 12px 0 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 .cr-icon-left svg { width: 20px; height: 20px; stroke: #555; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; transform: rotate(-45deg); }
@@ -3233,7 +3236,7 @@ body.ios-standalone .home-screen {
     border-radius: 24px; padding: 25px; box-sizing: border-box;
     box-shadow: 0 15px 30px rgba(0,0,0,0.2);
     display: flex; flex-direction: column; justify-content: space-between;
-    position: relative; overflow: hidden; margin-bottom: 30px; flex-shrink: 0;
+    position: relative; overflow: hidden; flex-shrink: 0;
 }
 .wallet-bank-card::after {
     content: ''; position: absolute; top: -50%; right: -20%;
@@ -3340,10 +3343,12 @@ body.ios-standalone .home-screen {
     width: 100%;
     display: flex;
     overflow-x: auto;
+    overflow-y: visible; /* 允许垂直方向显示，防止卡片和阴影被切掉 */
     scroll-snap-type: x mandatory;
     gap: 15px;
     padding: 10px 0 30px;
     scrollbar-width: none; /* 隐藏进度条 */
+    flex-shrink: 0; /* 防止容器高度被其他元素挤压 */
 }
 .wallet-cards-slider::-webkit-scrollbar { display: none; }
 
@@ -3524,3 +3529,453 @@ body.ios-standalone .home-screen {
     border: 2px solid #111;
     background: #f9f9f9;
 }
+/* =========================================
+   聊天室分页加载更多按钮样式
+   ========================================= */
+.chat-load-more {
+    text-align: center;
+    font-size: 12px;
+    color: #576b95;
+    padding: 15px 0 5px 0;
+    cursor: pointer;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+.chat-load-more:active {
+    opacity: 0.5;
+}
+/* =========================================
+   心声与虚拟键盘样式 (居中、缩小、圆角)
+   ========================================= */
+.inner-voice-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    z-index: 2000; display: none; justify-content: center; align-items: center;
+}
+.inner-voice-overlay.show { display: flex; animation: fadeIn 0.2s; }
+
+.inner-voice-modal {
+    width: 85%; max-width: 300px; /* 缩小整体宽度 */
+    display: flex; flex-direction: column; gap: 12px;
+    transform: translateY(-10%); /* 稍微偏上一点，视觉更居中 */
+}
+
+.inner-voice-box {
+    background-color: #fff; border-radius: 16px; padding: 15px 20px;
+    min-height: 80px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.quote-svg { position: absolute; width: 16px; height: 16px; fill: #e0e0e0; }
+.quote-left { top: 10px; left: 10px; }
+.quote-right { bottom: 10px; right: 10px; transform: rotate(180deg); }
+
+.typing-text {
+    font-size: 14px; color: #333; line-height: 1.5;
+    padding: 0 10px; min-height: 21px; word-break: break-all;
+}
+.typing-cursor {
+    display: inline-block; width: 2px; height: 14px; background-color: #007aff;
+    vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 2px;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.full-voice-hint {
+    font-size: 11px; color: rgba(255,255,255,0.8); text-align: center;
+    font-style: italic; padding: 0 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* 迷你圆角键盘 */
+.ios-keyboard-mini {
+    background-color: rgba(209, 212, 217, 0.95); border-radius: 16px; /* 键盘整体圆角 */
+    padding: 10px 6px; display: flex; flex-direction: column; gap: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.ios-keyboard-mini .kb-row { display: flex; justify-content: center; gap: 4px; }
+.ios-keyboard-mini .kb-key {
+    background-color: #fff; border-radius: 6px; height: 32px; /* 缩小按键高度 */
+    display: flex; justify-content: center; align-items: center;
+    font-size: 14px; color: #000; box-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    flex: 1; max-width: 26px; font-weight: 500;
+}
+.ios-keyboard-mini .kb-key.special { background-color: #b5b8bc; max-width: 36px; font-size: 12px; }
+.ios-keyboard-mini .kb-key.space { max-width: 120px; flex: 3; font-size: 12px; }
+.ios-keyboard-mini .kb-key.send { background-color: #007aff; color: #fff; max-width: 45px; font-size: 12px; font-weight: bold; cursor: pointer; }
+.ios-keyboard-mini .kb-key.active-press { background-color: #b5b8bc; transform: scale(0.95); }
+/* =========================================
+   角色记忆库 (Memory Bank) 专属样式
+   ========================================= */
+.memory-header-section {
+    display: flex; flex-direction: column; align-items: center; position: relative; padding-top: 10px;
+}
+.memory-deco-left { position: absolute; left: 0; top: 0; color: #ccc; font-size: 12px; line-height: 1.4; }
+.memory-deco-right { position: absolute; right: 0; top: 0; color: #ccc; font-size: 12px; }
+
+.memory-avatar-wrap {
+    width: 70px; height: 70px; border-radius: 50%; border: 2px dashed #d0d0d0;
+    padding: 4px; margin-bottom: 12px; margin-top: 10px;
+}
+.memory-avatar {
+    width: 100%; height: 100%; border-radius: 50%; background-color: #f0f0f0;
+    background-size: cover; background-position: center;
+}
+.memory-char-name { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 8px; letter-spacing: 1px; }
+.memory-about-me { font-size: 11px; color: #ffb6c1; margin-bottom: 20px; }
+
+.memory-tab-container {
+    display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; width: 100%;
+}
+.memory-tab-btn {
+    position: relative; width: 80px; height: 32px; background-color: #f8f8f8;
+    border: 1px solid #eaeaea; border-radius: 10px; display: flex; justify-content: center;
+    align-items: center; font-size: 12px; color: #888; cursor: pointer; transition: all 0.2s;
+}
+.memory-tab-btn.active { background-color: #f0f0f0; color: #333; font-weight: bold; border-color: #e0e0e0; }
+.memory-tab-btn::before, .memory-tab-btn::after {
+    content: ''; position: absolute; top: -5px; width: 10px; height: 10px;
+    background-color: inherit; border: 1px solid inherit; border-bottom: none;
+    border-radius: 50% 50% 0 0; z-index: -1;
+}
+.memory-tab-btn::before { left: 8px; border-color: #eaeaea; }
+.memory-tab-btn::after { right: 8px; border-color: #eaeaea; }
+.memory-tab-btn.active::before, .memory-tab-btn.active::after { border-color: #e0e0e0; }
+
+.memory-menu-bar-title {
+    text-align: center; font-size: 12px; font-weight: bold; color: #555;
+    letter-spacing: 2px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 15px;
+}
+.memory-menu-bar-title::before, .memory-menu-bar-title::after { content: ':'; font-size: 16px; font-weight: bold; color: #333; }
+
+/* 修改为浅灰色背景，并增加内边距和圆角 */
+/* 下半部分：独立的纯白大卡片 */
+.memory-content-area {
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 20px; 
+    scrollbar-width: none;
+    background-color: #ffffff; 
+    /* 四周留出边距，形成独立卡片 */
+    margin: 0 20px 20px 20px; 
+    border-radius: 20px; /* 四周圆角 */
+    box-shadow: 0 8px 25px rgba(0,0,0,0.04); /* 卡片悬浮阴影 */
+    border: 1px solid #f0f0f0;
+}
+.memory-content-area::-webkit-scrollbar { display: none; }
+
+.memory-step-block { margin-bottom: 15px; position: relative; }
+
+/* 折叠栏头部样式：因为外层是白色，这里加一点浅灰背景和边框区分 */
+.memory-fold-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px; background: #f9f9f9; border-radius: 12px;
+    cursor: pointer; border: 1px solid #eee;
+    transition: all 0.2s;
+}
+.memory-step-block.expanded .memory-fold-header {
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+    border-bottom: 1px dashed #ddd;
+}
+
+.memory-step-title { font-size: 15px; font-weight: 900; color: #333; margin-bottom: 4px; font-family: "Arial Black", Impact, sans-serif; letter-spacing: 1px; }
+.memory-step-subtitle { font-size: 10px; color: #555; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+.memory-step-subtitle span { color: #ffb6c1; }
+
+/* 折叠箭头动画 */
+.memory-fold-arrow { transition: transform 0.2s; stroke: #ccc; }
+.memory-step-block.expanded .memory-fold-arrow { transform: rotate(90deg); stroke: #888; }
+
+/* 折叠栏内容区样式 */
+.memory-fold-content {
+    display: none; padding: 15px; background: #f9f9f9;
+    border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+    border: 1px solid #eee; border-top: none;
+}
+.memory-step-block.expanded .memory-fold-content { display: block; }
+
+.memory-step-content { font-size: 12px; color: #666; line-height: 1.6; }
+.memory-step-content p { position: relative; padding-left: 10px; margin-bottom: 6px; }
+.memory-step-content p::before { content: '·'; position: absolute; left: 0; top: 0; font-weight: bold; color: #333; }
+
+/* 操作按钮移到内容区底部 */
+.memory-action-btns {
+    display: flex; justify-content: flex-end; gap: 12px; margin-top: 15px; padding-top: 10px; border-top: 1px solid #f9f9f9;
+}
+.memory-action-btns svg { width: 16px; height: 16px; cursor: pointer; stroke: #aaa; transition: stroke 0.2s; }
+.memory-action-btns svg:hover { stroke: #111; }
+/* =========================================
+   全局悬浮胶囊提示 (iOS 风格)
+   ========================================= */
+.ios-toast {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 15px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-150%);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 12px 24px;
+    border-radius: 30px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.ios-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+.toast-text {
+    font-size: 14px;
+    font-weight: bold;
+    color: #111;
+    letter-spacing: 0.5px;
+}
+.toast-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(0,0,0,0.1);
+    border-top-color: #111;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+.toast-success-icon {
+    width: 18px;
+    height: 18px;
+    stroke: #34c759;
+    stroke-width: 3;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* =========================================
+   应用内消息通知弹窗 (覆盖式)
+   ========================================= */
+.in-app-notification {
+    position: absolute; /* 修复：在模拟器内部必须用 absolute */
+    top: calc(env(safe-area-inset-top) + 15px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-150%);
+    width: 90%;
+    max-width: 350px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    gap: 12px;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.in-app-notification.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+.notif-avatar {
+    width: 40px; height: 40px; border-radius: 50%; background-color: #eee;
+    background-size: cover; background-position: center; flex-shrink: 0;
+}
+.notif-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.notif-name { font-size: 15px; font-weight: bold; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif-desc { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* =========================================
+   未读消息小红点
+   ========================================= */
+.wechat-unread-badge {
+    position: absolute;
+    top: -4px;
+    right: 6px;
+    background-color: #ff3b30;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(255,59,48,0.3);
+    border: 1.5px solid #f7f7f7; /* 与列表背景色一致，形成镂空感 */
+    z-index: 2;
+}
+
+/* =========================================
+   朋友圈 (Moment) 专属样式
+   ========================================= */
+.moment-item {
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.moment-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background-color: #eee;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+.moment-right {
+    flex: 1;
+    min-width: 0;
+}
+
+.moment-name {
+    color: #576b95;
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+
+.moment-content {
+    font-size: 15px;
+    color: #111;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+/* 如果内容为空，自动隐藏边距，防止纯图片动态上方留白过多 */
+.moment-content:empty {
+    display: none;
+}
+
+.moment-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.moment-img-real {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    background: #f4f4f4;
+}
+
+.moment-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    position: relative;
+}
+
+.moment-time {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.moment-delete {
+    font-size: 12px;
+    color: #576b95;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.moment-action-btn {
+    background: #f4f4f4;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 互动区域（点赞和评论） */
+.moment-interaction {
+    background: #f4f4f5;
+    border-radius: 4px;
+    margin-top: 10px;
+    position: relative;
+}
+.moment-interaction::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    border-width: 4px 6px;
+    border-style: solid;
+    border-color: transparent transparent #f4f4f5 transparent;
+}
+
+.moment-likes {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #576b95;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    word-break: break-all;
+}
+
+.moment-comments {
+    padding: 6px 10px;
+    border-top: 1px solid #e5e5e5;
+}
+
+.moment-comment-item {
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 4px;
+    line-height: 1.4;
+    word-break: break-all;
+}
+
+.moment-comment-user {
+    color: #576b95;
+    font-weight: bold;
+}
+
+/* 朋友圈操作菜单 (点赞/评论) */
+.moment-action-menu {
+    position: absolute;
+    right: 40px;
+    top: -6px;
+    background: #4c5154;
+    border-radius: 6px;
+    display: flex;
+    overflow: hidden;
+    width: 0;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+.moment-action-menu.show {
+    width: 140px;
+    opacity: 1;
+}
+.moment-action-item {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 0;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.moment-action-item:first-child {
+    border-right: 1px solid #3a3e40;
+}
+.moment-action-item:active {
+    background: #3a3e40;
+}
+

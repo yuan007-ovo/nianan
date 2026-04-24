@@ -377,6 +377,44 @@
                         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v10l8.5 5"></path></svg>
                     </span>
                 </div>
+                <div class="menu-item" onclick="openNotifSettingsModal()">
+                    <span class="menu-text">通知与提示音</span>
+                    <span class="menu-icon">
+                        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知与提示音设置弹窗 -->
+        <div class="preset-modal-overlay" id="notifSettingsModalOverlay">
+            <div class="preset-modal" style="width: 280px;">
+                <div class="preset-modal-title">通知与提示音</div>
+                <div style="width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 15px;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 14px; font-weight: bold; color: #333;">系统弹窗模式</span>
+                        <select id="modalSysNotifMode" style="border:1px solid #eee; border-radius:6px; padding:4px 8px; font-size:13px; color:#333; outline:none;">
+                            <option value="off">关闭</option>
+                            <option value="background">仅后台弹窗</option>
+                            <option value="always">全程弹窗</option>
+                        </select>
+                    </div>
+
+                    <div style="border-top: 1px solid #eee; padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                        <span style="font-size: 14px; font-weight: bold; color: #333;">自定义提示音</span>
+                        <input type="text" id="soundUrlInput" class="preset-modal-input" style="width: 100%; margin: 0;" placeholder="输入音频 URL...">
+                        <div style="text-align:center; font-size:12px; color:#888;">或</div>
+                        <div class="preset-btn-confirm" style="border:1px solid #eee; border-radius:8px; padding:10px; cursor:pointer; width:100%;" onclick="document.getElementById('soundFileInput').click()">上传本地音频</div>
+                        <input type="file" id="soundFileInput" accept="audio/*" style="display:none;" onchange="handleSoundFileUpload(event)">
+                        <audio id="soundPreview" controls style="width:100%; height:30px; margin-top:10px; display:none;"></audio>
+                    </div>
+
+                </div>
+                <div class="preset-modal-actions">
+                    <div class="preset-btn-cancel" onclick="closeNotifSettingsModal()">取消</div>
+                    <div class="preset-btn-confirm" onclick="saveNotifSettings()">保存</div>
+                </div>
             </div>
         </div>
 
@@ -408,7 +446,76 @@
             </div>
         </div>
     </div>
-    </div> <!-- 修复：这里补上 settingsFullScreenPanel 缺失的闭合标签 -->
+    </div>
+
+        <!-- =========================================
+         新增：全局悬浮胶囊提示 (iOS 风格)
+         ========================================= -->
+    <div id="globalToast" class="ios-toast">
+        <div class="toast-icon" id="toastIcon"></div>
+        <div class="toast-text" id="toastText">提示内容</div>
+    </div>
+
+    <!-- =========================================
+         新增：应用内消息通知弹窗
+         ========================================= -->
+    <div id="inAppNotification" class="in-app-notification" onclick="handleNotificationClick()">
+        <div class="notif-avatar" id="notifAvatar"></div>
+        <div class="notif-info">
+            <div class="notif-name" id="notifName">Name</div>
+            <div class="notif-desc" id="notifDesc">Message content...</div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         新增：API 报错详情弹窗 (可复制)
+         ========================================= -->
+    <div class="preset-modal-overlay" id="apiErrorModalOverlay" style="z-index: 9999;">
+        <div class="preset-modal" style="width: 320px;">
+            <div class="preset-modal-title" style="color: #ff3b30; display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                API 请求失败
+            </div>
+            <div style="width: 100%; padding: 15px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold;">详细错误信息：</div>
+                <textarea id="apiErrorTextarea" readonly style="width: 100%; height: 140px; padding: 12px; border: 1px solid #ffcccc; border-radius: 12px; resize: none; outline: none; font-size: 12px; background: #fff5f5; color: #333; font-family: monospace; line-height: 1.5;"></textarea>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeApiErrorModal()">关闭</div>
+                <div class="preset-btn-confirm" onclick="copyApiErrorText()" style="color: #007aff;">复制内容</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 心声历史记录面板 -->
+    <div class="theme-panel instant-panel" id="innerVoiceHistoryPanel" style="z-index: 265; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeInnerVoiceHistoryPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">心声历史</div>
+            </div>
+            <div class="header-close" style="visibility: hidden;">Done</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <div id="innerVoiceHistoryList" style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- 动态渲染心声历史 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑心声弹窗 -->
+    <div class="preset-modal-overlay" id="editInnerVoiceModalOverlay" style="z-index: 3000;">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">编辑心声</div>
+            <input type="hidden" id="editInnerVoiceId">
+            <textarea id="editInnerVoiceTextarea" style="width: 90%; height: 100px; margin: 15px 0; padding: 10px; border: 1px solid #eee; border-radius: 8px; resize: none; outline: none; font-size: 14px; background: #f9f9f9;"></textarea>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeEditInnerVoiceModal()">取消</div>
+                <div class="preset-btn-confirm" onclick="saveEditedInnerVoice()">保存</div>
+            </div>
+        </div>
+    </div>
+
         <!-- 角色 Secret 弹窗 (仿图片样式) -->
         <div class="preset-modal-overlay" id="secretModalOverlay">
             <div style="width: 320px; background: #fff; border-radius: 16px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;" id="secretModalContent">
@@ -956,8 +1063,24 @@
                 </div>
             </div>
         </div>
-        <div class="panel-content wechat-tab-content" id="tab-moment" style="display: none;">
-            <div style="text-align: center; color: #999; margin-top: 50px; font-size: 14px; font-weight: bold;">朋友圈页面</div>
+        <div class="panel-content wechat-tab-content" id="tab-moment" style="display: none; padding: 0; background-color: #fff;">
+            <div id="momentScrollArea" style="width: 100%; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                <!-- 封面与个人信息 (点击封面更换背景) -->
+                <div style="position: relative; width: 100%; height: 300px; background: #111; margin-bottom: 40px; cursor: pointer;" onclick="triggerMomentCoverUpload()">
+                    <div id="momentCoverImg" style="width: 100%; height: 100%; background-color: #333; background-size: cover; background-position: center;"></div>
+                    <div style="position: absolute; right: 20px; bottom: -20px; display: flex; align-items: center; gap: 15px;">
+                        <div id="momentMeName" style="color: #fff; font-size: 18px; font-weight: bold; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">Name</div>
+                        <div id="momentMeAvatar" style="width: 70px; height: 70px; border-radius: 12px; background: #eee; border: 2px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.1); background-size: cover; background-position: center;"></div>
+                    </div>
+                </div>
+                <!-- 隐藏的封面上传 input -->
+                <input type="file" id="momentCoverInput" style="display: none;" accept="image/*" onchange="handleMomentCoverUpload(event)">
+
+                <!-- 动态列表 -->
+                <div id="momentListContainer" style="display: flex; flex-direction: column; padding-bottom: 120px;">
+                    <!-- 动态渲染 -->
+                </div>
+            </div>
         </div>
 
         <div class="panel-content wechat-tab-content" id="tab-me" style="display: none; padding: 20px; padding-bottom: 120px; background-color: #fafafa; overflow-y: auto;">
@@ -969,9 +1092,9 @@
                 </div>
                 <div class="me-switch-info">
                     <div class="me-switch-title">正在切换账号...</div>
-                    <div class="me-switch-name">Name <svg viewBox="0 0 24 24" width="10" height="10" fill="#333"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg> <span id="meNameTop">岛</span></div>
+                    <div class="me-switch-name">Name <svg viewBox="0 0 24 24" width="10" height="10" fill="#333"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg> <span id="meNameTop">未登录</span></div>
                 </div>
-                <div class="me-switch-close">
+                    <div class="me-switch-close">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="#333" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
             </div>
@@ -987,7 +1110,7 @@
                     <div class="me-id-info">
                         <div class="me-id-label">SUBJECT NAME</div>
                         <!-- 增加 onclick 事件和提示样式 -->
-                        <div class="me-id-name" id="meName" onclick="editMeName()" style="cursor: pointer;" title="点击修改网名">岛</div>
+                        <div class="me-id-name" id="meName" onclick="editMeName()" style="cursor: pointer;" title="点击修改网名">未登录</div>
                         <div class="me-id-bottom-row">
                             <div class="me-id-no">NO. <span id="meAccountNo">0023798</span></div>
                             <div class="me-id-linked">LINKED</div>
@@ -1382,6 +1505,16 @@
             <!-- 操作按钮区 -->
             <div style="margin-top: 20px; padding: 0 20px; display: flex; flex-direction: column; gap: 15px;">
                 <div onclick="startChatWithChar()" style="background: #111; color: #fff; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer;">发消息</div>
+                <!-- 新增：让角色发朋友圈 -->
+                <div onclick="generateCharMoment()" style="background: #f0f0f0; color: #111; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                    让TA发朋友圈
+                </div>
+                <!-- 新增：记忆库入口 -->
+                <div onclick="openMemoryPanel()" style="background: #f8f8f8; color: #333; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #eee; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    角色记忆库
+                </div>
                 <div onclick="clearChatHistory()" style="background: #f4f4f4; color: #333; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #eee;">清空聊天记录</div>
                 <div onclick="deleteContactChar()" style="background: #fff; color: #ff3b30; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #ffe5e5;">删除好友</div>
             </div>
@@ -1389,8 +1522,106 @@
     </div>
 
     <!-- =========================================
-         新增：全屏聊天页面 (Chat Room)
+         新增：角色记忆库全屏面板 (Memory Bank)
          ========================================= -->
+    <div class="theme-panel instant-panel" id="charMemoryPanel" style="z-index: 240; background-color: #f4f4f5;">
+        <!-- 恢复标准顶栏样式 -->
+        <div class="panel-header">
+            <div class="header-close" onclick="closeMemoryPanel()">Back</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">Memory Bank</div>
+            </div>
+            <div class="header-close" style="color: #8888;" onclick="openMemorySettingsModal()">settings</div>
+        </div>
+
+        <div class="panel-content" style="padding: 0; display: flex; flex-direction: column;">
+            <!-- 上半部分：浅灰背景 (继承父级) -->
+            <div style="padding: 20px 20px 0 20px;">
+                <!-- 顶部信息区 -->
+                <div class="memory-header-section">
+                    <div class="memory-deco-left">[ ´ · ω · ` ]<br>Memory Bank</div>
+                    <div class="memory-deco-right">Auto-Summary</div>
+                    <div class="memory-avatar-wrap">
+                        <div class="memory-avatar" id="memoryCharAvatar"></div>
+                    </div>
+                    <div class="memory-char-name" id="memoryCharName">角色名</div>
+                </div>
+
+                <!-- 横向熊耳标签栏 -->
+                <div class="memory-tab-container">
+                    <div class="memory-tab-btn active" onclick="switchMemoryTab('summary')" id="memTab-summary">对话总结</div>
+                    <div class="memory-tab-btn" onclick="switchMemoryTab('core')" id="memTab-core">核心记忆</div>
+                    <div class="memory-tab-btn" onclick="switchMemoryTab('note')" id="memTab-note">作者备注</div>
+                </div>
+            </div>
+
+            <!-- 下半部分：纯白背景内容区 -->
+            <div class="memory-content-area" id="memoryContentArea">
+                <!-- 动态渲染记忆内容 -->
+            </div>
+
+            <!-- 底部悬浮添加按钮 -->
+            <div style="position: absolute; bottom: 40px; right: 20px; width: 50px; height: 50px; background: #111; border-radius: 25px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; z-index: 10;" onclick="openMemoryEditModal()">+</div>
+        </div>
+    </div>
+
+    <!-- 记忆编辑/添加弹窗 -->
+    <div class="preset-modal-overlay" id="memoryEditModalOverlay">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title" id="memoryEditTitle">添加记忆</div>
+            <input type="hidden" id="memoryEditId">
+            <div style="width: 100%; padding: 15px;">
+                <select id="memoryEditType" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; outline: none;">
+                    <option value="summary">对话总结 (Summary)</option>
+                    <option value="core">核心记忆 (Core)</option>
+                    <option value="note">作者备注 (Note)</option>
+                </select>
+                <textarea id="memoryEditText" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #eee; border-radius: 8px; resize: none; outline: none; font-size: 13px; background: #f9f9f9;" placeholder="输入记忆内容..."></textarea>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeMemoryEditModal()">取消</div>
+                <div class="preset-btn-confirm" onclick="saveMemoryEntry()">保存</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 记忆总结设置弹窗 -->
+    <div class="preset-modal-overlay" id="memorySettingsModalOverlay">
+        <div class="preset-modal" style="width: 320px;">
+            <div class="preset-modal-title">记忆总结设置</div>
+            <div style="width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 15px; max-height: 70vh; overflow-y: auto;">
+                <!-- 自动总结 -->
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 14px; font-weight: bold; color: #333;">自动总结</span>
+                        <label class="ios-switch" style="transform: scale(0.8); margin: 0;">
+                            <input type="checkbox" id="memAutoToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666;">
+                        每 <input type="number" id="memAutoTurns" style="width: 50px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 2px;" value="10"> 轮对话总结一次
+                    </div>
+                </div>
+                <!-- 自定义总结提示词 -->
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 10px;">自定义总结提示词</div>
+                    <textarea id="memCustomPrompt" style="width: 100%; height: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; outline: none; font-size: 12px; background: #fff; color: #555;" placeholder="留空则使用默认提示词。&#10;例如：请用第一人称日记的口吻，总结今天发生的事情，语气要傲娇一点..."></textarea>
+                </div>
+                <!-- 手动总结 -->
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border: 1px solid #eee;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 10px;">手动总结</div>
+                    <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666; margin-bottom: 10px;">
+                        从第 <input type="number" id="memManualStart" style="width: 50px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 2px;" placeholder="1"> 轮到第 <input type="number" id="memManualEnd" style="width: 50px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 2px;" placeholder="10"> 轮
+                    </div>
+                    <div onclick="executeManualSummary()" style="background: #111; color: #fff; text-align: center; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">立即生成总结</div>
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeMemorySettingsModal()" style="width: 100%; border-right: none;">保存并关闭</div>
+            </div>
+        </div>
+    </div>
     <div class="theme-panel instant-panel" id="chatRoomPanel" style="z-index: 250; background-color: #fafafa; padding: 0;">
         <!-- 顶部导航 (复刻 Settings 风格 + 双头像 + MORE) -->
         <div class="panel-header">
@@ -1403,6 +1634,46 @@
                 <div class="header-title" id="chatRoomTitle" style="cursor: default; transform: none; padding: 4px 16px;">Name</div>
             </div>
             <div class="header-close" style="color: #aaa; font-size: 14px; cursor: pointer;" onclick="openChatSettingsPanel()">MORE</div>
+        </div>
+
+        <!-- 新增：心声与虚拟键盘遮罩层 (默认隐藏) -->
+        <div class="inner-voice-overlay" id="innerVoiceOverlay" onclick="closeInnerVoicePanel()">
+            <div class="inner-voice-modal" onclick="event.stopPropagation()">
+                <!-- 心声显示框 -->
+                <div class="inner-voice-box">
+                    <svg class="quote-svg quote-left" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                    <div class="typing-text">
+                        <span id="ivTypedContent"></span><span class="typing-cursor" id="ivCursor"></span>
+                    </div>
+                    <svg class="quote-svg quote-right" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                </div>
+                <div class="full-voice-hint" id="ivFullHint"></div>
+
+                <div style="text-align: center; margin-top: 5px; margin-bottom: 5px;">
+                    <span onclick="closeInnerVoicePanel(); openInnerVoiceHistoryPanel();" style="font-size: 12px; color: rgba(255,255,255,0.8); text-decoration: underline; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">查看历史心声</span>
+                </div>
+
+                <!-- 迷你虚拟键盘 (缩小版+圆角) -->
+                <div class="ios-keyboard-mini">
+                    <div class="kb-row">
+                        <div class="kb-key">Q</div><div class="kb-key">W</div><div class="kb-key">E</div><div class="kb-key">R</div><div class="kb-key">T</div><div class="kb-key">Y</div><div class="kb-key">U</div><div class="kb-key">I</div><div class="kb-key">O</div><div class="kb-key">P</div>
+                    </div>
+                    <div class="kb-row" style="padding: 0 10px;">
+                        <div class="kb-key">A</div><div class="kb-key">S</div><div class="kb-key">D</div><div class="kb-key">F</div><div class="kb-key">G</div><div class="kb-key">H</div><div class="kb-key">J</div><div class="kb-key">K</div><div class="kb-key">L</div>
+                    </div>
+                    <div class="kb-row">
+                        <div class="kb-key special">⇧</div>
+                        <div class="kb-key">Z</div><div class="kb-key">X</div><div class="kb-key">C</div><div class="kb-key">V</div><div class="kb-key">B</div><div class="kb-key">N</div><div class="kb-key">M</div>
+                        <div class="kb-key special">⌫</div>
+                    </div>
+                    <div class="kb-row">
+                        <div class="kb-key special">123</div>
+                        <div class="kb-key special">🌐</div>
+                        <div class="kb-key space">空格</div>
+                        <div class="kb-key send" onclick="closeInnerVoicePanel()">发送</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 聊天记录区 -->
@@ -1684,7 +1955,7 @@
             <div class="header-title-wrapper">
                 <div class="header-title" style="cursor: default;">聊天设置</div>
             </div>
-            <div class="header-close" style="color: #111;" onclick="saveChatSettings()">Save</div>
+            <div class="header-close" style="color: #8888;" onclick="saveChatSettings()">Save</div>
         </div>
 
         <div class="panel-content cs-journal-content" style="padding: 0; gap: 0;">
@@ -1713,7 +1984,7 @@
             <!-- 区块1：API 限制 -->
             <div class="cs-journal-section">
                 <div class="cs-journal-sec-title">
-                    <span>★ | API 限制</span>
+                    <span>★ | 高级设置</span>
                     <span class="cs-journal-sec-sub">「Settings」////</span>
                 </div>
                 <div class="cs-journal-sec-content">
@@ -1735,7 +2006,37 @@
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">心声系统 (Inner Voice)</span>
+                        <label class="ios-switch" style="transform: scale(0.8); transform-origin: right center; margin: 0;">
+                            <input type="checkbox" id="csInnerVoiceToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">互动标识感知</span>
+                        <label class="ios-switch" style="transform: scale(0.8); transform-origin: right center; margin: 0;">
+                            <input type="checkbox" id="csBadgeAwareToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">主动发消息</span>
+                        <label class="ios-switch" style="transform: scale(0.8); transform-origin: right center; margin: 0;">
+                            <input type="checkbox" id="csActiveMsgToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="cs-journal-list-item">
+                        <span class="cs-dot">·</span>
+                        <span class="cs-label">主动发消息间隔 (分钟)</span>
+                        <input type="number" id="csActiveMsgInterval" placeholder="60" class="cs-value-input">
+                    </div>
                     <div class="cs-journal-list-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="cs-dot">·</span>
                             <span class="cs-label">回复气泡数限制 (最小 - 最大)</span>
@@ -1966,6 +2267,76 @@
             </div>
         </div>
     </div>
+
+    <!-- =========================================
+         新增：发布朋友圈全屏面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="momentPostPanel" style="z-index: 280; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeMomentPostPanel()">Cancel</div>
+            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">发表动态</div></div>
+            <div class="header-close" style="color: #8888;" onclick="publishMoment()">Publish</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <textarea id="momentPostText" style="width: 100%; height: 120px; border: none; outline: none; font-size: 16px; resize: none; color: #333;" placeholder="这一刻的想法..."></textarea>
+                
+                <!-- 图片预览与添加区 -->
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;" id="momentPostImagesArea">
+                    <div onclick="openMomentTypeModal()" style="width: 100px; height: 100px; background: #f4f4f4; border-radius: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 1px dashed #ccc;">
+                        <svg viewBox="0 0 24 24" width="32" height="32" stroke="#aaa" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 隐藏的文字描述输入框 -->
+            <div id="momentDescInputArea" style="display: none; margin-top: 15px; background: #fff; padding: 15px; border-radius: 16px; border: 1px dashed #ddd;">
+                <div style="font-size: 12px; color: #888; font-weight: bold; margin-bottom: 8px;">输入图片画面的文字描述：</div>
+                <textarea id="momentDescInput" style="width: 100%; height: 60px; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; resize: none;" placeholder="例如：一张复古的黑胶唱片机..."></textarea>
+                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <div onclick="confirmMomentDescImage()" style="background: #111; color: #fff; padding: 6px 16px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">确认添加</div>
+                </div>
+            </div>
+
+            <!-- 分组可见性选择 -->
+            <div style="margin-top: 15px; background: #fff; border-radius: 16px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                <span style="font-size: 15px; font-weight: bold; color: #333;">谁可以看</span>
+                <select id="momentVisibilitySelect" style="border: none; outline: none; font-size: 14px; color: #576b95; background: transparent; text-align: right; direction: rtl; font-weight: bold; cursor: pointer;">
+                    <option value="all">公开 (所有人可见)</option>
+                    <!-- 动态渲染分组 -->
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 朋友圈图片类型选择弹窗 -->
+    <div class="preset-modal-overlay" id="momentTypeModalOverlay">
+        <div class="preset-modal" style="width: 260px;">
+            <div class="preset-modal-title">添加图片</div>
+            <div class="preset-list" style="width: 100%; margin-top: 10px;">
+                <div class="preset-item" onclick="triggerMomentLocalImage()">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">上传真实图片</span>
+                </div>
+                <div class="preset-item" onclick="triggerMomentDescImage()">
+                    <span class="preset-item-name" style="text-align: center; width: 100%;">发送文字描述图片</span>
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" onclick="closeMomentTypeModal()" style="width: 100%; border-right: none;">取消</div>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="momentLocalImageInput" style="display: none;" accept="image/*" onchange="handleMomentLocalImage(event)">
+
+    <!-- 朋友圈评论输入弹窗 -->
+    <div class="preset-modal-overlay" id="momentCommentModalOverlay" style="align-items: flex-end; padding-bottom: 0;">
+        <div style="width: 100%; background: #f4f4f4; padding: 15px 20px calc(15px + env(safe-area-inset-bottom)); display: flex; gap: 10px; align-items: center; border-radius: 16px 16px 0 0;">
+            <input type="hidden" id="momentCommentTargetId">
+            <input type="text" id="momentCommentInput" style="flex: 1; height: 40px; border: none; border-radius: 8px; padding: 0 15px; font-size: 15px; outline: none;" placeholder="评论...">
+            <div onclick="submitMomentComment()" style="background: #111; color: #fff; height: 40px; padding: 0 20px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-weight: bold; cursor: pointer;">发送</div>
+        </div>
+    </div>
+
     <!-- =========================================
          新增：Chat APP 专属全屏设置体系
          ========================================= -->
