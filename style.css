@@ -4228,15 +4228,23 @@ body.ios-standalone .home-screen {
 /* =========================================
    音乐分享卡片样式 (仿网易云)
    ========================================= */
+.cr-bubble.cr-bubble-music-share {
+    background: transparent !important;
+    padding: 0 !important;
+}
+.cr-bubble.cr-bubble-music-share::before, .cr-bubble.cr-bubble-music-share::after {
+    display: none !important;
+}
+
 .music-share-card {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     background: #fff;
-    border-radius: 12px;
-    padding: 10px;
-    width: 230px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    padding: 15px; /* 增加内边距，提升高度 */
+    width: 200px; /* 减小宽度 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     border: 1px solid #eee;
     cursor: pointer;
     text-decoration: none;
@@ -4246,21 +4254,22 @@ body.ios-standalone .home-screen {
     border-color: #e5e5e5;
 }
 .music-share-card img {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
+    width: 50px; /* 增大图片 */
+    height: 50px;
+    border-radius: 10px;
     object-fit: cover;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .music-share-card .info {
     flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 .music-share-card .title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
     color: #333;
     white-space: nowrap;
@@ -4268,15 +4277,15 @@ body.ios-standalone .home-screen {
     text-overflow: ellipsis;
 }
 .music-share-card .artist {
-    font-size: 11px;
+    font-size: 12px;
     color: #888;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .music-share-card .icon {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     background: #ff3b30;
     border-radius: 50%;
     display: flex;
@@ -4285,11 +4294,12 @@ body.ios-standalone .home-screen {
     flex-shrink: 0;
 }
 .music-share-card .icon svg {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     fill: #fff;
     margin-left: 2px;
 }
+
 /* =========================================
    聊天室：音乐邀请卡片样式
    ========================================= */
@@ -4363,4 +4373,54 @@ body.ios-standalone .home-screen {
     padding: 6px 15px;
     font-size: 10px;
     color: rgba(255,255,255,0.5);
+}
+/* =========================================
+   一起听歌：实时弹幕消息样式
+   ========================================= */
+.music-live-msg {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    color: #fff;
+    max-width: 100%;
+    word-break: break-all;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+    animation: liveMsgFadeIn 0.3s ease-out;
+    transition: opacity 0.5s ease-out;
+}
+
+.music-live-msg.user {
+    background: rgba(255, 59, 48, 0.6); /* 用户发的消息带点红色 */
+}
+
+@keyframes liveMsgFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* 滚动歌词高亮样式 */
+.lyric-line {
+    padding: 10px 0;
+    transition: all 0.3s ease;
+    opacity: 0.4;
+    transform: scale(0.9);
+}
+.lyric-line.active {
+    opacity: 1;
+    color: #fff;
+    font-weight: bold;
+    transform: scale(1.1);
+}
+/* 迷你播放器内的歌词行 */
+.mini-lyric-line {
+    font-size: 12px;
+    color: #ff6b8b;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

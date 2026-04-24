@@ -2452,6 +2452,17 @@ function renderChatHistory(charId, keepScroll = false) {
         const isTransferMsg = msg.type === 'transfer'; 
         const isFamilyCardMsg = msg.type === 'family_card'; 
         const isMusicInviteMsg = msg.type === 'music_invite';
+        const isMusicShareMsg = msg.content.includes('music-share-card'); // 识别分享卡片
+        const isSystemMsg = msg.type === 'system'; // 识别系统提示
+
+        // 如果是系统消息，直接渲染居中灰色小字
+        if (isSystemMsg) {
+            const sysEl = document.createElement('div');
+            sysEl.style.cssText = 'text-align: center; font-size: 11px; color: #aaa; margin: 10px 0; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 10px; align-self: center; max-width: 80%;';
+            sysEl.innerText = msg.content;
+            fragment.appendChild(sysEl);
+            return; // 跳过后续普通气泡渲染
+        }
 
         let quoteHtml = '';
         if (msg.quote) {
@@ -2558,7 +2569,7 @@ function renderChatHistory(charId, keepScroll = false) {
         const bubbleHtml = `
             <div class="cr-msg-content-wrapper">
                 ${quoteHtml}
-                <div class="cr-bubble ${msg.role === 'user' ? 'cr-bubble-right' : 'cr-bubble-left'} ${isContinuous ? 'no-tail' : ''} ${isImageMsg ? 'cr-bubble-image' : ''} ${isForwardRecord ? 'cr-bubble-forward' : ''} ${isVoiceMsg ? 'cr-bubble-voice-wrap' : ''} ${isTransferMsg ? 'cr-bubble-transfer' : ''} ${isFamilyCardMsg ? 'cr-bubble-family' : ''} ${isMusicInviteMsg ? 'cr-bubble-music-invite' : ''}" 
+                <div class="cr-bubble ${msg.role === 'user' ? 'cr-bubble-right' : 'cr-bubble-left'} ${isContinuous ? 'no-tail' : ''} ${isImageMsg ? 'cr-bubble-image' : ''} ${isForwardRecord ? 'cr-bubble-forward' : ''} ${isVoiceMsg ? 'cr-bubble-voice-wrap' : ''} ${isTransferMsg ? 'cr-bubble-transfer' : ''} ${isFamilyCardMsg ? 'cr-bubble-family' : ''} ${isMusicInviteMsg ? 'cr-bubble-music-invite' : ''} ${isMusicShareMsg ? 'cr-bubble-music-share' : ''}" 
                      oncontextmenu="return false;" 
                      ontouchstart="handleBubbleTouchStart(event, ${index})" 
                      ontouchend="handleBubbleTouchEnd()" 
@@ -2667,6 +2678,11 @@ function sendChatMessage() {
         
         // 在后台完成数据保存后，再渲染聊天界面
         renderChatHistory(currentChatRoomCharId);
+        
+        // 同步刷新音乐APP的聊天室
+        if (document.getElementById('musicChatPanel') && document.getElementById('musicChatPanel').style.display === 'flex' && typeof window.currentListenTogetherCharId !== 'undefined' && window.currentListenTogetherCharId === currentChatRoomCharId) {
+            if (typeof renderMusicChatHistory === 'function') renderMusicChatHistory();
+        }
     }, 10);
 }
 
@@ -4152,6 +4168,21 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                     showMsgNotification(targetCharId, newMsg.content);
                     if (typeof renderChatList === 'function') renderChatList();
                 }
+                
+                // 同步刷新音乐APP的聊天室
+                const musicChatPanel = document.getElementById('musicChatPanel');
+                if (musicChatPanel && window.getComputedStyle(musicChatPanel).display !== 'none' && targetCharId === window.currentListenTogetherCharId) {
+                    if (typeof renderMusicChatHistory === 'function') renderMusicChatHistory();
+                }
+
+                if (i < messagesArray.length - 1) {
+                    
+                    let unreadCount = parseInt(ChatDB.getItem(`unread_${currentLoginId}_${targetCharId}`) || '0');
+                    ChatDB.setItem(`unread_${currentLoginId}_${targetCharId}`, (unreadCount + 1).toString());
+                    
+                    showMsgNotification(targetCharId, newMsg.content);
+                    if (typeof renderChatList === 'function') renderChatList();
+                }
 
                 if (i < messagesArray.length - 1) {
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -4268,6 +4299,10 @@ function actionEditMessage() {
             initialText = `${msg.amount || 0} ${msg.note || "转账"}`; 
         } else if (msg.type === 'voice') {
             currentEditMsgType = 'voice';
+        } else if (msg.content.includes('music-share-card') || msg.type === 'music_invite' || msg.type === 'family_card') {
+            // 拦截音乐分享卡片、音乐邀请卡片、亲属卡，将其作为特殊文本处理，防止被误判为表情包
+            currentEditMsgType = 'text';
+            initialText = msg.content;
         } else if (msg.type === 'sticker' || (msg.content.includes('<img') && !msg.content.includes('chat-img-120'))) {
             currentEditMsgType = 'sticker';
             const match = msg.content.match(/src="([^"]+)"/);
@@ -5263,6 +5298,25 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
                 }
                 sysMsg.content += `- 如果你想和对方一起听歌，可以随时输出 {"type":"music_invite_proactive"} 发起邀请。\n`;
 
+                // 【新增】：实时音乐状态感知与控制
+                if (typeof window.currentListenTogetherCharId !== 'undefined' && window.currentListenTogetherCharId === targetCharId) {
+                    const passedMinutes = typeof listenTogetherStartTime !== 'undefined' ? Math.floor((Date.now() - listenTogetherStartTime) / 60000) : 0;
+                    const songName = typeof currentPlayingSong !== 'undefined' && currentPlayingSong ? `${currentPlayingSong.title} - ${currentPlayingSong.artist}` : '无';
+                    const playState = (typeof audioPlayer !== 'undefined' && audioPlayer.paused) ? '已暂停' : '播放中';
+                    const plNames = (typeof window.currentPlaylistTracks !== 'undefined' && window.currentPlaylistTracks.length > 0) ? window.currentPlaylistTracks.map(t=>t.title).slice(0,5).join(', ') + '...' : '空';
+                    const currentLyric = typeof window.currentPlayingLyric !== 'undefined' ? window.currentPlayingLyric.substring(0, 300) + '...' : '无'; // 截取前300字防止过长
+
+                    sysMsg.content += `\n【当前一起听歌实时状态】\n`;
+                    sysMsg.content += `- 当前播放: ${songName} (${playState})\n`;
+                    sysMsg.content += `- 当前歌词片段: ${currentLyric}\n`;
+                    sysMsg.content += `- 已听时长: ${passedMinutes} 分钟\n`;
+                    sysMsg.content += `- 播放列表前5首: ${plNames}\n`;
+                    sysMsg.content += `你可以通过 JSON 控制音乐播放器，添加字段 "music_control": {"action": "指令", "target": "参数"}。\n`;
+
+                    sysMsg.content += `支持的 action 指令: play(继续播放), pause(暂停), next(下一首), prev(上一首), play_song(点歌, target填歌名), add_song(添加歌曲到列表, target填歌名), remove_song(从列表删除, target填歌名), exit(主动退出一起听歌)。\n`;
+                    sysMsg.content += `请根据用户的聊天内容和当前音乐状态，自然地进行互动或控制音乐。\n`;
+                }
+
                 // 注入朋友圈规则
                 sysMsg.content += momentsContext;
                 sysMsg.content += `\n【朋友圈深度互动指南】\n`;
@@ -5317,6 +5371,26 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
                             comments: []
                         });
                         momentsUpdated = true;
+                    }
+
+                    // 【新增】：处理 AI 音乐控制指令
+                    if (parsedData.music_control && typeof window.handleAiMusicControl === 'function') {
+                        window.handleAiMusicControl(parsedData.music_control);
+                    }
+
+                    // 【新增】：如果正在一起听歌，将 AI 的回复显示为弹幕
+                    if (typeof window.currentListenTogetherCharId !== 'undefined' && window.currentListenTogetherCharId === targetCharId) {
+                        // 提取纯文本回复
+                        let aiText = "";
+                        if (parsedData.messages) {
+                            let msgs = Array.isArray(parsedData.messages) ? parsedData.messages : [parsedData.messages];
+                            aiText = msgs.filter(m => m.type === 'text').map(m => m.content).join(' ');
+                        } else if (parsedData.content) {
+                            aiText = parsedData.content;
+                        }
+                        if (aiText && typeof showMusicLiveMessage === 'function') {
+                            showMusicLiveMessage('char', aiText);
+                        }
                     }
 
                     // 处理 AI 互动朋友圈
@@ -5415,6 +5489,24 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
             try {
                 let parsed = JSON.parse(msg.content);
                 msg.content = parsed.content || '';
+                
+                // 【新增】：选歌逻辑
+                let songToPlay = null;
+                // 1. 优先找 Char 的专属歌单
+                let charPls = JSON.parse(ChatDB.getItem(`music_playlists_${targetCharId}`) || '[]');
+                if (charPls.length > 0 && charPls[0].tracks && charPls[0].tracks.length > 0) {
+                    let tracks = charPls[0].tracks;
+                    songToPlay = tracks[Math.floor(Math.random() * tracks.length)];
+                } else {
+                    // 2. 如果没有，找 User 的歌单
+                    let userPls = JSON.parse(ChatDB.getItem(`music_playlists_${currentLoginId}`) || '[]');
+                    if (userPls.length > 0 && userPls[0].tracks && userPls[0].tracks.length > 0) {
+                        let tracks = userPls[0].tracks;
+                        songToPlay = tracks[Math.floor(Math.random() * tracks.length)];
+                    }
+                }
+                // 存入全局变量，等待用户同意后播放
+                window.pendingInviteSong = songToPlay;
                 
                 setTimeout(() => {
                     let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');

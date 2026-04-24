@@ -448,6 +448,36 @@ function importAllData(e) {
     document.getElementById('settingsPopup').classList.remove('show');
 }
 
+function checkUpdate(e) {
+    if(e) e.stopPropagation();
+    document.getElementById('settingsPopup').classList.remove('show');
+    alert('正在检查更新...');
+    setTimeout(() => {
+        location.reload(true);
+    }, 500);
+}
+
+function clearAllData(e) {
+    if(e) e.stopPropagation();
+    document.getElementById('settingsPopup').classList.remove('show');
+    if (confirm('警告：此操作将清空所有本地数据（包括聊天记录、角色、设置、音乐等），且不可恢复！\n\n确定要清空所有数据吗？')) {
+        if (confirm('再次确认：真的要清空所有数据吗？')) {
+            localStorage.clear();
+            if (chatDBInstance) {
+                const tx = chatDBInstance.transaction(CHAT_STORE_NAME, 'readwrite');
+                tx.objectStore(CHAT_STORE_NAME).clear();
+                tx.oncomplete = () => {
+                    alert('所有数据已清空，即将刷新页面。');
+                    location.reload();
+                };
+            } else {
+                alert('所有数据已清空，即将刷新页面。');
+                location.reload();
+            }
+        }
+    }
+}
+
 // 辅助函数：下载JSON
 function downloadJson(jsonStr, filename) {
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -1606,8 +1636,8 @@ function captureFullState() {
         apps: {},
         texts: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerText)
     };
-    for (let i = 1; i <= 5; i++) {
-        let appId = i === 5 ? 'app-dock1' : `app${i}`;
+    for (let i = 1; i <= 6; i++) {
+        let appId = i === 5 ? 'app-dock1' : (i === 6 ? 'app-dock-music' : `app${i}`);
         state.apps[appId] = {
             icon: document.getElementById(`icon-${appId}`).style.backgroundImage,
             name: document.getElementById(`name-${appId}`).innerText
@@ -1673,8 +1703,8 @@ function applyFullState(state) {
         });
     }
     
-    for (let i = 1; i <= 5; i++) {
-        let appId = i === 5 ? 'app-dock1' : `app${i}`;
+    for (let i = 1; i <= 6; i++) {
+        let appId = i === 5 ? 'app-dock1' : (i === 6 ? 'app-dock-music' : `app${i}`);
         const appData = state.apps[appId];
         if (appData) {
             const appIconEl = document.getElementById(`icon-${appId}`);
@@ -1772,7 +1802,8 @@ async function confirmResetDefault() {
             { id: 'app2', name: 'settings' },
             { id: 'app3', name: 'worldbook' },
             { id: 'app4', name: 'chat' },
-            { id: 'app-dock1', name: 'Chars' }
+            { id: 'app-dock1', name: 'Chars' },
+            { id: 'app-dock-music', name: 'Music' }
         ];
 
         defaultApps.forEach(app => {
