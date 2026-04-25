@@ -155,21 +155,37 @@ input, textarea, select {
     padding-top: 54px; /* 为绝对定位的状态栏留出固定空间 (44px + 10px)，防止开关时跳动 */
     flex: 1;
     z-index: 10;
+    grid-auto-flow: row dense; /* 核心修复：密集填充模式，自动把空位吸上去填满缝隙 */
 }
 
-/* 小组件 */
+/* 小组件主容器：只负责布局，不处理背景 */
 .widget-container {
     grid-column: 1 / 5;
-    grid-row: 1 / 5;
-    /* 强制覆盖所有背景，彻底去除波点，改为从上到下的白色渐变 */
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 100%) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    grid-row: span 4; /* 解除固定行限制，改为占据4行 */
     border-radius: 24px;
     padding: 15px;
     display: flex;
     flex-direction: column;
     gap: 15px;
+    position: relative; /* 新增：为背景层提供定位参考 */
+    z-index: 1; /* 新增：确保内容在最上层 */
+}
+
+/* 新增：单独的背景层，只让背景和毛玻璃渐变透明，不影响内部图片 */
+.widget-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 100%) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    z-index: -1; /* 放在内容的最底层 */
 }
 
 .widget-top-bar { display: flex; justify-content: space-between; }
@@ -206,7 +222,7 @@ input, textarea, select {
 }
 
 /* APP 图标 */
-.app-item { display: flex; flex-direction: column; align-items: center; justify-content: center; grid-row: 5 / 6; cursor: pointer; }
+.app-item { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
 
 /* 风格4：白底 + 灰色线框 */
 .app-icon { 
@@ -1968,9 +1984,11 @@ body.ios-standalone .home-screen {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    /* 修改这里：减小阴影范围和透明度 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
     border: 1px solid rgba(255,255,255,0.5);
 }
+
 .dock-apps {
     position: relative;
     z-index: 2;
@@ -4047,9 +4065,15 @@ body.ios-standalone .home-screen {
     display: flex; flex-direction: column; align-items: center; gap: 15px;
 }
 .music-profile-avatar { 
-    width: 80px; height: 80px; border-radius: 20px; background: #eee; 
-    border: 1px solid #ddd; background-size: cover; background-position: center;
+    width: 80px; height: 80px; 
+    border-radius: 50%; /* 确保默认就是正圆 */
+    background-color: transparent; /* 去除灰色底色 */
+    border: 1px solid #ddd; 
+    background-size: cover; 
+    background-position: center;
+    background-repeat: no-repeat; /* 防止图片重复 */
 }
+
 .music-profile-name { font-size: 20px; font-weight: 900; color: #111; }
 .music-profile-stats { display: flex; gap: 20px; font-size: 12px; color: #666; font-weight: bold; }
 .music-profile-stats span { color: #111; font-size: 14px; }
@@ -4934,4 +4958,149 @@ body.ios-standalone .home-screen {
     display: flex;
     align-items: center;
     width: 100%;
+}
+
+/* =========================================
+   新增：桌面编辑模式与小组件弹窗样式
+   ========================================= */
+.desktop-edit-capsule {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 30px;
+    display: none;
+    align-items: center;
+    padding: 5px 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+.desktop-edit-capsule.show {
+    display: flex;
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+.edit-capsule-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+}
+.edit-capsule-btn.plus {
+    font-size: 24px;
+    font-weight: normal;
+    color: #007aff;
+    border-left: 1px solid #eee;
+    border-right: 1px solid #eee;
+    padding: 5px 20px;
+}
+.widget-delete-btn {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    width: 24px;
+    height: 24px;
+    display: none;
+    cursor: pointer;
+    z-index: 10;
+}
+.is-desktop-editing .widget-delete-btn {
+    display: block;
+}
+.is-desktop-editing .app-item, .is-desktop-editing .widget-container {
+    animation: jiggle 0.3s infinite alternate;
+    cursor: move;
+    position: relative;
+    z-index: 10;
+}
+.is-desktop-editing .app-item.dragging, .is-desktop-editing .widget-container.dragging {
+    opacity: 0.8;
+    transform: scale(1.05);
+    animation: none;
+    z-index: 999 !important;
+    transition: none !important;
+}
+
+/* 新增：桌面网格背景 */
+.desktop-grid-bg {
+    position: absolute;
+    top: 54px; /* 与 home-screen 的 padding-top 一致 */
+    left: 20px;
+    right: 20px;
+    bottom: 0;
+    display: none;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(7, 80px);
+    gap: 15px 12px;
+    pointer-events: none;
+    z-index: 0;
+}
+.is-desktop-editing .desktop-grid-bg {
+    display: grid;
+}
+.grid-cell {
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.1);
+}
+.widget-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 9999; display: none;
+    flex-direction: column; justify-content: flex-end;
+}
+.widget-modal-overlay.show { display: flex; }
+.widget-modal {
+    background: #f4f4f5; border-radius: 20px 20px 0 0; height: 60vh;
+    display: flex; flex-direction: column; transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+.widget-modal-overlay.show .widget-modal { transform: translateY(0); }
+.widget-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 20px; border-bottom: 1px solid #eee; background: #fff;
+    border-radius: 20px 20px 0 0;
+}
+.widget-modal-btn { font-size: 14px; color: #007aff; cursor: pointer; font-weight: bold; }
+.widget-modal-title { font-size: 16px; font-weight: bold; color: #111; }
+.widget-modal-content {
+    flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
+}
+.widget-preview-item {
+    background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    cursor: pointer; border: 1px solid #eee; position: relative;
+}
+.widget-preview-delete {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    z-index: 10;
+}
+/* 桌面空位占位符 */
+.app-placeholder {
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 默认不拦截点击 */
+    background-color: rgba(0,0,0,0.01); /* 核心修复：加上 1% 的透明度，防止手指滑动时穿透，确保能被精准命中！ */
+}
+.is-desktop-editing .app-placeholder {
+    pointer-events: auto; /* 编辑模式下允许作为拖拽目标 */
+}
+/* 自定义透明小组件专属样式 */
+.widget-container.is-transparent-widget {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
+.widget-container.is-transparent-widget::before {
+    display: none !important; /* 隐藏默认的毛玻璃背景 */
 }

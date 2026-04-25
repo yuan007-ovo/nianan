@@ -197,7 +197,7 @@ function toggleChatPresetPopup(mode = 'register') {
     if (chatPresetPopup.classList.contains('show')) {
         isChatPresetEditing = false;
         chatPresetPopup.classList.remove('is-editing');
-        document.getElementById('chatPresetEditBtn').innerText = 'Edit';
+        document.getElementById('chatPresetEditBtn').innerText = 'EDIT';
         
         // 根据模式修改弹窗标题
         const headerTitle = document.querySelector('#chatPresetPopup .preset-header span:first-child');
@@ -676,7 +676,8 @@ function switchWechatTab(tabName) {
         rightBtn.style.visibility = 'hidden';
         if (searchBtn) searchBtn.style.display = 'flex'; // Chat 页面显示搜索按钮
     } else if (tabName === 'me') {
-        rightBtn.innerHTML = 'Edit';
+        rightBtn.innerHTML = 'EDIT';
+        rightBtn.style.fontSize = '15px';
         rightBtn.onclick = editCurrentPersona;
         rightBtn.style.visibility = 'visible';
         if (searchBtn) searchBtn.style.display = 'none'; // 其他页面隐藏搜索按钮

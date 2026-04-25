@@ -2025,3 +2025,494 @@ function closeCharIdCardModal() {
         document.getElementById('charIdCardModalOverlay').classList.remove('show');
     }, 300);
 }
+// ==========================================
+// 桌面长按编辑模式与拖拽逻辑 (完美兼容移动端)
+// ==========================================
+let desktopPressTimer;
+const homeScreen = document.getElementById('homeScreen');
+const gridBg = document.getElementById('desktopGridBg');
+
+// 动态生成 28 个网格单元格
+for (let i = 0; i < 28; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    gridBg.appendChild(cell);
+}
+
+let dragEl = null;
+let desktopDragStartX = 0, desktopDragStartY = 0;
+let initialDesktopHTML = ''; // 用于记录编辑前的状态，方便取消时回滚
+
+// 自动计算并填满桌面的空位
+function fillDesktopPlaceholders() {
+    const homeScreen = document.getElementById('homeScreen');
+    if (!homeScreen) return;
+    
+    // 清除旧的占位符
+    const existingPlaceholders = homeScreen.querySelectorAll('.app-placeholder');
+    existingPlaceholders.forEach(p => p.remove());
+
+    let usedSlots = 0;
+    const items = homeScreen.querySelectorAll('.app-item, .widget-container');
+    items.forEach(item => {
+        if (item.closest('.dock-container')) return; // 排除底栏的 APP
+        if (item.classList.contains('widget-container')) {
+            usedSlots += 16; // 小组件占 4x4 = 16 格
+        } else if (item.classList.contains('app-item')) {
+            usedSlots += 1; // APP 占 1 格
+        }
+    });
+
+    const totalSlots = 28; // 桌面总共 4x7 = 28 格
+    const emptySlots = totalSlots - usedSlots;
+
+    // 填充空位
+    for (let i = 0; i < emptySlots; i++) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'app-placeholder';
+        placeholder.style.minHeight = '80px'; // 确保空位有高度，方便拖拽命中
+        homeScreen.appendChild(placeholder);
+    }
+}
+
+// 恢复保存的桌面布局顺序（完美恢复小组件和APP）
+function restoreDesktopOrder() {
+    const orderStr = localStorage.getItem('desktop_order');
+    if (!orderStr) return;
+    const order = JSON.parse(orderStr);
+    const homeScreen = document.getElementById('homeScreen');
+    
+    const elements = { app: {} };
+    
+    // 收集当前桌面上的 APP
+    Array.from(homeScreen.children).forEach(child => {
+        if (child.classList.contains('app-item')) {
+            const iconEl = child.querySelector('.app-icon');
+            if (iconEl) elements.app[iconEl.id] = child;
+        }
+    });
+
+    // 清空桌面（保留 grid-bg）
+    const gridBg = document.getElementById('desktopGridBg');
+    homeScreen.innerHTML = '';
+    if (gridBg) homeScreen.appendChild(gridBg);
+    
+    // 按照保存的顺序重新排列 DOM
+    order.forEach(item => {
+        if (item.type === 'widget') {
+            const temp = document.createElement('div');
+            
+            // 如果是带有动态脚本的自定义小组件，重新注入原始 content 触发脚本
+            if (item.isCustom && item.rawContent) {
+                const transparentClass = item.isTransparent ? 'is-transparent-widget' : '';
+                temp.innerHTML = `
+                <div class="widget-container custom-desktop-widget ${transparentClass}" style="background: ${item.bgColor || ''}" data-raw-content="${item.rawContent}">
+                    <div class="widget-delete-btn" onclick="deleteDesktopWidget(this)">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ff3b30"></circle><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"></line></svg>
+                    </div>
+                    ${decodeURIComponent(item.rawContent)}
+                </div>`;
+            } else {
+                // 普通小组件直接恢复 HTML
+                temp.innerHTML = item.html;
+            }
+            
+            const widget = temp.firstElementChild;
+            homeScreen.appendChild(widget);
+            
+            // 重新绑定小组件内的图片上传事件
+            widget.querySelectorAll('.uploadable-img').forEach(el => {
+                handleImageUpload(el, (imgUrl, targetEl) => {
+                    targetEl.style.backgroundImage = `url(${imgUrl})`;
+                    targetEl.classList.add('has-image');
+                });
+            });
+        } else if (item.type === 'app' && elements.app[item.id]) {
+            homeScreen.appendChild(elements.app[item.id]);
+            delete elements.app[item.id]; // 标记已使用
+        } else if (item.type === 'placeholder') {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'app-placeholder';
+            placeholder.style.minHeight = '80px';
+            homeScreen.appendChild(placeholder);
+        }
+    });
+    
+    // 把没匹配上的新 APP 追加到最后
+    Object.values(elements.app).forEach(el => homeScreen.appendChild(el));
+}
+
+// 拦截编辑模式下的点击事件，防止进入 APP
+homeScreen.addEventListener('click', function(e) {
+    if (homeScreen.classList.contains('is-desktop-editing')) {
+        // 如果点击的不是删除按钮，则阻止默认跳转
+        if (!e.target.closest('.widget-delete-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }
+}, true); // 使用捕获阶段拦截
+
+function bindDesktopLongPress() {
+    fillDesktopPlaceholders(); // 每次绑定前确保空位被填满
+    const items = homeScreen.querySelectorAll('.app-item, .widget-container');
+    items.forEach(item => {
+        item.removeEventListener('touchstart', handleTouchStart);
+        item.removeEventListener('touchmove', handleTouchMove);
+        item.removeEventListener('touchend', handleTouchEnd);
+        item.removeEventListener('mousedown', handleTouchStart);
+        
+        item.addEventListener('touchstart', handleTouchStart, {passive: false});
+        item.addEventListener('touchmove', handleTouchMove, {passive: false});
+        item.addEventListener('touchend', handleTouchEnd);
+        item.addEventListener('mousedown', handleTouchStart);
+    });
+    
+    document.removeEventListener('mousemove', handleTouchMove);
+    document.removeEventListener('mouseup', handleTouchEnd);
+    document.addEventListener('mousemove', handleTouchMove, {passive: false});
+    document.addEventListener('mouseup', handleTouchEnd);
+}
+
+function handleTouchStart(e) {
+    const touch = e.touches ? e.touches[0] : e;
+    desktopDragStartX = touch.clientX;
+    desktopDragStartY = touch.clientY;
+
+    if (!homeScreen.classList.contains('is-desktop-editing')) {
+        desktopPressTimer = setTimeout(() => {
+            enterDesktopEditMode();
+        }, 800);
+        return;
+    }
+
+    if (e.target.closest('.widget-delete-btn')) return;
+    
+    dragEl = e.target.closest('.app-item, .widget-container');
+    if (!dragEl) return;
+
+    dragEl.classList.add('dragging');
+}
+
+let currentDropTarget = null; // 记录当前悬停的目标
+
+function handleTouchMove(e) {
+    const touch = e.touches ? e.touches[0] : e;
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+
+    if (!homeScreen.classList.contains('is-desktop-editing')) {
+        // 增加防抖：只有手指移动超过 10px 才取消长按，防止误触
+        if (Math.abs(currentX - desktopDragStartX) > 10 || Math.abs(currentY - desktopDragStartY) > 10) {
+            clearTimeout(desktopPressTimer);
+        }
+        return;
+    }
+
+    if (!dragEl) return;
+    e.preventDefault();
+
+    // 让元素跟随手指移动，并确保在最上层
+    const deltaX = currentX - desktopDragStartX;
+    const deltaY = currentY - desktopDragStartY;
+    dragEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
+    dragEl.style.zIndex = '9999';
+
+    dragEl.style.visibility = 'hidden';
+    const targetEl = document.elementFromPoint(currentX, currentY);
+    dragEl.style.visibility = 'visible';
+
+    if (targetEl) {
+        const dropTarget = targetEl.closest('.app-item, .widget-container, .app-placeholder');
+        if (dropTarget && dropTarget !== dragEl && dropTarget.parentNode === homeScreen) {
+            // 如果悬停到了新目标，添加高亮提示
+            if (currentDropTarget !== dropTarget) {
+                if (currentDropTarget) currentDropTarget.classList.remove('drag-over');
+                currentDropTarget = dropTarget;
+                currentDropTarget.classList.add('drag-over');
+            }
+        } else {
+            // 移出目标区域时，清除高亮
+            if (currentDropTarget) {
+                currentDropTarget.classList.remove('drag-over');
+                currentDropTarget = null;
+            }
+        }
+    }
+}
+
+function handleTouchEnd(e) {
+    clearTimeout(desktopPressTimer);
+    if (dragEl) {
+        // 松开手指时，如果停留在有效目标上，才执行位置交换
+        if (currentDropTarget && currentDropTarget !== dragEl) {
+            // 核心修复：精准互换两个 DOM 节点的位置，其他元素绝对不移动！
+            const parentA = dragEl.parentNode;
+            const siblingA = dragEl.nextSibling === currentDropTarget ? dragEl : dragEl.nextSibling;
+            
+            currentDropTarget.parentNode.insertBefore(dragEl, currentDropTarget);
+            parentA.insertBefore(currentDropTarget, siblingA);
+            
+            currentDropTarget.classList.remove('drag-over');
+            currentDropTarget = null;
+        }
+
+        dragEl.style.transform = ''; // 清除位移
+        dragEl.style.zIndex = '';
+        dragEl.classList.remove('dragging');
+        dragEl = null;
+    }
+}
+
+function enterDesktopEditMode() {
+    const homeScreen = document.getElementById('homeScreen');
+    // 记录进入编辑模式前的桌面 HTML，用于取消时回滚
+    initialDesktopHTML = homeScreen.innerHTML;
+    
+    homeScreen.classList.add('is-desktop-editing');
+    document.getElementById('desktopEditCapsule').classList.add('show');
+}
+
+function cancelDesktopEdit() {
+    const homeScreen = document.getElementById('homeScreen');
+    homeScreen.classList.remove('is-desktop-editing');
+    document.getElementById('desktopEditCapsule').classList.remove('show');
+    
+    // 如果点击了取消，恢复到进入编辑模式前的 HTML 状态
+    if (initialDesktopHTML) {
+        homeScreen.innerHTML = initialDesktopHTML;
+        initialDesktopHTML = '';
+        
+        // 重新绑定长按拖拽事件
+        bindDesktopLongPress();
+        
+        // 重新绑定小组件图片上传事件
+        homeScreen.querySelectorAll('.uploadable-img').forEach(el => {
+            handleImageUpload(el, (imgUrl, targetEl) => {
+                targetEl.style.backgroundImage = `url(${imgUrl})`;
+                targetEl.classList.add('has-image');
+            });
+        });
+    }
+}
+
+function saveDesktopEdit() {
+    initialDesktopHTML = ''; // 清除回滚记录，确认保存
+    
+    const homeScreen = document.getElementById('homeScreen');
+    homeScreen.classList.remove('is-desktop-editing');
+    document.getElementById('desktopEditCapsule').classList.remove('show');
+    
+    // 记录当前 DOM 顺序并保存到本地
+    const order = [];
+    const items = homeScreen.querySelectorAll('.app-item, .widget-container, .app-placeholder');
+    items.forEach(item => {
+        if (item.classList.contains('widget-container')) {
+            // 保存小组件的完整 HTML 及原始脚本内容，确保刷新后动态脚本能再次执行
+            const rawContent = item.getAttribute('data-raw-content') || '';
+            order.push({ 
+                type: 'widget', 
+                id: item.id || '', 
+                html: item.outerHTML,
+                rawContent: rawContent,
+                isCustom: item.classList.contains('custom-desktop-widget'),
+                isTransparent: item.classList.contains('is-transparent-widget'),
+                bgColor: item.style.background
+            });
+        } else if (item.classList.contains('app-item')) {
+            const iconEl = item.querySelector('.app-icon');
+            order.push({ type: 'app', id: iconEl ? iconEl.id : '' });
+        } else if (item.classList.contains('app-placeholder')) {
+            order.push({ type: 'placeholder' });
+        }
+    });
+    localStorage.setItem('desktop_order', JSON.stringify(order));
+    
+    triggerAutoSave();
+    alert('桌面布局已保存！');
+}
+
+function deleteDesktopWidget(btn) {
+    if(confirm('确定要删除该小组件吗？')) {
+        btn.closest('.widget-container').remove();
+        fillDesktopPlaceholders(); // 删除后重新计算空位
+        // 注意：这里不再自动保存，必须用户点击“保存”才会生效，点击“取消”会恢复
+    }
+}
+
+bindDesktopLongPress();
+// ==========================================
+// 导入小组件弹窗逻辑 (支持预览、删除与持久化)
+// ==========================================
+let importedWidgets = JSON.parse(localStorage.getItem('imported_widgets') || '[]');
+
+function renderImportedWidgets() {
+    const content = document.getElementById('widgetModalContent');
+    // 保留第一个默认组件，清除后面动态添加的
+    while (content.children.length > 1) {
+        content.removeChild(content.lastChild);
+    }
+    
+    importedWidgets.forEach((data, index) => {
+        const item = document.createElement('div');
+        item.className = 'widget-preview-item';
+        item.style.display = 'flex';
+        item.style.flexDirection = 'column';
+        item.style.alignItems = 'center';
+        item.style.gap = '10px';
+        
+        const isTransparent = data.bgColor === 'transparent';
+        const transparentClass = isTransparent ? 'is-transparent-widget' : '';
+        
+        // 如果 JSON 中有 content，则使用 content；否则使用默认文本
+        const innerContent = data.content ? data.content : `
+        <div style="padding: 10px; font-size: 14px; font-weight: bold; color: #333; text-align: center;">
+            ${data.name || '自定义小组件'}
+        </div>`;
+        
+        item.innerHTML = `
+            <div class="widget-preview-delete" onclick="deleteImportedWidget(${index}, event)">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ff3b30"></circle><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"></line></svg>
+            </div>
+            <div style="font-size: 14px; font-weight: bold; color: #333; width: 100%; text-align: center;" onclick="addImportedWidgetToDesktop(${index})">${data.name || '自定义小组件'}</div>
+            <div onclick="addImportedWidgetToDesktop(${index})" style="width: 100%; height: 160px; position: relative; overflow: hidden; border-radius: 12px; background: #f4f4f5; display: flex; justify-content: center; align-items: center; cursor: pointer;">
+                <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 350px;">
+                    <div class="widget-container custom-desktop-widget ${transparentClass}" style="margin: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: ${data.bgColor || ''}">
+                        ${innerContent}
+                    </div>
+                </div>
+            </div>
+        `;
+        content.appendChild(item);
+    });
+}
+
+function openWidgetModal() {
+    renderImportedWidgets();
+    document.getElementById('widgetModalOverlay').classList.add('show');
+}
+
+function closeWidgetModal() {
+    document.getElementById('widgetModalOverlay').classList.remove('show');
+}
+
+function importWidgetJson(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const data = JSON.parse(event.target.result);
+            data.name = data.name || file.name;
+            importedWidgets.push(data);
+            localStorage.setItem('imported_widgets', JSON.stringify(importedWidgets));
+            renderImportedWidgets();
+            alert('小组件导入成功！');
+        } catch (err) {
+            alert('解析JSON失败，请确保文件格式正确。');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // 清空 input 允许重复导入同名文件
+}
+
+function deleteImportedWidget(index, e) {
+    e.stopPropagation(); // 阻止触发添加事件
+    if (confirm('确定要从列表中删除这个导入的小组件吗？')) {
+        importedWidgets.splice(index, 1);
+        localStorage.setItem('imported_widgets', JSON.stringify(importedWidgets));
+        renderImportedWidgets();
+    }
+}
+
+function addImportedWidgetToDesktop(index) {
+    const data = importedWidgets[index];
+    if (!data) return;
+    
+    const isTransparent = data.bgColor === 'transparent';
+    const transparentClass = isTransparent ? 'is-transparent-widget' : '';
+    
+    // 如果 JSON 中有 content，则使用 content；否则使用默认文本
+    const innerContent = data.content ? data.content : `
+    <div style="padding: 10px; font-size: 14px; font-weight: bold; color: #333; text-align: center;">
+        ${data.name || '自定义小组件'}
+    </div>`;
+    
+    // 将原始代码进行编码并存入属性中，防止刷新时脚本丢失
+    const rawAttr = data.content ? `data-raw-content="${encodeURIComponent(data.content)}"` : '';
+    
+    const widgetHTML = `
+    <div class="widget-container custom-desktop-widget ${transparentClass}" style="background: ${data.bgColor || ''}" ${rawAttr}>
+        <div class="widget-delete-btn" onclick="deleteDesktopWidget(this)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ff3b30"></circle><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"></line></svg>
+        </div>
+        ${innerContent}
+    </div>`;
+    
+    document.getElementById('desktopGridBg').insertAdjacentHTML('afterend', widgetHTML);
+    fillDesktopPlaceholders(); // 重新计算空位
+    closeWidgetModal();
+    bindDesktopLongPress();
+    // 注意：这里不再自动保存，必须用户点击“保存”才会生效
+}
+
+function addWidgetToDesktop(type) {
+    if (type === 'default') {
+        if (document.getElementById('main-widget-container')) {
+            alert('默认小组件已经在桌面上了！');
+            return;
+        }
+        
+        const defaultWidgetHTML = `
+        <div class="widget-container" id="main-widget-container">
+            <div class="widget-delete-btn" onclick="deleteDesktopWidget(this)">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ff3b30"></circle><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"></line></svg>
+            </div>
+            <div class="widget-top-bar">
+                <div class="widget-btn icon-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="#666" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <div class="widget-btn" contenteditable="true" spellcheck="false">#记录你有关的萌点</div>
+            </div>
+            <div class="widget-music">
+                <div class="music-cover uploadable-img"></div>
+                <div class="music-info">
+                    <div class="music-title" contenteditable="true" spellcheck="false">DorisWorld</div>
+                    <div class="music-sub" contenteditable="true" spellcheck="false">Doris<br>Music</div>
+                </div>
+            </div>
+            <div class="widget-search">
+                <span contenteditable="true" spellcheck="false">索菲亚公主的午后芭蕾茶话会</span>
+                <span style="background:#888; color:#fff; border-radius:50%; width:20px; height:20px; text-align:center; line-height:20px;">↑</span>
+            </div>
+            <div class="widget-gallery">
+                <div class="gallery-item-widget uploadable-img">love</div>
+                <div class="gallery-item-widget uploadable-img">Cherish</div>
+                <div class="gallery-item-widget uploadable-img">|||||||</div>
+            </div>
+        </div>`;
+        
+        document.getElementById('desktopGridBg').insertAdjacentHTML('afterend', defaultWidgetHTML);
+        
+        document.querySelectorAll('#main-widget-container .uploadable-img').forEach(el => {
+            handleImageUpload(el, (imgUrl, targetEl) => {
+                targetEl.style.backgroundImage = `url(${imgUrl})`;
+                targetEl.classList.add('has-image');
+            });
+        });
+        
+        fillDesktopPlaceholders(); // 重新计算空位
+        closeWidgetModal();
+        bindDesktopLongPress();
+        // 注意：这里不再自动保存，必须用户点击“保存”才会生效
+    }
+}
+
+// 页面加载时初始化渲染
+window.addEventListener('DOMContentLoaded', () => {
+    renderImportedWidgets();
+    fillDesktopPlaceholders();
+    restoreDesktopOrder();
+});
