@@ -249,6 +249,10 @@ input, textarea, select {
     background-color: transparent;
     box-shadow: none;
     border: none;
+    /* 强制图片居中铺满，防止被其他样式覆盖导致放大 */
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
 }
 .app-icon.is-custom > svg {
     display: none;
