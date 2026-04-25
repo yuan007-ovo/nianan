@@ -955,10 +955,34 @@ const SVG_PATHS = {
     FIRE: "M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.08-3.61 5.75-2.39 8.9.04.1.08.2.08.33 0 .22-.15.42-.35.5-.22.1-.47.04-.64-.12-.06-.05-.1-.1-.15-.17-1.1-1.43-1.26-3.59-.39-5.19-1.42.54-2.48 1.64-3.06 3.11-.9 2.02-.48 4.52 1.04 6.06 2.29 2.31 5.92 2.5 8.47.44 2.51-2.02 3.5-5.42 1.6-8.3z",
     BIG_FIRE: "M12 23c4.418 0 8-3.582 8-8 0-3.285-2.007-6.113-4.886-7.315.213 1.124-.12 2.34-.94 3.22-.82.88-2.036 1.213-3.174 1.094V12c0-3.866-3.134-7-7-7 0 3.866 3.134 7 7 7v3c0 4.418 3.582 8 8 8z",
     BOAT: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z",
-    SHIP: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z",
-    SPLASH: "M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z",
-    LUCK: "M12,2C9.5,2 7.5,4 7.5,6.5C7.5,7.4 7.8,8.2 8.2,8.9C7.5,8.5 6.7,8.2 5.8,8.2C3.3,8.2 1.3,10.2 1.3,12.7C1.3,15.2 3.3,17.2 5.8,17.2C6.7,17.2 7.5,16.9 8.2,16.5C7.8,17.2 7.5,18 7.5,18.9C7.5,21.4 9.5,23.4 12,23.4C14.5,23.4 16.5,21.4 16.5,18.9C16.5,18 16.2,17.2 15.8,16.5C16.5,16.9 17.3,17.2 18.2,17.2C20.7,17.2 22.7,15.2 22.7,12.7C22.7,10.2 20.7,8.2 18.2,8.2C17.3,8.2 16.5,8.5 15.8,8.9C16.2,8.2 16.5,7.4 16.5,6.5C16.5,4 14.5,2 12,2Z"
+    SHIP: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z",    SPLASH: "M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z",
+    LUCK: "M12,2C9.5,2 7.5,4 7.5,6.5C7.5,7.4 7.8,8.2 8.2,8.9C7.5,8.5 6.7,8.2 5.8,8.2C3.3,8.2 1.3,10.2 1.3,12.7C1.3,15.2 3.3,17.2 5.8,17.2C6.7,17.2 7.5,16.9 8.2,16.5C7.8,17.2 7.5,18 7.5,18.9C7.5,21.4 9.5,23.4 12,23.4C14.5,23.4 16.5,21.4 16.5,18.9C16.5,18 16.2,17.2 15.8,16.5C16.5,16.9 17.3,17.2 18.2,17.2C20.7,17.2 22.7,15.2 22.7,12.7C22.7,10.2 20.7,8.2 18.2,8.2C17.3,8.2 16.5,8.5 15.8,8.9C16.2,8.2 16.5,7.4 16.5,6.5C16.5,4 14.5,2 12,2Z",
+    RECORD: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"
 };
+
+// 新增：更新一起听歌互动数据
+function updateMusicInteractionStats(charId) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
+    if (!stats[charId]) {
+        stats[charId] = { streak: 0, lastDate: '', count: 0, pinned: false, special: false, userLastMsg: false, charLastMsg: false, addedDate: new Date().toISOString().split('T')[0], littleLuck: false, wornBadge: null, musicStreak: 0, musicLastDate: '' };
+    }
+
+    const data = stats[charId];
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    if (data.musicLastDate === yesterday) {
+        data.musicStreak = (data.musicStreak || 0) + 1;
+    } else if (data.musicLastDate !== today) {
+        data.musicStreak = 1;
+    }
+    data.musicLastDate = today;
+
+    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+}
 
 // 1. 更新互动数据 (包含小幸运逻辑)
 function updateInteractionStats(charId, isUserSend = true) {
@@ -1025,6 +1049,8 @@ function getWornBadgeHtml(charId) {
         badgeClass = stats.streak >= 30 ? 'badge-ship' : 'badge-boat';
     } else if (badgeType === 'splash' && stats.count >= 100) {
         path = SVG_PATHS.SPLASH; badgeClass = "badge-splash";
+    } else if (badgeType === 'record' && (stats.musicStreak || 0) >= 3) {
+        path = SVG_PATHS.RECORD; badgeClass = "badge-record";
     } else {
         return ''; 
     }
@@ -1053,7 +1079,8 @@ function renderInteractionDetail() {
         { type: 'luck', name: '小幸运', desc: '成为新朋友当天互发消息获得', icon: 'badge-luck', path: SVG_PATHS.LUCK, condition: stats.littleLuck, val: '已点亮' },
         { type: 'fire', name: '畅聊火花', desc: '连续互动3天获得', icon: 'badge-fire', path: (stats.streak || 0) >= 30 ? SVG_PATHS.BIG_FIRE : SVG_PATHS.FIRE, condition: (stats.streak || 0) >= 3, val: `${stats.streak || 0}天` },
         { type: 'boat', name: '友谊之船', desc: '连续互动7天获得', icon: 'badge-boat', path: (stats.streak || 0) >= 30 ? SVG_PATHS.SHIP : SVG_PATHS.BOAT, condition: (stats.streak || 0) >= 7, val: (stats.streak || 0) >= 30 ? '已升级巨轮' : '已点亮' },
-        { type: 'splash', name: '闲聊水花', desc: '累计互动消息超过100条点亮', icon: 'badge-splash', path: SVG_PATHS.SPLASH, condition: (stats.count || 0) >= 100, val: `${stats.count || 0}条` }
+        { type: 'splash', name: '闲聊水花', desc: '累计互动消息超过100条点亮', icon: 'badge-splash', path: SVG_PATHS.SPLASH, condition: (stats.count || 0) >= 100, val: `${stats.count || 0}条` },
+        { type: 'record', name: '共鸣唱片', desc: '连续一起听歌3天获得', icon: 'badge-record', path: SVG_PATHS.RECORD, condition: (stats.musicStreak || 0) >= 3, val: `${stats.musicStreak || 0}天` }
     ];
 
     badgeConfigs.forEach(config => {
@@ -1098,6 +1125,8 @@ function openBadgeActionModal(config) {
         detailText = `与好友互发消息连续超过 ${stats.streak || 0} 天`;
     } else if (config.type === 'splash') {
         detailText = `与好友累计互发消息超过 ${stats.count || 0} 条`;
+    } else if (config.type === 'record') {
+        detailText = `与好友连续一起听歌超过 ${stats.musicStreak || 0} 天`;
     }
     document.getElementById('badgeActionDesc').innerText = detailText;
 
@@ -2551,7 +2580,7 @@ function renderChatHistory(charId, keepScroll = false) {
         } else if (isMusicInviteMsg) {
             let statusText = msg.status === 'accepted' ? '已同意' : (msg.status === 'rejected' ? '已拒绝' : '等待回复...');
             bubbleInnerHtml = `
-                <div class="music-invite-card">
+                <div class="music-invite-card" onclick="event.stopPropagation(); openMusicInviteDetail(${index})">
                     <div class="music-invite-card-top">
                         <div class="music-invite-icon">
                             <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
@@ -3757,10 +3786,18 @@ function playInnerVoiceAnimation(text) {
     type();
 }
 
+let isGeneratingApiReply = false; // 新增：全局防误触锁
+
 async function generateApiReply(isProactive = false, proactiveCharId = null) {
+    if (isGeneratingApiReply) return; // 如果正在生成，直接拦截
+    isGeneratingApiReply = true;
+
     const currentLoginId = ChatDB.getItem('current_login_account');
     const targetCharId = isProactive ? proactiveCharId : currentChatRoomCharId;
-    if (!currentLoginId || !targetCharId) return;
+    if (!currentLoginId || !targetCharId) {
+        isGeneratingApiReply = false;
+        return;
+    }
 
     const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
     if (!apiConfig.url || !apiConfig.key || !apiConfig.model) {
@@ -3839,8 +3876,9 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
 
     if (activeWbs.top.length > 0) systemPrompt += `[背景设定]\n${activeWbs.top.join('\n')}\n\n`;
     
-    // 【新增：酒馆风格记忆注入】
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${targetCharId}`) || '{}');
+    // 【新增：酒馆风格记忆注入】(改为绑定面具ID，实现同面具小号记忆互通)
+    const currentPersonaId = persona ? persona.id : currentLoginId;
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentPersonaId}_${targetCharId}`) || '{}');
     
     // 1. 注入对话总结 (Chat Summary) - 放在背景设定的最前面
     if (memory.summary && memory.summary.length > 0) {
@@ -4196,6 +4234,7 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
     } catch (e) {
         showApiErrorModal(e.message || '网络请求失败，请检查 API 地址或网络连接。');
     } finally {
+        isGeneratingApiReply = false; // 释放锁
         apiBtn.innerHTML = originalBtnHtml;
         apiBtn.style.pointerEvents = 'auto';
         titleEl.innerText = originalTitle;
@@ -4326,8 +4365,14 @@ function actionEditMessage() {
             }
         }
 
-        // 自动清理 AI 错误生成的 [图片]、[语音] 等前缀，让你编辑时更清爽
-        initialText = initialText.replace(/^\[.*?\]\s*|^【.*?】\s*/g, '').trim();
+        // 修复：精准清理系统前缀，不再使用模糊匹配，防止误删用户的【动作描写】
+        const cleanRegex = /^(?:\[图片\]|\[语音\]|\[转账\]|\[赠送亲属卡\]|\[索要亲属卡\])\s*/g;
+        let cleanedText = initialText.replace(cleanRegex, '').trim();
+        
+        // 如果清理后变成空了，说明原本就只有这些词，那就恢复原样
+        if (cleanedText) {
+            initialText = cleanedText;
+        }
 
         document.getElementById('editMsgTextarea').value = initialText;
         
@@ -5873,36 +5918,18 @@ function handleNotificationClick() {
         openChatRoom(currentNotifCharId);
     }
 }
-// ==========================================
-// 角色记忆库 (Memory Bank) 逻辑
-// ==========================================
-let currentMemoryTab = 'core';
-
-function openMemoryPanel() {
-    if (!currentProfileCharId) return;
-    
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === currentProfileCharId);
-    if (!char) return;
-
-    // 填充头像和名字
-    document.getElementById('memoryCharAvatar').style.backgroundImage = char.avatarUrl ? `url(${char.avatarUrl})` : '';
-    document.getElementById('memoryCharName').innerText = char.netName || char.name || '未命名';
-
-    // 初始化记忆数据结构
-    initMemoryData(currentProfileCharId);
-    
-    document.getElementById('charMemoryPanel').style.display = 'flex';
-    switchMemoryTab('core'); // 默认打开核心记忆
-}
-
-function closeMemoryPanel() {
-    document.getElementById('charMemoryPanel').style.display = 'none';
+// 辅助函数：获取当前登录账号绑定的面具ID
+function getCurrentPersonaIdForMemory() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return null;
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    return account ? account.personaId : currentLoginId;
 }
 
 function initMemoryData(charId) {
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${charId}`) || 'null');
+    const personaId = getCurrentPersonaIdForMemory();
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${charId}`) || 'null');
     if (!memory) {
         memory = {
             summary: [],
@@ -5910,7 +5937,7 @@ function initMemoryData(charId) {
             note: [],
             settings: { autoSummarize: false, autoTurns: 10, customPrompt: '' }
         };
-        ChatDB.setItem(`char_memory_${currentLoginId}_${charId}`, JSON.stringify(memory));
+        ChatDB.setItem(`char_memory_${personaId}_${charId}`, JSON.stringify(memory));
     }
 }
 
@@ -5922,8 +5949,8 @@ function switchMemoryTab(tab) {
 }
 
 function renderMemoryContent() {
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+    const personaId = getCurrentPersonaIdForMemory();
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
     const list = memory[currentMemoryTab] || [];
     const container = document.getElementById('memoryContentArea');
     container.innerHTML = '';
@@ -5942,10 +5969,8 @@ function renderMemoryContent() {
     list.forEach((item, index) => {
         const block = document.createElement('div');
         block.className = 'memory-step-block';
-        // 默认第一条展开，其他的折叠
         if (index === 0) block.classList.add('expanded'); 
         
-        // 渲染折叠栏结构
         block.innerHTML = `
             <div class="memory-fold-header" onclick="this.parentElement.classList.toggle('expanded')">
                 <div>
@@ -5968,14 +5993,13 @@ function renderMemoryContent() {
     });
 }
 
-// --- 记忆增删改 ---
 function openMemoryEditModal(id = null) {
     document.getElementById('memoryEditType').value = currentMemoryTab;
     if (id) {
         document.getElementById('memoryEditTitle').innerText = '编辑记忆';
         document.getElementById('memoryEditId').value = id;
-        const currentLoginId = ChatDB.getItem('current_login_account');
-        let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+        const personaId = getCurrentPersonaIdForMemory();
+        let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
         const item = memory[currentMemoryTab].find(m => m.id === id);
         if (item) document.getElementById('memoryEditText').value = item.content;
     } else {
@@ -6001,37 +6025,34 @@ function saveMemoryEntry() {
     
     if (!content) return alert('内容不能为空！');
 
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+    const personaId = getCurrentPersonaIdForMemory();
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
     
     if (id) {
-        // 编辑
         const index = memory[type].findIndex(m => m.id === id);
         if (index !== -1) memory[type][index].content = content;
     } else {
-        // 新增
         memory[type].push({ id: Date.now().toString(), content: content });
     }
 
-    ChatDB.setItem(`char_memory_${currentLoginId}_${currentProfileCharId}`, JSON.stringify(memory));
+    ChatDB.setItem(`char_memory_${personaId}_${currentProfileCharId}`, JSON.stringify(memory));
     closeMemoryEditModal();
     if (type === currentMemoryTab) renderMemoryContent();
 }
 
 function deleteMemoryEntry(id) {
     if (confirm('确定删除这条记忆吗？')) {
-        const currentLoginId = ChatDB.getItem('current_login_account');
-        let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+        const personaId = getCurrentPersonaIdForMemory();
+        let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
         memory[currentMemoryTab] = memory[currentMemoryTab].filter(m => m.id !== id);
-        ChatDB.setItem(`char_memory_${currentLoginId}_${currentProfileCharId}`, JSON.stringify(memory));
+        ChatDB.setItem(`char_memory_${personaId}_${currentProfileCharId}`, JSON.stringify(memory));
         renderMemoryContent();
     }
 }
 
-// --- 记忆总结设置 ---
 function openMemorySettingsModal() {
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+    const personaId = getCurrentPersonaIdForMemory();
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
     
     document.getElementById('memAutoToggle').checked = memory.settings.autoSummarize || false;
     document.getElementById('memAutoTurns').value = memory.settings.autoTurns || 10;
@@ -6041,16 +6062,15 @@ function openMemorySettingsModal() {
 }
 
 function closeMemorySettingsModal() {
-    // 保存设置
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+    const personaId = getCurrentPersonaIdForMemory();
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
     
     if (!memory.settings) memory.settings = {};
     memory.settings.autoSummarize = document.getElementById('memAutoToggle').checked;
     memory.settings.autoTurns = parseInt(document.getElementById('memAutoTurns').value) || 10;
     memory.settings.customPrompt = document.getElementById('memCustomPrompt').value.trim();
     
-    ChatDB.setItem(`char_memory_${currentLoginId}_${currentProfileCharId}`, JSON.stringify(memory));
+    ChatDB.setItem(`char_memory_${personaId}_${currentProfileCharId}`, JSON.stringify(memory));
     document.getElementById('memorySettingsModalOverlay').classList.remove('show');
 }
 
@@ -6062,30 +6082,26 @@ async function executeManualSummary() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId || !currentProfileCharId) return;
 
-    // 1. 获取 API 配置
     const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
     if (!apiConfig.url || !apiConfig.key || !apiConfig.model) {
         return alert('请先在设置中配置 API 信息！');
     }
 
-    // 2. 获取聊天记录
     let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentProfileCharId}`) || '[]');
     if (history.length === 0) return alert('暂无聊天记录可总结！');
     
-    // 截取指定轮数的记录 (假设一问一答算1轮，这里简单按消息条数截取)
     const startIndex = Math.max(0, history.length - end * 2);
     const endIndex = history.length - (start - 1) * 2;
     const targetHistory = history.slice(startIndex, endIndex);
     
     let chatText = targetHistory.map(m => `${m.role === 'user' ? 'User' : 'Char'}: ${m.content}`).join('\n');
 
-    // 3. 获取旧的总结和设置
-    let memory = JSON.parse(ChatDB.getItem(`char_memory_${currentLoginId}_${currentProfileCharId}`) || '{}');
+    const personaId = getCurrentPersonaIdForMemory();
+    let memory = JSON.parse(ChatDB.getItem(`char_memory_${personaId}_${currentProfileCharId}`) || '{}');
     if (!memory.summary) memory.summary = [];
     let oldSummary = memory.summary.length > 0 ? memory.summary[0].content : "暂无前情提要。";
     let customPrompt = (memory.settings && memory.settings.customPrompt) ? memory.settings.customPrompt : "1. 使用第三人称陈述句，保持客观、简短。\n2. 重点记录发生的关键事件、角色之间关系的改变、以及重要的新情报。\n3. 剥离废话，只输出总结的文本，不要输出任何其他格式或多余的解释。";
 
-    // 4. 获取角色设定和用户设定
     let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
     const char = chars.find(c => c.id === currentProfileCharId);
     const charDesc = char ? (char.description || '无') : '无';
@@ -6096,7 +6112,6 @@ async function executeManualSummary() {
     const persona = personas.find(p => p.id === (account ? account.personaId : null));
     const userDesc = persona ? (persona.persona || '无') : '无';
 
-    // 5. 构建融合了设定的总结 Prompt
     const summaryPrompt = `你是一个故事记录者。请根据以下信息，更新现有的故事总结。
 
 【角色设定】：
@@ -6116,10 +6131,7 @@ ${customPrompt}
 
 请输出更新后的【新的故事总结】：`;
 
-    // 6. 调用 API
     document.getElementById('memorySettingsModalOverlay').classList.remove('show');
-    
-    // 显示悬浮胶囊
     showToast('正在生成记忆总结...', 'loading');
     
     try {
@@ -6129,7 +6141,7 @@ ${customPrompt}
             body: JSON.stringify({
                 model: apiConfig.model,
                 messages: [{ role: 'user', content: summaryPrompt }],
-                temperature: 0.5 // 总结需要较低的温度以保持客观
+                temperature: 0.5
             })
         });
 
@@ -6137,11 +6149,9 @@ ${customPrompt}
             const data = await response.json();
             const newSummaryText = data.choices[0].message.content.trim();
             
-            // 7. 覆盖保存到记忆库的 summary 标签下
             memory.summary = [{ id: Date.now().toString(), content: newSummaryText }];
-            ChatDB.setItem(`char_memory_${currentLoginId}_${currentProfileCharId}`, JSON.stringify(memory));
+            ChatDB.setItem(`char_memory_${personaId}_${currentProfileCharId}`, JSON.stringify(memory));
             
-            // 成功提示
             hideToast();
             showToast('总结完成！', 'success', 2000);
             
@@ -6844,4 +6854,60 @@ ${recentHistory || '暂无聊天记录'}
         hideToast();
         showApiErrorModal(e.message || '网络请求失败，请检查 API。');
     }
+}
+// ==========================================
+// 音乐邀请详情弹窗逻辑
+// ==========================================
+function openMusicInviteDetail(index) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId || !currentChatRoomCharId) return;
+
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    const msg = history[index];
+    if (!msg || msg.type !== 'music_invite') return;
+
+    // 获取联系人名称
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+    const displayName = remarks[currentChatRoomCharId] || (char ? (char.netName || char.name) : '未知');
+
+    // 填充数据
+    document.getElementById('midContactName').innerText = displayName;
+    
+    let statusText = '待回复';
+    if (msg.status === 'accepted') statusText = '已同意';
+    if (msg.status === 'rejected') statusText = '已拒绝';
+    if (msg.status === 'ended') statusText = '已结束';
+    document.getElementById('midStatus').innerText = statusText;
+
+    // 兼容旧数据，如果没有 inviteId 则生成一个临时的显示
+    const inviteId = msg.inviteId || `invite_${msg.timestamp}_${Math.random().toString(36).substr(2, 6)}`;
+    document.getElementById('midInviteId').innerText = inviteId;
+
+    const formatTime = (ts) => {
+        if (!ts) return '--';
+        const d = new Date(ts);
+        return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    };
+
+    document.getElementById('midCreateTime').innerText = formatTime(msg.timestamp);
+    document.getElementById('midUpdateTime').innerText = formatTime(msg.updateTime || msg.timestamp);
+
+    // 歌曲信息
+    const songInfoEl = document.getElementById('midSongInfo');
+    if (msg.songCover && msg.songTitle) {
+        songInfoEl.style.display = 'flex';
+        document.getElementById('midSongCover').style.backgroundImage = `url('${msg.songCover}')`;
+        document.getElementById('midSongTitle').innerText = msg.songTitle;
+        document.getElementById('midSongArtist').innerText = msg.songArtist || '未知歌手';
+    } else {
+        songInfoEl.style.display = 'none';
+    }
+
+    document.getElementById('musicInviteDetailOverlay').classList.add('show');
+}
+
+function closeMusicInviteDetail() {
+    document.getElementById('musicInviteDetailOverlay').classList.remove('show');
 }

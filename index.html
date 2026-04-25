@@ -767,7 +767,7 @@
                 </div>
             </div>
             <!-- 绑定保存逻辑 -->
-            <div class="header-close" style="color: #111;" onclick="saveWbEntry()">Save</div>
+            <div class="header-close" style="color: #8888;" onclick="saveWbEntry()">Save</div>
         </div>
 
         <div class="panel-content wb-pic-style-content">
@@ -1777,6 +1777,11 @@
                 <div class="cr-more-item" onclick="handleMoreAction('location')">
                     <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
                     <span>定位</span>
+                </div>
+                <!-- 新增：查手机按钮 -->
+                <div class="cr-more-item" onclick="openPhoneCheck()">
+                    <div class="cr-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></div>
+                    <span>查手机</span>
                 </div>
             </div>
         </div>
@@ -3143,6 +3148,57 @@
             </div>
         </div>
     </div>
+        <!-- =========================================
+         新增：音乐邀请详情弹窗
+         ========================================= -->
+    <div class="preset-modal-overlay" id="musicInviteDetailOverlay" style="z-index: 4000;">
+        <div class="preset-modal" style="width: 320px; padding: 0; border-radius: 20px; background: #fff; overflow: hidden;">
+            <!-- 头部 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+                <div style="font-size: 16px; font-weight: 900; color: #111;">一起听邀请详情</div>
+                <div onclick="closeMusicInviteDetail()" style="width: 28px; height: 28px; background: #f4f4f4; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #555;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+            
+            <!-- 内容区 -->
+            <div style="padding: 20px;">
+                <!-- 歌曲信息 (如果有) -->
+                <div id="midSongInfo" style="display: flex; gap: 12px; align-items: center; margin-bottom: 20px;">
+                    <div id="midSongCover" style="width: 50px; height: 50px; border-radius: 10px; background: #eee; background-size: cover; background-position: center;"></div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; overflow: hidden;">
+                        <div id="midSongTitle" style="font-size: 16px; font-weight: bold; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未知歌曲</div>
+                        <div id="midSongArtist" style="font-size: 13px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未知歌手</div>
+                    </div>
+                </div>
+
+                <!-- 详情列表 -->
+                <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: #333;">
+                    <div style="display: flex; gap: 10px;">
+                        <span style="color: #666; width: 70px;">联系人:</span>
+                        <span id="midContactName" style="font-weight: 500;"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <span style="color: #666; width: 70px;">状态:</span>
+                        <span id="midStatus" style="font-weight: 500;"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <span style="color: #666; width: 70px;">邀请ID:</span>
+                        <span id="midInviteId" style="font-family: monospace; color: #888; font-size: 12px; word-break: break-all;"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <span style="color: #666; width: 70px;">创建时间:</span>
+                        <span id="midCreateTime" style="font-family: monospace; color: #555;"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <span style="color: #666; width: 70px;">更新时间:</span>
+                        <span id="midUpdateTime" style="font-family: monospace; color: #555;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- =========================================
          新增：Char 主动邀请一起听歌弹窗 (高度还原图片)
          ========================================= -->
@@ -3258,7 +3314,309 @@
             </div>
         </div>
     </div>
+    <!-- =========================================
+         新增：全屏查手机遮罩与弹窗
+         ========================================= -->
+    <div class="phone-check-overlay" id="phoneCheckOverlay">
+        <div class="phone-frame-container">
+            <!-- 左上角 Char 头像 (邮票) -->
+            <div class="char-stamp-avatar" onclick="toggleSidebar()">
+                <div class="char-stamp-inner"></div>
+            </div>
 
+            <!-- 物理边框 -->
+            <div class="phone-hardware-frame">
+                <!-- 屏幕内容 -->
+                <div class="phone-screen-content">
+                    
+                    <!-- 侧边栏 (在屏幕内向右滑出) -->
+                    <div class="char-sidebar" id="charSidebar">
+                        <div class="sidebar-avatar"></div>
+                        <div class="sidebar-menu">
+                            <div class="sidebar-item" onclick="openIconModal()">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                <span>换图标</span>
+                            </div>
+                            <div class="sidebar-item" onclick="triggerWallpaperUpload()">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                                <span>换壁纸</span>
+                            </div>
+                            <div class="sidebar-item" onclick="alert('一键生成功能开发中...')">
+                                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                <span>一键生成</span>
+                            </div>
+                        </div>
+                        <div class="sidebar-bottom">
+                            <div class="sidebar-item" onclick="closePhoneCheck()">
+                                <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                <span>退出</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="phone-wallpaper" id="phoneWallpaper"></div>
+                    
+                    <!-- 状态栏 -->
+                    <div class="phone-status-bar">
+                        <span>12:00</span>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>
+                        </div>
+                    </div>
+
+                    <!-- 桌面 4x6 -->
+                    <div class="phone-desktop">
+                        <!-- 1-4行：个人主页小组件 -->
+                        <div class="profile-widget">
+                            <!-- 渐变背景层 -->
+                            <div class="profile-bg" id="widgetBg" onclick="triggerWidgetBgUpload()"></div>
+                            <!-- 头像 (居中) -->
+                            <div class="profile-avatar"></div>
+                            <!-- 内容层 (透明底) -->
+                            <div class="profile-content">
+                                <div class="profile-name">≮ · · ≯</div>
+                                <div class="profile-handle">@HATABUuuu</div>
+                                <div class="profile-bio">
+                                    ⊹ ˚ . ✟ 湖のほとりに天使が舞い降りた ✟ ⊹ ˚ .
+                                </div>
+                                <div class="profile-location">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                    鄞州区
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 第5行：4个 APP -->
+                        <div class="desktop-app" style="grid-row: 5; grid-column: 1;" onclick="openPhoneWechatLogin()">
+                            <div class="app-icon" id="app-icon-1"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+                            <div class="app-name">WeChat</div>
+                        </div>
+                        <div class="desktop-app" style="grid-row: 5; grid-column: 2;">
+                            <div class="app-icon" id="app-icon-2"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></div>
+                            <div class="app-name">Instagram</div>
+                        </div>
+                        <div class="desktop-app" style="grid-row: 5; grid-column: 3;">
+                            <div class="app-icon" id="app-icon-3"><svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></div>
+                            <div class="app-name">YouTube</div>
+                        </div>
+                        <div class="desktop-app" style="grid-row: 5; grid-column: 4;">
+                            <div class="app-icon" id="app-icon-4"><svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></div>
+                            <div class="app-name">Twitter</div>
+                        </div>
+                    </div>
+
+                    <!-- Dock 栏 (3个 APP) -->
+                    <div class="phone-dock">
+                        <div class="app-icon" id="app-icon-5"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div>
+                        <div class="app-icon" id="app-icon-6"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+                        <div class="app-icon" id="app-icon-7"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg></div>
+                    </div>
+                    <!-- 新增：微信登录界面 (覆盖在屏幕内) -->
+                    <div class="phone-wechat-login" id="phoneWechatLogin">
+                        <div class="pwl-header">
+                            <div class="pwl-close" onclick="closePhoneWechatLogin()">×</div>
+                        </div>
+                        <div class="pwl-content">
+                            <div class="pwl-avatar" id="pwlAvatar"></div>
+                            <div class="pwl-title">微 信 登 录</div>
+                            <div class="pwl-input-group">
+                                <input type="text" id="pwlAccount" placeholder="请填写微信号/QQ号/邮箱">
+                            </div>
+                            <div class="pwl-input-group">
+                                <input type="password" id="pwlPassword" placeholder="请填写密码">
+                            </div>
+                            <div class="pwl-btn" onclick="doPhoneWechatLogin()">登 录</div>
+                        </div>
+                    </div>
+
+                    <!-- 新增：微信主界面 (仿图) -->
+                    <div class="phone-wechat-app" id="phoneWechatApp">
+                        <!-- 顶部导航 -->
+                        <div class="pwa-header">
+                            <div class="pwa-back" onclick="closePhoneWechatApp()">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                Back
+                            </div>
+                            <div class="pwa-title-box">
+                                <div class="pwa-title">wechat☆</div>
+                                <div class="pwa-subtitle" id="pwaSubtitle">ZERO_VESPRINI</div>
+                            </div>
+                            <div class="pwa-action" id="pwaActionBtn" onclick="handlePwaAction()">
+                                <div class="pwa-action-circle"></div>
+                            </div>
+                        </div>
+
+                        <!-- 搜索框 -->
+                        <div class="pwa-search-box">
+                            <div class="pwa-search-inner">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="#aaa" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <input type="text" placeholder="Search...">
+                            </div>
+                        </div>
+
+                        <!-- 内容区 -->
+                        <div class="pwa-content">
+                            <!-- Chat Tab -->
+                            <div class="pwa-tab-page active" id="pwaTabChat">
+                                <div id="pwaChatList" class="pwa-list-container">
+                                    <div class="pwa-empty-hint">
+                                        点击右上角刷新按钮<br>生成 AI 视角的聊天列表
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Profile Tab -->
+                            <div class="pwa-tab-page" id="pwaTabProfile">
+                                <div class="pwa-profile-container">
+                                    <div class="pwa-profile-avatar" id="pwaProfileAvatar"></div>
+                                    <div class="pwa-profile-name" id="pwaProfileName">Name</div>
+                                    <div class="pwa-profile-sign" id="pwaProfileSign">Signature</div>
+                                </div>
+                            </div>
+
+                            <!-- Contacts Tab -->
+                            <div class="pwa-tab-page" id="pwaTabContacts">
+                                <div id="pwaContactList" class="pwa-list-container">
+                                    <div class="pwa-empty-hint">
+                                        点击右上角刷新按钮<br>生成通讯录列表
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 底部导航 (凸起头像) -->
+                        <div class="pwa-bottom-nav">
+                            <div class="pwa-nav-item active" id="pwaNavBtnChat" onclick="switchPwaTab('chat')">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                <span>Chat</span>
+                            </div>
+                            <div class="pwa-nav-item-center" id="pwaNavBtnProfile" onclick="switchPwaTab('profile')">
+                                <div class="pwa-nav-avatar-wrap">
+                                    <div class="pwa-nav-avatar" id="pwaNavAvatar"></div>
+                                </div>
+                                <span>Profile</span>
+                            </div>
+                            <div class="pwa-nav-item" id="pwaNavBtnContacts" onclick="switchPwaTab('contacts')">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+                                <span>Contacts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 聊天详情页 -->
+                    <div class="phone-wechat-app" id="pwaChatRoom" style="z-index: 60;">
+                        <div class="pwa-header">
+                            <div class="pwa-back" onclick="closePwaChatRoom()">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                Back
+                            </div>
+                            <div class="pwa-title-box">
+                                <div class="pwa-title" id="pwaChatRoomTitle" style="font-size: 16px; font-style: normal;">Name</div>
+                            </div>
+                            <div class="pwa-action" style="visibility: hidden;"></div>
+                        </div>
+                        <div class="pwa-content" style="background: #f5f5f5; padding: 15px; overflow-y: auto; display: flex; flex-direction: column;" id="pwaChatRoomHistory">
+                            <!-- 聊天记录 -->
+                        </div>
+                        
+                        <!-- 新增底部输入框 -->
+                        <div class="pwa-bottom-bar" id="pwaChatRoomBottomBar">
+                            <div class="pwa-icon-btn" onclick="togglePwaMorePanel()">
+                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                            </div>
+                            <div class="pwa-input-container">
+                                <input type="text" id="pwaChatRoomInput" placeholder="iMessages..." onkeypress="if(event.key==='Enter') sendPwaChatMessage()">
+                            </div>
+                            <div class="pwa-icon-btn" onclick="generatePwaApiReply()">
+                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                            </div>
+                            <div class="pwa-send-btn" onclick="sendPwaChatMessage()">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                            </div>
+                        </div>
+                        
+                        <!-- PWA 更多面板 -->
+                        <div class="pwa-more-panel" id="pwaMorePanel">
+                            <div class="pwa-more-item" onclick="pwaActionRoll()">
+                                <div class="pwa-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></div>
+                                <span>重回</span>
+                            </div>
+                            <div class="pwa-more-item" onclick="pwaActionMultiSelect()">
+                                <div class="pwa-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></div>
+                                <span>多选删除</span>
+                            </div>
+                        </div>
+                        
+                        <!-- PWA 多选操作栏 -->
+                        <div class="pwa-multi-action-bar" id="pwaMultiActionBar">
+                            <div class="pwa-multi-btn" onclick="pwaBatchDeleteMessages()">
+                                <svg viewBox="0 0 24 24" stroke="#ff3b30" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                <span style="color: #ff3b30;">删除</span>
+                            </div>
+                            <div class="pwa-multi-btn" onclick="pwaExitMultiSelectMode()">
+                                <svg viewBox="0 0 24 24" stroke="#333" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                <span>取消</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 生成通讯录设置弹窗 (覆盖在手机屏幕内) -->
+                    <div class="icon-modal-overlay" id="pwaContactGenModal">
+                        <div class="icon-modal" style="width: 260px;">
+                            <div class="icon-modal-title">生成通讯录</div>
+                            <div style="width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 13px; color: #666;">最小生成数量</span>
+                                    <input type="number" id="pwaContactMin" value="5" style="width: 60px; text-align: center; border: 1px solid #eee; border-radius: 8px; padding: 6px; outline: none;">
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 13px; color: #666;">最大生成数量</span>
+                                    <input type="number" id="pwaContactMax" value="15" style="width: 60px; text-align: center; border: 1px solid #eee; border-radius: 8px; padding: 6px; outline: none;">
+                                </div>
+                            </div>
+                            <div style="display: flex; width: 100%; gap: 10px;">
+                                <div class="icon-modal-close" style="flex: 1; margin-top: 0; text-align: center;" onclick="document.getElementById('pwaContactGenModal').classList.remove('show')">取消</div>
+                                <div class="icon-modal-close" style="flex: 1; margin-top: 0; text-align: center; background: #111; color: #fff;" onclick="confirmGenerateContacts()">生成</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 新增：通讯录点击操作弹窗 -->
+                    <div class="icon-modal-overlay" id="pwaContactActionModal">
+                        <div class="icon-modal" style="width: 280px; padding: 0; overflow: hidden;">
+                            <div style="padding: 25px 20px; display: flex; flex-direction: column; align-items: center; background: #f9f9f9; border-bottom: 1px solid #eee;">
+                                <div id="pcaAvatar" class="ios-msg-avatar" style="width: 64px; height: 64px; font-size: 28px; margin-bottom: 12px;"></div>
+                                <div id="pcaName" style="font-size: 18px; font-weight: bold; color: #111;">Name</div>
+                                <div id="pcaDesc" style="font-size: 12px; color: #888; margin-top: 6px; text-align: center; line-height: 1.4;">Desc</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div class="pca-action-btn" onclick="chatWithContact()">发消息</div>
+                                <div class="pca-action-btn" onclick="editContactDesc()">编辑简介</div>
+                                <div class="pca-action-btn" onclick="shareContact()">分享名片</div>
+                                <div class="pca-action-btn" style="color: #ff3b30;" onclick="deleteContact()">删除联系人</div>
+                                <div class="pca-action-btn" style="background: #f4f4f4; border-top: 6px solid #eee; color: #888;" onclick="closeContactActionModal()">取消</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 更换图标弹窗 -->
+    <div class="icon-modal-overlay" id="iconModalOverlay">
+        <div class="icon-modal">
+            <div class="icon-modal-title">选择要更换的图标</div>
+            <div class="icon-grid" id="iconModalGrid"></div>
+            <div class="icon-modal-close" onclick="closeIconModal()">取消</div>
+        </div>
+    </div>
+
+    <!-- 隐藏的上传输入框 -->
+    <input type="file" id="wallpaperUploadInput" accept="image/*" style="display: none;" onchange="handleWallpaperUpload(event)">
+    <input type="file" id="iconUploadInput" accept="image/*" style="display: none;" onchange="handleIconUpload(event)">
+    <input type="file" id="widgetBgUploadInput" accept="image/*" style="display: none;" onchange="handleWidgetBgUpload(event)">
 </div>
 </div>
     <script>
@@ -3281,5 +3639,6 @@
 <script src="script.js"></script>
 <script src="chat.js"></script>
 <script src="music.js"></script>
+<script src="phoneCheck.js"></script>
 </body>
 </html>

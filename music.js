@@ -7,7 +7,57 @@ const musicLoginPanel = document.getElementById('musicLoginPanel');
 
 // 音乐播放器核心实例
 const audioPlayer = new Audio();
+// 自动播放下一首
+audioPlayer.addEventListener('ended', () => {
+    playNextMusicSong();
+});
+
 let currentPlayingSong = null;
+
+// ==========================================
+// 👇 新增：系统级后台播放保活与锁屏控制逻辑 👇
+// ==========================================
+function updateSystemMediaSession() {
+    if ('mediaSession' in navigator && currentPlayingSong) {
+        // 1. 将当前歌曲信息推送到手机锁屏界面
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: currentPlayingSong.title || '未知歌曲',
+            artist: currentPlayingSong.artist || '未知歌手',
+            album: '小年糕 Music',
+            artwork: [
+                { src: currentPlayingSong.cover || 'https://p2.music.126.net/6y-7YvS_G8V8.jpg', sizes: '512x512', type: 'image/jpeg' }
+            ]
+        });
+
+        // 2. 接管锁屏界面的播放控制按键，确保后台能切歌
+        navigator.mediaSession.setActionHandler('play', () => {
+            audioPlayer.play();
+            const disc = document.querySelector('.mp-disc-outer');
+            if (disc) disc.style.animationPlayState = 'running';
+        });
+        
+        navigator.mediaSession.setActionHandler('pause', () => {
+            audioPlayer.pause();
+            const disc = document.querySelector('.mp-disc-outer');
+            if (disc) disc.style.animationPlayState = 'paused';
+        });
+        
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            if (typeof playPrevMusicSong === 'function') playPrevMusicSong();
+        });
+        
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            if (typeof playNextMusicSong === 'function') playNextMusicSong();
+        });
+    }
+}
+
+// 监听音频被系统强行打断（如来电话），防止状态错乱
+audioPlayer.addEventListener('pause', () => {
+    const disc = document.querySelector('.mp-disc-outer');
+    if (disc) disc.style.animationPlayState = 'paused';
+});
+// 👆 新增结束 👆
 
 // 音乐 API 配置 (完全还原 script.js 逻辑)
 let currentMusicSearchApi = localStorage.getItem('music_search_api') || 'primary';
@@ -444,6 +494,10 @@ async function musicPlaySong(id, title, artist, cover) {
                             playerPanel.style.backgroundImage = `url('${cover}')`;
                         }
                     }
+                    
+                    // 👇 核心注入：每次成功播放新歌，立刻更新系统锁屏状态，确立后台霸权
+                    updateSystemMediaSession();
+                    
                 }).catch(e => {
                     if (e.name !== 'AbortError') {
                         alert(`《${title}》可能是 VIP 专属或无版权，无法自动播放。`);
@@ -952,12 +1006,18 @@ function inviteListenTogether(charId, charName) {
     if (confirm(`确定要邀请 ${charName} 一起听歌吗？`)) {
         // 1. 向聊天室发送邀请卡片
         let history = JSON.parse(ChatDB.getItem(`chat_history_${chatLoginId}_${charId}`) || '[]');
+        const now = Date.now();
         history.push({
             role: 'user',
             type: 'music_invite',
             status: 'pending',
             content: '[一起听歌邀请]',
-            timestamp: Date.now()
+            timestamp: now,
+            updateTime: now,
+            inviteId: `invite_${now}_${Math.random().toString(36).substr(2, 6)}`,
+            songTitle: currentPlayingSong ? currentPlayingSong.title : '',
+            songArtist: currentPlayingSong ? currentPlayingSong.artist : '',
+            songCover: currentPlayingSong ? currentPlayingSong.cover : ''
         });
         ChatDB.setItem(`chat_history_${chatLoginId}_${charId}`, JSON.stringify(history));
         
@@ -974,6 +1034,11 @@ function inviteListenTogether(charId, charName) {
 
 // 核心：正式开始一起听歌的 UI 逻辑
 window.startListenTogether = function(charId) {
+    // 触发一起听歌互动统计
+    if (typeof updateMusicInteractionStats === 'function') {
+        updateMusicInteractionStats(charId);
+    }
+
     const musicLoginId = ChatDB.getItem('music_current_login_account');
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
     const me = accounts.find(a => a.id === musicLoginId);
@@ -1020,8 +1085,19 @@ window.startListenTogether = function(charId) {
             togetherAvatars.style.display = 'flex';
         }
         
-        listenTogetherStartTime = Date.now();
-        document.getElementById('mpListenTime').innerText = '0';
+        // 如果没有传入 startTime，说明是新开始的
+        if (!window.restoredListenStartTime) {
+            listenTogetherStartTime = Date.now();
+        } else {
+            listenTogetherStartTime = window.restoredListenStartTime;
+            window.restoredListenStartTime = null;
+        }
+        
+        // 持久化状态
+        ChatDB.setItem('music_listen_together_charId', charId);
+        ChatDB.setItem('music_listen_together_startTime', listenTogetherStartTime.toString());
+
+        document.getElementById('mpListenTime').innerText = Math.floor((Date.now() - listenTogetherStartTime) / 60000);
         clearInterval(listenTogetherTimer);
         
         listenTogetherTimer = setInterval(() => {
@@ -1072,6 +1148,28 @@ window.handleMusicInviteResponse = function(isAccept) {
 function endListenTogether(e) {
     if(e) e.stopPropagation();
     if(confirm('确定要结束一起听歌吗？')) {
+        // 更新最后一条邀请消息的更新时间和状态
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        if (currentLoginId && window.currentListenTogetherCharId) {
+            let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${window.currentListenTogetherCharId}`) || '[]');
+            // 从后往前找最后一条已同意的邀请
+            for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].type === 'music_invite' && history[i].status === 'accepted') {
+                    history[i].status = 'ended';
+                    history[i].updateTime = Date.now();
+                    break;
+                }
+            }
+            ChatDB.setItem(`chat_history_${currentLoginId}_${window.currentListenTogetherCharId}`, JSON.stringify(history));
+            if (typeof renderChatHistory === 'function' && currentChatRoomCharId === window.currentListenTogetherCharId) {
+                renderChatHistory(window.currentListenTogetherCharId);
+            }
+        }
+
+        // 清除持久化状态
+        ChatDB.removeItem('music_listen_together_charId');
+        ChatDB.removeItem('music_listen_together_startTime');
+
         document.getElementById('mpListenTogetherStatus').style.display = 'none';
         clearInterval(listenTogetherTimer);
         listenTogetherTimer = null; 
@@ -1598,6 +1696,10 @@ function playLocalSong(song) {
                     playerPanel.style.backgroundImage = `url('${song.cover}')`;
                 }
             }
+            
+            // 👇 核心注入：本地歌曲播放时同样接管系统锁屏
+            updateSystemMediaSession();
+            
         }).catch(e => console.error(e));
     }
 }
@@ -2522,3 +2624,17 @@ if (capsuleBtn && capsuleContainer) {
         }
     });
 }
+// 页面加载时恢复一起听歌状态
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        const savedCharId = ChatDB.getItem('music_listen_together_charId');
+        const savedStartTime = ChatDB.getItem('music_listen_together_startTime');
+        
+        if (savedCharId && savedStartTime) {
+            window.restoredListenStartTime = parseInt(savedStartTime);
+            if (typeof window.startListenTogether === 'function') {
+                window.startListenTogether(savedCharId);
+            }
+        }
+    }, 1000); // 延迟等待 DOM 和数据就绪
+});
