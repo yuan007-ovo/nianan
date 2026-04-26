@@ -152,10 +152,15 @@ input, textarea, select {
     grid-template-rows: repeat(7, 80px);
     gap: 15px 12px;
     padding: 0 20px;
-    padding-top: 54px; /* 为绝对定位的状态栏留出固定空间 (44px + 10px)，防止开关时跳动 */
+    /* 默认状态栏开启时，往下移一点留出空间 */
+    padding-top: calc(env(safe-area-inset-top) + 60px); 
     flex: 1;
     z-index: 10;
     grid-auto-flow: row dense; /* 核心修复：密集填充模式，自动把空位吸上去填满缝隙 */
+}
+/* 状态栏关闭时，恢复原来的高度保持原样 */
+.hide-status-bar .home-screen {
+    padding-top: 54px;
 }
 
 /* 小组件主容器：只负责布局，不处理背景 */
@@ -860,9 +865,7 @@ body.ios-standalone .status-bar {
     display: flex;
     opacity: 1;
 }
-body.ios-standalone .home-screen { 
-    padding-top: 20px; 
-}
+/* 删除了 body.ios-standalone .home-screen 的 padding-top 覆盖，使其继承全局设置，解决 PWA 模式下靠上和不对齐的问题 */
 
 /* =========================================
    Worldbook 专属样式
@@ -5292,7 +5295,7 @@ body.ios-standalone .home-screen {
 /* 新增：桌面网格背景 */
 .desktop-grid-bg {
     position: absolute;
-    top: 54px; /* 与 home-screen 的 padding-top 一致 */
+    top: calc(env(safe-area-inset-top) + 60px); /* 与 home-screen 的 padding-top 一致 */
     left: 20px;
     right: 20px;
     bottom: 0;
@@ -5303,13 +5306,17 @@ body.ios-standalone .home-screen {
     pointer-events: none;
     z-index: 0;
 }
+/* 状态栏关闭时，网格也恢复原来的高度 */
+.hide-status-bar .desktop-grid-bg {
+    top: 54px;
+}
 .is-desktop-editing .desktop-grid-bg {
     display: grid;
 }
 .grid-cell {
     border: 1px dashed rgba(0, 0, 0, 0.2);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent; /* 去除半透明格子底色 */
 }
 .widget-modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -5351,7 +5358,7 @@ body.ios-standalone .home-screen {
     width: 100%;
     height: 100%;
     pointer-events: none; /* 默认不拦截点击 */
-    background-color: rgba(0,0,0,0.01); /* 核心修复：加上 1% 的透明度，防止手指滑动时穿透，确保能被精准命中！ */
+    background-color: transparent; /* 改为完全透明，去除半透明格子 */
 }
 .is-desktop-editing .app-placeholder {
     pointer-events: auto; /* 编辑模式下允许作为拖拽目标 */

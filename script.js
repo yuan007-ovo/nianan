@@ -2541,6 +2541,6 @@ function addWidgetToDesktop(type) {
 // 页面加载时初始化渲染
 window.addEventListener('DOMContentLoaded', () => {
     renderImportedWidgets();
-    fillDesktopPlaceholders();
     restoreDesktopOrder();
+    bindDesktopLongPress(); // 新增：恢复桌面后重新绑定拖拽事件
 });
