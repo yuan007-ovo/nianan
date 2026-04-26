@@ -19,13 +19,26 @@ let currentPlayingSong = null;
 // ==========================================
 function updateSystemMediaSession() {
     if ('mediaSession' in navigator && currentPlayingSong) {
+        // 处理封面 URL，确保获取高清大图以供锁屏显示
+        let coverUrl = currentPlayingSong.cover || 'https://p2.music.126.net/6y-7YvS_G8V8.jpg';
+        if (coverUrl.includes('?param=')) {
+            coverUrl = coverUrl.replace(/\?param=\d+y\d+/, '?param=512y512');
+        } else if (coverUrl.includes('music.126.net')) {
+            coverUrl += '?param=512y512';
+        }
+
         // 1. 将当前歌曲信息推送到手机锁屏界面
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentPlayingSong.title || '未知歌曲',
             artist: currentPlayingSong.artist || '未知歌手',
             album: '小年糕 Music',
             artwork: [
-                { src: currentPlayingSong.cover || 'https://p2.music.126.net/6y-7YvS_G8V8.jpg', sizes: '512x512', type: 'image/jpeg' }
+                { src: coverUrl, sizes: '96x96', type: 'image/jpeg' },
+                { src: coverUrl, sizes: '128x128', type: 'image/jpeg' },
+                { src: coverUrl, sizes: '192x192', type: 'image/jpeg' },
+                { src: coverUrl, sizes: '256x256', type: 'image/jpeg' },
+                { src: coverUrl, sizes: '384x384', type: 'image/jpeg' },
+                { src: coverUrl, sizes: '512x512', type: 'image/jpeg' }
             ]
         });
 
@@ -448,12 +461,22 @@ async function musicPlaySong(id, title, artist, cover) {
         
         currentPlayingSong = { id, title, artist, cover };
 
-        // 异步获取歌词并解析
-        fetch(`${getMusicSearchApiUrl()}/lyric?id=${id}`).then(res => res.json()).then(data => {
+        // 异步获取歌词并解析 (使用播放源 API)
+        fetch(`${getMusicPlayApiUrl()}/?server=netease&type=lrc&id=${id}`).then(res => res.text()).then(textData => {
             const lyricContent = document.getElementById('mpLyricContent');
             const miniLyric = document.getElementById('miniPlayerLyric');
-            if (data.code === 200 && data.lrc && data.lrc.lyric) {
-                const rawLrc = data.lrc.lyric;
+            
+            let rawLrc = "";
+            try {
+                const jsonData = JSON.parse(textData);
+                if (jsonData.lrc && jsonData.lrc.lyric) rawLrc = jsonData.lrc.lyric;
+                else if (jsonData.lyric) rawLrc = jsonData.lyric;
+                else rawLrc = textData;
+            } catch (e) {
+                rawLrc = textData;
+            }
+
+            if (rawLrc) {
                 window.currentPlayingLyric = rawLrc.replace(/\[\d{2}:\d{2}\.\d{2,3}\]/g, '').trim();
                 window.parsedLyrics = parseLrc(rawLrc);
                 if (lyricContent) {
@@ -465,6 +488,11 @@ async function musicPlaySong(id, title, artist, cover) {
                 if (lyricContent) lyricContent.innerHTML = "暂无歌词数据";
                 if (miniLyric) miniLyric.innerText = "享受纯净音乐";
             }
+        }).catch(e => {
+            console.error("获取歌词失败", e);
+            window.parsedLyrics = [];
+            const lyricContent = document.getElementById('mpLyricContent');
+            if (lyricContent) lyricContent.innerHTML = "暂无歌词数据";
         });
 
         const playBaseUrl = getMusicPlayApiUrl();
@@ -880,7 +908,7 @@ async function musicDoWyyLogin() {
             
             ChatDB.setItem(`music_playlists_${musicLoginId}`, JSON.stringify(savedPlaylists));
             renderMyPlaylists();
-            document.getElementById('musicImportModal').classList.remove('show');
+            document.getElementById('musicWyyLoginModal').classList.remove('show');
             alert(`成功获取并保存了 ${successCount} 个歌单！`);
         } else {
             alert("获取歌单失败，请检查 UID 是否正确或切换音源。");
@@ -1581,9 +1609,39 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
     const pl = savedPlaylists.find(p => p.id === id);
     if (!pl) return;
 
+    // 网易云风格 UI 赋值
     document.getElementById('playlistDetailName').innerText = pl.name;
-    document.getElementById('playlistDetailCount').innerText = `共 ${pl.tracks ? pl.tracks.length : 0} 首`;
+    document.getElementById('playlistDetailCount').innerText = `(${pl.tracks ? pl.tracks.length : 0})`;
     document.getElementById('playlistDetailCover').style.backgroundImage = `url('${pl.cover}')`;
+    
+    const bgEl = document.getElementById('playlistDetailBg');
+    if (bgEl) bgEl.style.backgroundImage = `url('${pl.cover}')`;
+    
+    // 模拟创建者信息
+    let creatorName = "我";
+    let creatorAvatar = "https://p2.music.126.net/6y-7YvS_G8V8.jpg";
+    if (isCharPlaylist && charId) {
+        let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+        const char = chars.find(c => c.id === charId);
+        if (char) {
+            creatorName = char.netName || char.name;
+            creatorAvatar = char.avatarUrl || creatorAvatar;
+        }
+    } else {
+        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+        const acc = accounts.find(a => a.id === musicLoginId);
+        if (acc) {
+            creatorName = acc.netName || "我";
+            creatorAvatar = acc.avatarUrl || creatorAvatar;
+        }
+    }
+    
+    const creatorAvatarEl = document.getElementById('playlistDetailCreatorAvatar');
+    if (creatorAvatarEl) creatorAvatarEl.style.backgroundImage = `url('${creatorAvatar}')`;
+    const creatorNameEl = document.getElementById('playlistDetailCreatorName');
+    if (creatorNameEl) creatorNameEl.innerText = creatorName + " >";
+    const descEl = document.getElementById('playlistDetailDesc');
+    if (descEl) descEl.innerText = "编辑信息 >";
 
     const tracksContainer = document.getElementById('playlistDetailTracks');
     tracksContainer.innerHTML = '';
@@ -1591,12 +1649,11 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
     if (pl.tracks && pl.tracks.length > 0) {
         pl.tracks.forEach((song, index) => {
             const item = document.createElement('div');
-            item.className = 'music-song-item';
+            // 网易云列表风格
+            item.style.cssText = 'display: flex; align-items: center; padding: 12px 20px; gap: 15px; cursor: pointer;';
             item.onclick = () => {
-                // 将当前歌单的所有歌曲存入全局播放列表
                 window.currentPlaylistTracks = pl.tracks;
                 renderMpPlaylist();
-                
                 if (song.url && song.url.startsWith('data:audio')) {
                     playLocalSong(song);
                 } else if (song.isGenerated) {
@@ -1606,17 +1663,20 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
                 }
             };
             item.innerHTML = `
-                <div style="width: 30px; text-align: center; color: #aaa; font-size: 14px; font-weight: bold;">${index + 1}</div>
-                <div class="music-song-info">
-                    <div class="music-song-title">${song.title}</div>
-                    <div class="music-song-artist">${song.artist}</div>
+                <div style="width: 20px; text-align: center; color: #999; font-size: 15px; font-weight: bold;">${index + 1}</div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden;">
+                    <div style="font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.title}</div>
+                    <div style="font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.artist}</div>
                 </div>
-                <div class="music-song-action">播放</div>
+                <div onclick="event.stopPropagation(); removeSongFromPlaylist('${pl.id}', '${song.id}', ${isCharPlaylist}, '${charId}')" style="padding: 5px; color: #ccc;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
             `;
+
             tracksContainer.appendChild(item);
         });
     } else {
-        tracksContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#888; font-size:13px;">歌单为空</div>';
+        tracksContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#888; font-size:13px;">歌单为空，快去添加歌曲吧</div>';
     }
 
     // 处理加载更多按钮
@@ -1628,8 +1688,45 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
         loadMoreBtn.style.display = 'none';
     }
 
+    // 绑定播放全部按钮
+    window.playAllPlaylistSongs = function() {
+        if (pl.tracks && pl.tracks.length > 0) {
+            window.currentPlaylistTracks = pl.tracks;
+            renderMpPlaylist();
+            const firstSong = pl.tracks[0];
+            if (firstSong.url && firstSong.url.startsWith('data:audio')) {
+                playLocalSong(firstSong);
+            } else if (firstSong.isGenerated) {
+                playGeneratedSong(firstSong.title, firstSong.artist);
+            } else {
+                musicPlaySong(firstSong.id, firstSong.title, firstSong.artist, firstSong.cover);
+            }
+        }
+    };
+
     document.getElementById('musicPlaylistDetailPanel').style.display = 'flex';
 }
+
+// 【新增】：从歌单中删除歌曲
+window.removeSongFromPlaylist = function(playlistId, songId, isCharPlaylist, charId) {
+    if (!confirm("确定要将这首歌从歌单中移除吗？")) return;
+    
+    const musicLoginId = ChatDB.getItem('music_current_login_account');
+    let dbKey = isCharPlaylist ? `music_playlists_${charId}` : `music_playlists_${musicLoginId}`;
+    let savedPlaylists = JSON.parse(ChatDB.getItem(dbKey) || '[]');
+    
+    const plIndex = savedPlaylists.findIndex(p => p.id === playlistId);
+    if (plIndex !== -1) {
+        savedPlaylists[plIndex].tracks = savedPlaylists[plIndex].tracks.filter(s => String(s.id) !== String(songId));
+        savedPlaylists[plIndex].trackCount = savedPlaylists[plIndex].tracks.length;
+        ChatDB.setItem(dbKey, JSON.stringify(savedPlaylists));
+        
+        // 刷新当前页面
+        openPlaylistDetail(playlistId, isCharPlaylist, charId);
+        // 刷新主页歌单列表
+        if (!isCharPlaylist) renderMyPlaylists();
+    }
+};
 
 // 播放 AI 生成的歌曲 (先搜索再播放)
 async function playGeneratedSong(title, artist) {

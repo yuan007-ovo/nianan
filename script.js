@@ -787,94 +787,122 @@ function importWbEntry() {
         const file = e.target.files[0];
         if (!file) return;
         
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target.result;
-            const fileName = file.name.replace(/\.[^/.]+$/, "");
-            
-            // 确保全局 wbData 是最新状态
-            wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || { groups: ['默认分组'], entries: [] };
-            
-            if (file.name.endsWith('.json')) {
-                try {
-                    const data = JSON.parse(content);
-                    let entriesToImport = [];
+        const fileName = file.name.replace(/\.[^/.]+$/, "");
+        wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || { groups: ['默认分组'], entries: [] };
 
-                    // 1. 兼容酒馆 (SillyTavern) 的 Lorebook 格式
-                    if (data.entries) {
-                        const entriesArray = Array.isArray(data.entries) ? data.entries : Object.values(data.entries);
-                        entriesArray.forEach(item => {
-                            let kw = '';
-                            if (Array.isArray(item.key)) kw = item.key.join(', ');
-                            else if (Array.isArray(item.keys)) kw = item.keys.join(', ');
-                            else if (typeof item.key === 'string') kw = item.key;
-                            else if (typeof item.keys === 'string') kw = item.keys;
+        // 专门处理 docx 格式
+        if (file.name.endsWith('.docx')) {
+            if (typeof mammoth === 'undefined') {
+                alert('缺少 docx 解析库，请检查网络连接！');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const arrayBuffer = event.target.result;
+                mammoth.extractRawText({arrayBuffer: arrayBuffer})
+                    .then(function(result) {
+                        const text = result.value;
+                        importAsText(fileName, text);
+                        ChatDB.setItem('worldbook_data', JSON.stringify(wbData));
+                        renderWbList();
+                    })
+                    .catch(function(err) {
+                        alert('docx 解析失败: ' + err.message);
+                    });
+            };
+            reader.readAsArrayBuffer(file);
+        } 
+        // 拦截古老的 doc 格式
+        else if (file.name.endsWith('.doc')) {
+            alert('抱歉宝宝，.doc 是非常古老的二进制格式，浏览器无法直接完美解析，建议另存为 .docx 或 .txt 后导入哦~');
+        } 
+        // 处理 txt 和 json 格式
+        else {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                
+                if (file.name.endsWith('.json')) {
+                    try {
+                        const data = JSON.parse(content);
+                        let entriesToImport = [];
 
-                            entriesToImport.push({
-                                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                                active: item.enabled !== false && item.disable !== true,
-                                title: item.comment || item.name || '未命名',
-                                group: currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter,
-                                position: 'before',
-                                constant: !!item.constant,
-                                exact: true,
-                                keywords: kw,
-                                content: item.content || ''
+                        // 1. 兼容酒馆 (SillyTavern) 的 Lorebook 格式
+                        if (data.entries) {
+                            const entriesArray = Array.isArray(data.entries) ? data.entries : Object.values(data.entries);
+                            entriesArray.forEach(item => {
+                                let kw = '';
+                                if (Array.isArray(item.key)) kw = item.key.join(', ');
+                                else if (Array.isArray(item.keys)) kw = item.keys.join(', ');
+                                else if (typeof item.key === 'string') kw = item.key;
+                                else if (typeof item.keys === 'string') kw = item.keys;
+
+                                entriesToImport.push({
+                                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                                    active: item.enabled !== false && item.disable !== true,
+                                    title: item.comment || item.name || '未命名',
+                                    group: currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter,
+                                    position: 'before',
+                                    constant: !!item.constant,
+                                    exact: true,
+                                    keywords: kw,
+                                    content: item.content || ''
+                                });
                             });
-                        });
-                    } 
-                    // 2. 兼容普通的 JSON 数组格式
-                    else if (Array.isArray(data)) {
-                        data.forEach(item => {
-                            entriesToImport.push({
-                                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                                active: item.active !== false,
-                                title: item.title || '未命名',
-                                group: wbData.groups.includes(item.group) ? item.group : (currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter),
-                                position: item.position || 'before',
-                                constant: !!item.constant,
-                                exact: item.exact !== false,
-                                keywords: item.keywords || '',
-                                content: item.content || ''
+                        } 
+                        // 2. 兼容普通的 JSON 数组格式
+                        else if (Array.isArray(data)) {
+                            data.forEach(item => {
+                                entriesToImport.push({
+                                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                                    active: item.active !== false,
+                                    title: item.title || '未命名',
+                                    group: wbData.groups.includes(item.group) ? item.group : (currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter),
+                                    position: item.position || 'before',
+                                    constant: !!item.constant,
+                                    exact: item.exact !== false,
+                                    keywords: item.keywords || '',
+                                    content: item.content || ''
+                                });
                             });
-                        });
-                    }
-                    // 3. 兼容单个 JSON 对象
-                    else {
-                        entriesToImport.push({
-                            id: Date.now().toString(),
-                            active: data.active !== false,
-                            title: data.title || fileName,
-                            group: wbData.groups.includes(data.group) ? data.group : (currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter),
-                            position: data.position || 'before',
-                            constant: !!data.constant,
-                            exact: data.exact !== false,
-                            keywords: data.keywords || '',
-                            content: data.content || ''
-                        });
-                    }
+                        }
+                        // 3. 兼容单个 JSON 对象
+                        else {
+                            entriesToImport.push({
+                                id: Date.now().toString(),
+                                active: data.active !== false,
+                                title: data.title || fileName,
+                                group: wbData.groups.includes(data.group) ? data.group : (currentWbGroupFilter === '默认分组' ? wbData.groups[0] : currentWbGroupFilter),
+                                position: data.position || 'before',
+                                constant: !!data.constant,
+                                exact: data.exact !== false,
+                                keywords: data.keywords || '',
+                                content: data.content || ''
+                            });
+                        }
 
-                    if (entriesToImport.length > 0) {
-                        wbData.entries.push(...entriesToImport);
-                        alert(`成功导入 ${entriesToImport.length} 个词条！`);
-                    } else {
-                        alert('未在 JSON 中找到有效的词条数据。');
-                    }
+                        if (entriesToImport.length > 0) {
+                            wbData.entries.push(...entriesToImport);
+                            alert(`成功导入 ${entriesToImport.length} 个词条！`);
+                        } else {
+                            alert('未在 JSON 中找到有效的词条数据。');
+                        }
 
-                } catch (err) {
-                    console.error(err);
-                    alert('JSON 解析失败，将作为普通文本导入');
+                    } catch (err) {
+                        console.error(err);
+                        alert('JSON 解析失败，将作为普通文本导入');
+                        importAsText(fileName, content);
+                    }
+                } else {
                     importAsText(fileName, content);
                 }
-            } else {
-                importAsText(fileName, content);
-            }
-            
-            // 强制同步写入数据库
-            ChatDB.setItem('worldbook_data', JSON.stringify(wbData));
-            renderWbList();
-        };
-        reader.readAsText(file);
+                
+                // 强制同步写入数据库
+                ChatDB.setItem('worldbook_data', JSON.stringify(wbData));
+                renderWbList();
+            };
+            reader.readAsText(file);
+        }
     };
     input.click();
 }

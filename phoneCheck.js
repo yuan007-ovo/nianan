@@ -95,6 +95,12 @@ function toggleSidebar() {
     document.getElementById('charSidebar').classList.toggle('open');
 }
 
+// 切换全屏模式
+function togglePhoneFullscreen() {
+    document.getElementById('phoneCheckOverlay').classList.toggle('is-fullscreen');
+    toggleSidebar(); // 切换后收起侧边栏
+}
+
 // ==========================================
 // 壁纸与背景上传逻辑 (带持久化)
 // ==========================================
@@ -1044,4 +1050,358 @@ function pwaBatchDeleteMessages() {
         renderPwaChatRoomHistory();
         renderPwaChatList();
     }
+}
+
+// ==========================================
+// 查手机 - TikTok 交互逻辑
+// ==========================================
+
+function openPhoneTiktok() {
+    if (!currentChatRoomCharId) return alert('请先进入聊天室！');
+    
+    // 动态加载当前角色的头像和名字到 TikTok 个人主页
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+    if (char) {
+        const avatarUrl = char.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100&auto=format&fit=crop';
+        const charName = char.netName || char.name || 'User';
+        
+        // 替换头像
+        document.querySelectorAll('.tk-avatar-wrapper, .tk-record-disc-inner, .tk-profile-avatar-large').forEach(el => {
+            el.style.backgroundImage = `url('${avatarUrl}')`;
+        });
+        
+        // 替换名字
+        document.querySelectorAll('.tk-username, .tk-profile-title, .tk-profile-handle').forEach(el => {
+            if (el.classList.contains('tk-profile-handle') || el.classList.contains('tk-username')) {
+                el.innerText = '@' + charName;
+            } else {
+                el.innerText = charName;
+            }
+        });
+    }
+
+    document.getElementById('phoneTiktokApp').classList.add('show');
+    switchTiktokTab('home'); // 默认打开首页
+}
+
+function closePhoneTiktok() {
+    document.getElementById('phoneTiktokApp').classList.remove('show');
+}
+
+function switchTiktokTab(tabId) {
+    // 隐藏所有页面
+    document.querySelectorAll('.tk-page').forEach(p => p.classList.remove('active'));
+    // 取消所有底部导航高亮
+    document.querySelectorAll('.tk-nav-item').forEach(n => n.classList.remove('active'));
+    
+    // 显示目标页面
+    document.getElementById('tk-page-' + tabId).classList.add('active');
+    // 高亮对应导航
+    document.getElementById('tk-nav-' + tabId).classList.add('active');
+}
+
+// ==========================================
+// TikTok API 生成与渲染逻辑
+// ==========================================
+
+async function generateTiktokDataAPI() {
+    if (!currentChatRoomCharId) return;
+    const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) return alert('请先配置 API！');
+
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+    if (!char) return;
+
+    const prompt = `你现在正在扮演角色：${char.name}。
+请生成该角色手机里 TikTok (海外版抖音) 的相关数据。
+必须返回合法的 JSON，结构如下：
+{
+  "foryou": [ // 3-5条推荐视频
+    {
+      "author": "作者名",
+      "desc": "视频文案",
+      "likes": "1.2M",
+      "commentsCount": "45K",
+      "music": "音乐名",
+      "comments": [ // 5条评论
+        {"user": "评论者", "content": "评论内容"}
+      ]
+    }
+  ],
+  "trending": [ // 4-5条抖音热搜
+    {"title": "热搜标题", "hot": "123W"}
+  ],
+  "profile": [ // 3-5条角色自己发布的作品
+    {
+      "desc": "视频文案",
+      "likes": "10K",
+      "commentsCount": "120",
+      "comments": [ // 5条评论
+        {"user": "评论者", "content": "评论内容"}
+      ]
+    }
+  ],
+  "inbox": [ // 3-8条私信
+    {
+      "name": "发件人",
+      "lastMsg": "最后一条消息",
+      "time": "1h",
+      "history": [ // 聊天记录
+        {"role": "other", "content": "消息"},
+        {"role": "me", "content": "回复"}
+      ]
+    }
+  ],
+  "drafts": [ // 1-3条未发布作品/特效自拍
+    {"desc": "草稿描述，例如：尝试了新的猫咪特效，太搞笑了"}
+  ]
+}`;
+
+    showToast('正在生成 TikTok 数据...', 'loading');
+
+    try {
+        const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+            body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.8 })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            let replyRaw = data.choices[0].message.content.trim();
+            replyRaw = replyRaw.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+            
+            const parsed = JSON.parse(replyRaw);
+            ChatDB.setItem(`tiktok_data_${currentChatRoomCharId}`, JSON.stringify(parsed));
+            
+            // 渲染所有页面
+            renderTkHomeFeed();
+            renderTkSearch();
+            renderTkProfileFeed();
+            renderTkInbox();
+            renderTkDrafts();
+            
+            hideToast();
+            alert('TikTok 数据生成成功！');
+        } else {
+            throw new Error('API 请求失败');
+        }
+    } catch (e) {
+        hideToast();
+        alert('生成失败，请检查 API 配置或重试。');
+    }
+}
+
+// 渲染 Search 抖音热搜
+function renderTkSearch() {
+    const list = document.getElementById('tkSearchList');
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    if (!data.trending || data.trending.length === 0) return;
+
+    list.innerHTML = '';
+    data.trending.forEach((item, index) => {
+        const el = document.createElement('div');
+        el.className = 'tk-search-item';
+        let rankClass = index === 0 ? 'top1' : (index === 1 ? 'top2' : (index === 2 ? 'top3' : ''));
+        el.innerHTML = `
+            <div class="tk-search-rank ${rankClass}">${index + 1}</div>
+            <div class="tk-search-info">
+                <div class="tk-search-title">${item.title}</div>
+                <div class="tk-search-hot">${item.hot} 热度</div>
+            </div>
+        `;
+        list.appendChild(el);
+    });
+}
+
+// 渲染 Home 推荐视频流
+function renderTkHomeFeed() {
+    const container = document.getElementById('tkHomeFeed');
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    if (!data.foryou || data.foryou.length === 0) return;
+
+    container.innerHTML = '';
+    data.foryou.forEach((video, index) => {
+        const item = document.createElement('div');
+        item.className = 'tk-video-item';
+        item.innerHTML = `
+            <div class="tk-right-actions">
+                <div class="tk-avatar-wrapper"><div class="tk-avatar-plus">+</div></div>
+                <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="tk-action-text">${video.likes}</span></div>
+                <div class="tk-action-item" onclick="openTkComments('foryou', ${index})"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg><span class="tk-action-text">${video.commentsCount}</span></div>
+                <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg><span class="tk-action-text">Save</span></div>
+                <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M14 5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11V5z"/></svg><span class="tk-action-text">Share</span></div>
+                <div class="tk-record-disc"><div class="tk-record-disc-inner"></div></div>
+            </div>
+            <div class="tk-bottom-info">
+                <div class="tk-username">@${video.author}</div>
+                <div class="tk-description">${video.desc}</div>
+                <div class="tk-music-ticker">
+                    <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                    <div class="tk-marquee"><span>Original Sound - ${video.music || video.author}</span></div>
+                </div>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+// 渲染 Profile 个人作品网格
+function renderTkProfileFeed() {
+    const grid = document.getElementById('tkProfileGrid');
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    if (!data.profile || data.profile.length === 0) return;
+
+    grid.innerHTML = '';
+    data.profile.forEach((video, index) => {
+        const item = document.createElement('div');
+        item.className = 'tk-grid-item';
+        item.innerText = video.desc; // 简单显示文案作为封面
+        item.onclick = () => openTkComments('profile', index); // 点击直接看评论
+        grid.appendChild(item);
+    });
+}
+
+// 渲染 Inbox 私信列表
+function renderTkInbox() {
+    const list = document.getElementById('tkInboxList');
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    if (!data.inbox || data.inbox.length === 0) return;
+
+    list.innerHTML = '';
+    data.inbox.forEach((msg, index) => {
+        const item = document.createElement('div');
+        item.className = 'tk-inbox-item';
+        item.onclick = () => openTkChatRoom(index);
+        item.innerHTML = `
+            <div class="tk-inbox-avatar"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+            <div class="tk-inbox-info">
+                <div class="tk-inbox-name">${msg.name}</div>
+                <div class="tk-inbox-desc">${msg.lastMsg}</div>
+            </div>
+            <div class="tk-inbox-right">${msg.time || '1h'}</div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+// 打开评论区
+function openTkComments(type, index) {
+    const list = document.getElementById('tkCommentsList');
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    const video = data[type][index];
+    if (!video || !video.comments) return;
+
+    list.innerHTML = '';
+    video.comments.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'tk-comment-item';
+        item.innerHTML = `
+            <div class="tk-comment-avatar"></div>
+            <div class="tk-comment-content">
+                <div class="tk-comment-user">${c.user}</div>
+                <div class="tk-comment-text">${c.content}</div>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+
+    document.getElementById('tkCommentsPanel').classList.add('show');
+}
+
+function closeTkComments() {
+    document.getElementById('tkCommentsPanel').classList.remove('show');
+}
+
+// 打开私信聊天室
+function openTkChatRoom(index) {
+    const historyEl = document.getElementById('tkChatHistory');
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    const chat = data.inbox[index];
+    if (!chat || !chat.history) return;
+
+    document.getElementById('tkChatTitle').innerText = chat.name;
+    historyEl.innerHTML = '';
+
+    chat.history.forEach(msg => {
+        const bubble = document.createElement('div');
+        bubble.className = `tk-chat-bubble ${msg.role === 'me' ? 'tk-chat-right' : 'tk-chat-left'}`;
+        bubble.innerText = msg.content;
+        historyEl.appendChild(bubble);
+    });
+
+    document.getElementById('tkChatRoom').classList.add('show');
+    setTimeout(() => { historyEl.scrollTop = historyEl.scrollHeight; }, 100);
+}
+
+function closeTkChatRoom() {
+    document.getElementById('tkChatRoom').classList.remove('show');
+}
+
+// 打开相机页面 (点击加号触发)
+function openTiktokCamera() {
+    document.getElementById('tk-page-camera').classList.add('show');
+}
+
+// 关闭相机页面
+function closeTiktokCamera() {
+    document.getElementById('tk-page-camera').classList.remove('show');
+}
+// ==========================================
+// 相机页面中间草稿箱逻辑 (左右翻看)
+// ==========================================
+let currentTkDraftIndex = 0;
+let tkDraftsList = [];
+
+function renderTkDrafts() {
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    
+    const data = JSON.parse(dataStr);
+    tkDraftsList = data.drafts || [];
+    currentTkDraftIndex = 0;
+    updateTkDraftDisplay();
+}
+
+function updateTkDraftDisplay() {
+    const textEl = document.getElementById('tkCamDraftText');
+    if (!textEl) return;
+    
+    if (tkDraftsList.length === 0) {
+        textEl.innerText = "暂无草稿，请点击主页右上角生成";
+    } else {
+        textEl.innerText = tkDraftsList[currentTkDraftIndex].desc;
+    }
+}
+
+function prevTkDraft() {
+    if (tkDraftsList.length <= 1) return;
+    currentTkDraftIndex = (currentTkDraftIndex - 1 + tkDraftsList.length) % tkDraftsList.length;
+    updateTkDraftDisplay();
+}
+
+function nextTkDraft() {
+    if (tkDraftsList.length <= 1) return;
+    currentTkDraftIndex = (currentTkDraftIndex + 1) % tkDraftsList.length;
+    updateTkDraftDisplay();
 }
