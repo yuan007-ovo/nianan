@@ -579,6 +579,20 @@
             </div>
         </div>
     </div>
+    <!-- =========================================
+         新增：全局通用输入弹窗 (复刻主题APP预设弹窗风格)
+         ========================================= -->
+    <div class="preset-modal-overlay" id="globalPromptModalOverlay" style="z-index: 9999;">
+        <div class="preset-modal">
+            <div class="preset-modal-title" id="globalPromptTitle" style="color:#aaa; font-size:15px;">标题</div>
+            <div class="preset-modal-desc" id="globalPromptDesc" style="color:#888; font-size:15px;">描述</div>
+            <input type="text" class="preset-modal-input" id="globalPromptInput" placeholder="⸝⸝⸝ ╸▵╺⸝⸝⸝" maxlength="20">
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" style="color:#8888;font-size:12px;" onclick="closeGlobalPrompt()">CANCEL</div>
+                <div class="preset-btn-confirm" style="color:#8888;font-size:12px;" id="globalPromptConfirmBtn">SAVE</div>
+            </div>
+        </div>
+    </div>
 
     <!-- 心声历史记录面板 -->
     <div class="theme-panel instant-panel" id="innerVoiceHistoryPanel" style="z-index: 265; background-color: #f4f4f5;">
@@ -817,7 +831,7 @@
     <!-- 4. Worldbook 词条编辑页面 (图片风格重构) -->
     <div class="theme-panel instant-panel" id="wbEditPanel">
         <div class="panel-header">
-            <div class="header-close" onclick="closeWbEditPanel()" style="font-size: 15px;>CANCEL</div>
+            <div class="header-close" onclick="closeWbEditPanel()" style="font-size: 15px;">CANCEL</div>
             <div class="header-title-wrapper">
                 <!-- 标题改为分组选择 -->
                 <div class="header-title" onclick="toggleWbEditGroupPopup()" style="display: flex; align-items: center; gap: 4px;">
@@ -1115,16 +1129,24 @@
 
         <!-- 四个子页面容器 -->
         <div class="panel-content wechat-tab-content" id="tab-chat">
+            <!-- 新增：搜索框 -->
+            <div class="search-wrapper" style="margin: 0 auto 5px auto; width: 85%; background: #f7f7f7; border: none; border-radius: 20px; padding: 8px 15px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#bbb" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="chatSessionSearchInput" placeholder="Searching for session..." oninput="renderChatList()" style="background: transparent; border: none; outline: none; width: 100%; margin-left: 8px; font-size: 14px;">
+            </div>
             <!-- 动态渲染的聊天列表将放在这里 -->
             <div id="chatSessionList" style="display: flex; flex-direction: column; gap: 12px;"></div>
         </div>
+
         <!-- 【关键修改】：将 background-color 从 #f4f4f5 改为 #fafafa (或者直接改成 #fff 纯白) -->
 <div class="panel-content wechat-tab-content" id="tab-contacts" style="display: none; padding: 0; background-color: #fafafa;">
             <!-- 顶部均等分导航栏 -->
             <div class="contact-top-nav">
-                <!-- 【关键修改】：Chats 改为 Categories (分组) -->
-                <div class="contact-nav-btn active" onclick="switchContactSubTab('categories')">Categories</div>
-                <div class="contact-nav-btn" onclick="switchContactSubTab('friends')">Friends</div>
+                <div class="contact-nav-btn active" onclick="switchContactSubTab('categories')">Friends</div>
+                <div class="contact-nav-btn" onclick="switchContactSubTab('special')" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    Special
+                </div>
                 <div class="contact-nav-btn" onclick="switchContactSubTab('groups')">Groups</div>
             </div>
 
@@ -1132,17 +1154,17 @@
             <div class="contact-slider-container">
                 <div class="contact-slider-wrapper" id="contactSliderWrapper">
                     
-                    <!-- 1. Categories 列表 (分组) -->
+                    <!-- 1. Categories 列表 (现在叫 Friends) -->
                     <div class="contact-sub-page" id="sub-categories">
                         <div class="contact-group-list" id="contactCategoriesList">
                             <!-- 动态渲染分组 -->
                         </div>
                     </div>
 
-                    <!-- 2. Friends 列表 (所有好友平铺) -->
-                    <div class="contact-sub-page" id="sub-friends">
-                        <div id="contactFriendsList" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
-                            <!-- 动态渲染所有好友 -->
+                    <!-- 2. Special 列表 (特别关心) -->
+                    <div class="contact-sub-page" id="sub-special">
+                        <div id="contactSpecialList" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+                            <!-- 动态渲染特别关心 -->
                         </div>
                     </div>
 
@@ -1195,11 +1217,12 @@
             <!-- 学生证大卡片 -->
             <div class="me-id-card">
                 <div class="me-id-top">
-                    <div class="me-id-avatar-wrap">
+                    <div class="me-id-avatar-wrap" onclick="triggerMeAvatarUpload()" style="cursor: pointer;" title="点击修改账号头像">
                         <div class="me-id-avatar" id="meAvatar"></div>
                         <svg class="me-id-star-tl" viewBox="0 0 24 24" width="12" height="12" fill="#ccc"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
                         <svg class="me-id-star-br" viewBox="0 0 24 24" width="10" height="10" fill="#ccc"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
                     </div>
+                    <input type="file" id="meAvatarInput" accept="image/*" style="display: none;" onchange="handleMeAvatarChange(event)">
                     <div class="me-id-info">
                         <div class="me-id-label">SUBJECT NAME</div>
                         <!-- 增加 onclick 事件和提示样式 -->
@@ -1234,7 +1257,7 @@
                     <div class="me-menu-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
                 </div>
                 <!-- 面具 -->
-                <div class="me-menu-item">
+                <div class="me-menu-item" onclick="openMaskManagerPanel()">
                     <div class="me-menu-left">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="#333" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <div class="me-menu-text">面具 <span class="me-menu-text-en">Masks</span></div>
@@ -1312,6 +1335,24 @@
     </div>
 
     <!-- =========================================
+         新增：面具管理全屏面板
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="maskManagerPanel" style="z-index: 212; background-color: #fafafa;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeMaskManagerPanel()" style="font-size: 15px;">BACK</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">面具</div>
+            </div>
+            <div class="header-close" style="color: #8888; font-size: 15px; font-weight: bold; cursor: pointer;" onclick="openPersonaPanel()">ADD</div>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <div id="maskManagerList" style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- 动态渲染 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
          新增：表情包管理全屏面板
          ========================================= -->
     <div class="theme-panel instant-panel" id="emojiManagerPanel" style="z-index: 212; background-color: #fafafa;">
@@ -1326,7 +1367,7 @@
                     <div class="preset-popup-arrow"></div>
                     <div class="preset-header">
                         <span style="font-weight: bold; color: #333;">表情包分组</span>
-                        <span class="preset-edit-btn" id="emojiGroupEditBtn" onclick="toggleEmojiGroupEditMode()" style="font-size: 15px;">EDIT</span>
+                        <span class="preset-edit-btn" id="emojiGroupEditBtn" onclick="toggleEmojiGroupEditMode()" style="font-size: 10px;">EDIT</span>
                     </div>
                     <div class="preset-list" id="emojiGroupList">
                         <!-- 动态渲染 -->
@@ -1423,7 +1464,7 @@
                     <div class="preset-popup-arrow"></div>
                     <div class="preset-header">
                         <span style="font-weight: bold; color: #333;">角色分组</span>
-                        <span class="preset-edit-btn" id="charGroupEditBtn" onclick="toggleCharGroupEditMode()" style="font-size: 15px;">EDIT</span>
+                        <span class="preset-edit-btn" id="charGroupEditBtn" onclick="toggleCharGroupEditMode()" style="font-size: 12px;">EDIT</span>
                     </div>
                     <div class="preset-list" id="charGroupList">
                         <div class="preset-item"><span class="preset-item-name">默认分组</span></div>
@@ -1467,7 +1508,7 @@
          ========================================= -->
     <div class="theme-panel instant-panel" id="charEditPanel" style="z-index: 270; background-color: #fafafa;">
         <div class="panel-header">
-            <div class="header-close" onclick="closeCharEditPanel()" style="font-size: 15px;>CANCEL</div>
+            <div class="header-close" onclick="closeCharEditPanel()" style="font-size: 15px;">CANCEL</div>
             <div class="header-title-wrapper">
                 <div class="header-title" onclick="toggleCharEditGroupPopup()" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <span id="char-edit-header-group">默认分组</span>
@@ -1794,7 +1835,7 @@
             <div class="cr-icon-in" onclick="toggleChatPanel('emoji')">in</div>
             
             <!-- AI回复键：改为黑色圆形+白色小飞机图标 -->
-            <div class="cr-api-btn" onclick="generateApiReply()" style="width: 32px; height: 32px; background-color: #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-right: 4px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+            <div class="cr-api-btn" onclick="generateApiReply()" style="width: 28px; height: 28px; background-color: #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-right: 4px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -2349,10 +2390,10 @@
                 </div>
             </div>
 
-            <div style="width: 100%; text-align: center; margin-top: 20px; font-size: 14px; font-weight: bold;">请输入支付密码</div>
+            <div id="payPwdHintText" style="width: 100%; text-align: center; margin-top: 20px; font-size: 14px; font-weight: bold;">请输入支付密码</div>
             
             <!-- 隐藏的输入框用于唤起键盘 -->
-            <div style="position: relative; width: 100%; display: flex; justify-content: center; margin-top: 15px;">
+            <div id="payPwdInputArea" style="position: relative; width: 100%; display: flex; justify-content: center; margin-top: 15px;">
                 <input type="tel" id="payPasswordInput" maxlength="6" style="position: absolute; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer;" oninput="handlePasswordInput()">
                 <div style="display: flex; gap: 10px;" id="pwdDotsContainer">
                     <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
@@ -2363,6 +2404,11 @@
                     <div style="width: 45px; height: 45px; border: 1px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa;"></div>
                 </div>
             </div>
+            
+            <!-- 免密支付确认按钮 -->
+            <div id="freePayConfirmBtn" onclick="executePayment(true)" style="display: none; width: 80%; background: #111; color: #fff; text-align: center; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px;">确认支付</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2371,9 +2417,9 @@
          ========================================= -->
     <div class="theme-panel instant-panel" id="momentPostPanel" style="z-index: 280; background-color: #fafafa;">
         <div class="panel-header">
-            <div class="header-close" onclick="closeMomentPostPanel()" style="font-size: 15px;>CANCEL</div>
+            <div class="header-close" onclick="closeMomentPostPanel()" style="font-size: 15px;">CANCEL</div>
             <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">发表动态</div></div>
-            <div class="header-close" style="color: #8888;" onclick="publishMoment()">Publish</div>
+            <div class="header-close" style="color: #8888; font-size: 15px;" onclick="publishMoment()">PUBLISH</div>
         </div>
         <div class="panel-content" style="padding: 20px;">
             <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
@@ -2466,6 +2512,16 @@
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </div>
                 </div>
+                <div class="wechat-settings-item">
+                    <div class="wechat-settings-left">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>免密支付</span>
+                    </div>
+                    <label class="ios-switch" style="transform: scale(0.8); margin: 0;">
+                        <input type="checkbox" id="freePayToggle" onchange="toggleFreePay(this)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div style="padding: 25px 20px 10px; font-size: 13px; color: #888;">个性化</div>
@@ -2478,6 +2534,13 @@
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ccc" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </div>
             </div>
+
+            <div class="wechat-settings-group" style="margin-top: 30px;">
+                <div class="wechat-settings-item" onclick="deleteCurrentAccount()" style="justify-content: center;">
+                    <span style="color: #ff3b30; font-weight: bold; font-size: 16px;">注销当前账号</span>
+                </div>
+            </div>
+
         </div>
     </div>
 

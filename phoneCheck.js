@@ -447,18 +447,29 @@ function renderPwaChatList() {
     const contacts = JSON.parse(ChatDB.getItem(`pwa_contact_list_${currentChatRoomCharId}`) || '[]');
     let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
 
+    // 获取当前账号头像
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    const userAvatarUrl = account ? account.avatarUrl : '';
+
     listEl.innerHTML = '';
     data.forEach((item, index) => {
         const el = document.createElement('div');
         el.className = 'pwa-list-item';
         
         let avatarHtml = '';
-        // 尝试在通讯录中找到对应的人，如果是真实角色则显示真实头像
-        const contactInfo = contacts.find(c => c.name === item.name);
-        if (contactInfo && contactInfo.isRealChar && contactInfo.charId) {
-            const realChar = chars.find(c => c.id === contactInfo.charId);
-            if (realChar && realChar.avatarUrl) {
-                avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${realChar.avatarUrl}'); background-size: cover; background-position: center;"></div>`;
+        
+        if (item.isUser && userAvatarUrl) {
+            avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${userAvatarUrl}'); background-size: cover; background-position: center;"></div>`;
+        } else {
+            // 尝试在通讯录中找到对应的人，如果是真实角色则显示真实头像
+            const contactInfo = contacts.find(c => c.name === item.name);
+            if (contactInfo && contactInfo.isRealChar && contactInfo.charId) {
+                const realChar = chars.find(c => c.id === contactInfo.charId);
+                if (realChar && realChar.avatarUrl) {
+                    avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${realChar.avatarUrl}'); background-size: cover; background-position: center;"></div>`;
+                }
             }
         }
 
@@ -605,14 +616,22 @@ function renderPwaContactList() {
     
     let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
 
+    // 获取当前账号头像
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    const userAvatarUrl = account ? account.avatarUrl : '';
+
     listEl.innerHTML = '';
     data.forEach((item, index) => {
         const el = document.createElement('div');
         el.className = 'pwa-list-item';
         
         let avatarHtml = '';
-        // 如果是真实角色，显示真实头像
-        if (item.isRealChar && item.charId) {
+        
+        if (item.isUser && userAvatarUrl) {
+            avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${userAvatarUrl}'); background-size: cover; background-position: center;"></div>`;
+        } else if (item.isRealChar && item.charId) {
             const realChar = chars.find(c => c.id === item.charId);
             if (realChar && realChar.avatarUrl) {
                 avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${realChar.avatarUrl}'); background-size: cover; background-position: center;"></div>`;
@@ -652,12 +671,21 @@ function openContactActionModal(index) {
 
     const avatarEl = document.getElementById('pcaAvatar');
     
-    // 弹窗内也支持显示真实头像
-    if (contact.isRealChar && contact.charId) {
+    // 获取当前账号头像
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    const userAvatarUrl = account ? account.avatarUrl : '';
+
+    if (contact.isUser && userAvatarUrl) {
+        avatarEl.className = ''; 
+        avatarEl.style.cssText = `width: 64px; height: 64px; border-radius: 50%; background-image: url('${userAvatarUrl}'); background-size: cover; background-position: center; margin-bottom: 12px;`;
+        avatarEl.innerText = '';
+    } else if (contact.isRealChar && contact.charId) {
         let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
         const realChar = chars.find(c => c.id === contact.charId);
         if (realChar && realChar.avatarUrl) {
-            avatarEl.className = ''; // 清除 ios-msg-avatar 类
+            avatarEl.className = ''; 
             avatarEl.style.cssText = `width: 64px; height: 64px; border-radius: 50%; background-image: url('${realChar.avatarUrl}'); background-size: cover; background-position: center; margin-bottom: 12px;`;
             avatarEl.innerText = '';
         }

@@ -2,6 +2,23 @@
 // Chat 模块专属逻辑 (chat.js)
 // ==========================================
 
+// 获取所有实体 (包含角色和用户账号)
+function getAllEntities() {
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    let mappedAccounts = accounts.map(a => ({
+        id: a.id,
+        name: a.netName || '未命名',
+        netName: a.netName || '未命名',
+        account: a.account,
+        avatarUrl: a.avatarUrl,
+        signature: a.signature,
+        contactGroup: '默认分组',
+        isAccount: true
+    }));
+    return chars.concat(mappedAccounts);
+}
+
 // --- 面板开关逻辑 ---
 const chatPanel = document.getElementById('chatPanel');
 const personaPanel = document.getElementById('personaPanel');
@@ -102,6 +119,31 @@ function editCurrentPersona() {
 
     personaPanel.style.display = 'flex';
 }
+// 根据指定 ID 编辑面具 (从面具管理面板进入)
+function editPersonaById(personaId) {
+    let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
+    const persona = personas.find(p => p.id === personaId);
+    if (!persona) return alert('未找到该面具信息！');
+
+    // 标记为编辑模式，记录当前面具ID
+    currentEditingPersonaId = persona.id;
+
+    // 将面具数据回显到表单中
+    document.getElementById('pIdInput').value = persona.realName || '';
+    document.getElementById('pSexInput').value = persona.sex || '';
+    document.getElementById('pPersonaInput').value = persona.persona || '';
+    
+    const avatarUpload = document.getElementById('pAvatarUpload');
+    if (persona.avatarUrl) {
+        avatarUpload.style.backgroundImage = `url(${persona.avatarUrl})`;
+        avatarUpload.innerText = '';
+    } else {
+        avatarUpload.style.backgroundImage = '';
+        avatarUpload.innerText = '上传头像';
+    }
+
+    document.getElementById('personaPanel').style.display = 'flex';
+}
 
 // 3. 保存面具 (支持新建和更新)
 function savePersona() {
@@ -140,18 +182,7 @@ function savePersona() {
 
     ChatDB.setItem('chat_personas', JSON.stringify(personas));
     
-    // 【修复】：同步更新绑定了该面具的所有账号的头像
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    let accountModified = false;
-    accounts.forEach(acc => {
-        if (acc.personaId === (currentEditingPersonaId || newPersona.id)) {
-            acc.avatarUrl = avatarUrl;
-            accountModified = true;
-        }
-    });
-    if (accountModified) {
-        ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
-    }
+    // 移除强制同步账号头像的逻辑，实现面具头像与账号头像分离
 
     closePersonaPanel();
 
@@ -161,6 +192,10 @@ function savePersona() {
         if (typeof renderChatList === 'function') renderChatList();
         // 新增：同步刷新朋友圈资料
         if (typeof renderMoments === 'function') renderMoments();
+    }
+    
+    if (document.getElementById('maskManagerPanel') && document.getElementById('maskManagerPanel').style.display === 'flex') {
+        renderMaskManagerList();
     }
 }
 
@@ -394,6 +429,61 @@ function renderMePage() {
     } else {
         avatarEl.style.backgroundImage = 'none';
     }
+}
+
+// 修改账号头像
+function triggerMeAvatarUpload() {
+    document.getElementById('meAvatarInput').click();
+}
+
+function handleMeAvatarChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imgUrl = e.target.result;
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        if (!currentLoginId) return;
+        
+        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+        const accountIndex = accounts.findIndex(a => a.id === currentLoginId);
+        if (accountIndex !== -1) {
+            accounts[accountIndex].avatarUrl = imgUrl;
+            ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+            
+            // 刷新UI
+            renderMePage();
+            if (typeof renderChatList === 'function') renderChatList();
+            if (typeof renderMoments === 'function') renderMoments();
+            
+            // 如果在聊天室，同步刷新聊天室顶部头像
+            const charAvatarEl = document.getElementById('crHeaderAvatarMe');
+            if (charAvatarEl) charAvatarEl.style.backgroundImage = `url('${imgUrl}')`;
+
+            // 新增：同步刷新 musicAPP 和 查手机 的头像
+            if (typeof renderMusicMePage === 'function') renderMusicMePage();
+            if (typeof updateCapsuleUI === 'function') updateCapsuleUI();
+            
+            // 刷新一起听歌的头像
+            const mpListenTogetherAvatar1 = document.getElementById('mpListenTogetherAvatar1');
+            if (mpListenTogetherAvatar1) mpListenTogetherAvatar1.style.backgroundImage = `url('${imgUrl}')`;
+            const mpBigAvatar1 = document.getElementById('mpBigAvatar1');
+            if (mpBigAvatar1) mpBigAvatar1.style.backgroundImage = `url('${imgUrl}')`;
+            const miniAvatar1 = document.getElementById('miniAvatar1');
+            if (miniAvatar1) miniAvatar1.style.backgroundImage = `url('${imgUrl}')`;
+            
+            // 刷新查手机的头像
+            const phoneWechatApp = document.getElementById('phoneWechatApp');
+            if (phoneWechatApp && phoneWechatApp.classList.contains('show')) {
+                if (typeof renderPwaChatList === 'function') renderPwaChatList();
+                if (typeof renderPwaContactList === 'function') renderPwaContactList();
+            }
+            
+            alert('账号头像修改成功！');
+        }
+    }
+    reader.readAsDataURL(file);
+    event.target.value = '';
 }
 
 // 编辑网名
@@ -1181,7 +1271,7 @@ function toggleWearBadge(badgeType) {
 
 // 新增辅助函数：仅更新标题栏标识
 function updateChatRoomTitleBadge(charId) {
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let chars = getAllEntities();
     const char = chars.find(c => c.id === charId);
     const currentLoginId = ChatDB.getItem('current_login_account');
     let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
@@ -1206,9 +1296,13 @@ function renderChatList() {
     }
 
     let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
-    let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let allChars = getAllEntities();
     let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
     let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+
+    // 获取搜索关键字
+    const searchInput = document.getElementById('chatSessionSearchInput');
+    const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
     if (sessions.length === 0) {
         listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">暂无聊天记录</div>';
@@ -1223,12 +1317,21 @@ function renderChatList() {
         return 0; 
     });
 
+    let renderCount = 0;
+
     sessions.forEach(charId => {
         const char = allChars.find(c => c.id === charId);
         if (!char) return;
 
         const charStat = stats[charId] || {};
         const displayName = remarks[charId] || char.netName || char.name;
+        
+        // 搜索过滤
+        if (keyword && !displayName.toLowerCase().includes(keyword)) {
+            return;
+        }
+        
+        renderCount++;
         const wornBadgeHtml = getWornBadgeHtml(charId);
 
         let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
@@ -1284,7 +1387,12 @@ function renderChatList() {
         `;
         listEl.appendChild(item);
     });
+
+    if (renderCount === 0 && keyword) {
+        listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">未找到匹配的会话</div>';
+    }
 }
+
 
 
 // 4. 长按菜单逻辑
@@ -1376,10 +1484,10 @@ function switchContactSubTab(tabName) {
         btns[0].classList.add('active');
         wrapper.style.transform = 'translateX(0%)';
         renderContactCategories(); // 渲染分组
-    } else if (tabName === 'friends') {
+    } else if (tabName === 'special') {
         btns[1].classList.add('active');
         wrapper.style.transform = 'translateX(-33.333%)';
-        renderContactFriends(); // 渲染所有好友
+        renderContactSpecial(); // 渲染特别关心
     } else if (tabName === 'groups') {
         btns[2].classList.add('active');
         wrapper.style.transform = 'translateX(-66.666%)';
@@ -1397,10 +1505,10 @@ function renderContactCategories() {
 
     let userGroups = JSON.parse(ChatDB.getItem(`contact_groups_${currentLoginId}`) || '["默认分组"]');
     let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
-    let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let allEntities = getAllEntities(); // 使用合并后的实体
 
     userGroups.forEach(groupName => {
-        const groupFriends = contacts.map(id => allChars.find(c => c.id === id)).filter(c => c && (c.contactGroup || '默认分组') === groupName);
+        const groupFriends = contacts.map(id => allEntities.find(c => c.id === id)).filter(c => c && (c.contactGroup || '默认分组') === groupName);
 
         const groupItem = document.createElement('div');
         groupItem.className = 'contact-group-item';
@@ -1434,7 +1542,6 @@ function renderContactCategories() {
         const header = groupItem.querySelector('.contact-group-header');
         const content = groupItem.querySelector('.contact-group-content');
 
-        // 修复：加入 { passive: true } 防止浏览器报错
         header.addEventListener('touchstart', startPress, { passive: true });
         header.addEventListener('touchend', cancelPress, { passive: true });
         header.addEventListener('touchmove', cancelPress, { passive: true });
@@ -1452,11 +1559,12 @@ function renderContactCategories() {
             friendEl.style.display = 'flex';
             friendEl.style.alignItems = 'center';
             friendEl.style.gap = '10px';
-            friendEl.style.cursor = 'pointer'; // 添加鼠标指针样式
-            friendEl.onclick = () => openCharProfilePanel(friend.id); // 点击打开详情页
+            friendEl.style.cursor = 'pointer';
+            friendEl.onclick = () => openCharProfilePanel(friend.id);
+            const typeTag = friend.isAccount ? '<span style="font-size:10px; background:#eee; color:#888; padding:2px 4px; border-radius:4px; margin-left:4px;">用户</span>' : '';
             friendEl.innerHTML = `
                 <div style="width: 40px; height: 40px; border-radius: 10px; background-image: url('${friend.avatarUrl || ''}'); background-size: cover; background-color: #eee;"></div>
-                <div style="flex: 1; font-size: 14px; font-weight: bold; color: #333;">${friend.netName || friend.name}</div>
+                <div style="flex: 1; font-size: 14px; font-weight: bold; color: #333;">${friend.netName || friend.name}${typeTag}</div>
             `;
             content.appendChild(friendEl);
         });
@@ -1465,9 +1573,9 @@ function renderContactCategories() {
     });
 }
 
-// 2. 渲染通讯录中的 Friends (所有好友平铺)
-function renderContactFriends() {
-    const listEl = document.getElementById('contactFriendsList');
+// 2. 渲染通讯录中的 Special (特别关心)
+function renderContactSpecial() {
+    const listEl = document.getElementById('contactSpecialList');
     if (!listEl) return;
     listEl.innerHTML = '';
 
@@ -1475,17 +1583,18 @@ function renderContactFriends() {
     if (!currentLoginId) return;
 
     let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
-    let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let allEntities = getAllEntities();
+    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
     
-    // 获取所有已添加的好友
-    const allFriends = contacts.map(id => allChars.find(c => c.id === id)).filter(c => c);
+    // 获取所有已添加的好友，并且 special 为 true
+    const specialFriends = contacts.map(id => allEntities.find(c => c.id === id)).filter(c => c && stats[c.id] && stats[c.id].special);
 
-    if (allFriends.length === 0) {
-        listEl.innerHTML = '<div style="text-align:center; color:#ccc; font-size:13px; margin-top: 40px;">暂无好友</div>';
+    if (specialFriends.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; color:#ccc; font-size:13px; margin-top: 40px;">暂无特别关心的好友</div>';
         return;
     }
 
-    allFriends.forEach(friend => {
+    specialFriends.forEach(friend => {
         const friendEl = document.createElement('div');
         friendEl.style.display = 'flex';
         friendEl.style.alignItems = 'center';
@@ -1494,11 +1603,13 @@ function renderContactFriends() {
         friendEl.style.background = '#fff';
         friendEl.style.borderRadius = '16px';
         friendEl.style.marginBottom = '10px';
-        friendEl.style.cursor = 'pointer'; // 添加鼠标指针样式
-        friendEl.onclick = () => openCharProfilePanel(friend.id); // 点击打开详情页
+        friendEl.style.cursor = 'pointer';
+        friendEl.onclick = () => openCharProfilePanel(friend.id);
+        const typeTag = friend.isAccount ? '<span style="font-size:10px; background:#eee; color:#888; padding:2px 4px; border-radius:4px; margin-left:4px;">用户</span>' : '';
         friendEl.innerHTML = `
             <div style="width: 48px; height: 48px; border-radius: 12px; background-image: url('${friend.avatarUrl || ''}'); background-size: cover; background-color: #eee;"></div>
-            <div style="flex: 1; font-size: 16px; font-weight: bold; color: #333;">${friend.netName || friend.name}</div>
+            <div style="flex: 1; font-size: 16px; font-weight: bold; color: #333;">${friend.netName || friend.name}${typeTag}</div>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#111"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
         `;
         listEl.appendChild(friendEl);
     });
@@ -1582,42 +1693,44 @@ function closeContextMenu() {
 function actionRenameGroup(groupName, currentLoginId) {
     closeContextMenu();
     if (groupName === '默认分组') return alert('默认分组不可修改名称！');
-    const newName = prompt('请输入新的分组名称：', groupName);
-    if (newName && newName.trim() !== '' && newName !== groupName) {
-        let userGroups = JSON.parse(ChatDB.getItem(`contact_groups_${currentLoginId}`) || '["默认分组"]');
-        if (userGroups.includes(newName)) return alert('分组名已存在！');
-        const index = userGroups.indexOf(groupName);
-        if (index !== -1) {
-            userGroups[index] = newName.trim();
-            ChatDB.setItem(`contact_groups_${currentLoginId}`, JSON.stringify(userGroups));
-            
-            // 同步修改该分组下好友的 contactGroup 字段
-            let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-            let modified = false;
-            allChars.forEach(c => {
-                if (c.contactGroup === groupName) {
-                    c.contactGroup = newName.trim();
-                    modified = true;
-                }
-            });
-            if (modified) ChatDB.setItem('chat_chars', JSON.stringify(allChars));
-            
-            renderContactFriends();
+    openGlobalPrompt('修改名称', '请输入新的分组名称', '⸝⸝⸝ ╸▵╺⸝⸝⸝', (newName) => {
+        if (newName && newName.trim() !== '' && newName !== groupName) {
+            let userGroups = JSON.parse(ChatDB.getItem(`contact_groups_${currentLoginId}`) || '["默认分组"]');
+            if (userGroups.includes(newName)) return alert('分组名已存在！');
+            const index = userGroups.indexOf(groupName);
+            if (index !== -1) {
+                userGroups[index] = newName.trim();
+                ChatDB.setItem(`contact_groups_${currentLoginId}`, JSON.stringify(userGroups));
+                
+                // 同步修改该分组下好友的 contactGroup 字段
+                let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+                let modified = false;
+                allChars.forEach(c => {
+                    if (c.contactGroup === groupName) {
+                        c.contactGroup = newName.trim();
+                        modified = true;
+                    }
+                });
+                if (modified) ChatDB.setItem('chat_chars', JSON.stringify(allChars));
+                
+                renderContactFriends();
+            }
         }
-    }
+    }, groupName);
 }
 
 // 菜单具体操作函数：新建分组
 function actionCreateGroup(currentLoginId) {
     closeContextMenu();
-    const newName = prompt('请输入新建分组名称：');
-    if (newName && newName.trim() !== '') {
-        let userGroups = JSON.parse(ChatDB.getItem(`contact_groups_${currentLoginId}`) || '["默认分组"]');
-        if (userGroups.includes(newName.trim())) return alert('分组名已存在！');
-        userGroups.push(newName.trim());
-        ChatDB.setItem(`contact_groups_${currentLoginId}`, JSON.stringify(userGroups));
-        renderContactFriends();
-    }
+    openGlobalPrompt('新建分组', '请输入新建分组名称', '⸝⸝⸝ ╸▵╺⸝⸝⸝', (newName) => {
+        if (newName && newName.trim() !== '') {
+            let userGroups = JSON.parse(ChatDB.getItem(`contact_groups_${currentLoginId}`) || '["默认分组"]');
+            if (userGroups.includes(newName.trim())) return alert('分组名已存在！');
+            userGroups.push(newName.trim());
+            ChatDB.setItem(`contact_groups_${currentLoginId}`, JSON.stringify(userGroups));
+            renderContactFriends();
+        }
+    });
 }
 
 // 菜单具体操作函数：删除分组
@@ -1733,13 +1846,14 @@ function renderCharGroups() {
 }
 
 function promptAddCharGroup() {
-    const name = prompt("请输入新分组名称：");
-    if (name && name.trim() !== "") {
-        if (charGroups.includes(name.trim())) return alert('分组已存在！');
-        charGroups.push(name.trim());
-        saveCharGroups();
-        renderCharGroups();
-    }
+    openGlobalPrompt('新建分组', '请输入新分组名称', '⸝⸝⸝ ╸▵╺⸝⸝⸝', (name) => {
+        if (name && name.trim() !== "") {
+            if (charGroups.includes(name.trim())) return alert('分组已存在！');
+            charGroups.push(name.trim());
+            saveCharGroups();
+            renderCharGroups();
+        }
+    });
 }
 
 function deleteCharGroup(groupName, e) {
@@ -2279,29 +2393,32 @@ function handleCharSearch() {
     const resultContainer = document.getElementById('searchCharResult');
     
     if (!keyword) {
-        resultContainer.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">输入账号查找角色</div>';
+        resultContainer.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">输入账号查找角色或用户</div>';
         return;
     }
 
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    // 根据账号精确搜索或模糊搜索
-    const matchedChars = chars.filter(c => c.account && c.account.includes(keyword));
+    let allEntities = getAllEntities();
+    const currentLoginId = ChatDB.getItem('current_login_account');
 
-    if (matchedChars.length === 0) {
-        resultContainer.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">未找到该账号对应的角色</div>';
+    // 过滤掉当前登录账号自己
+    const matchedEntities = allEntities.filter(c => c.id !== currentLoginId && c.account && c.account.includes(keyword));
+
+    if (matchedEntities.length === 0) {
+        resultContainer.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">未找到该账号对应的角色或用户</div>';
         return;
     }
 
     resultContainer.innerHTML = '';
-    matchedChars.forEach(char => {
+    matchedEntities.forEach(char => {
         const card = document.createElement('div');
         card.className = 'wechat-list-item';
         card.style.cursor = 'default';
+        const typeTag = char.isAccount ? '<span style="font-size:10px; background:#eee; color:#888; padding:2px 4px; border-radius:4px; margin-left:4px;">用户</span>' : '';
         card.innerHTML = `
             <div class="wechat-avatar" style="background-image: url('${char.avatarUrl || ''}');"></div>
             <div class="wechat-info">
                 <div class="wechat-name-time">
-                    <span class="wechat-name">${char.netName || char.name}</span>
+                    <span class="wechat-name">${char.netName || char.name}${typeTag}</span>
                 </div>
                 <div class="wechat-msg">账号: ${char.account}</div>
             </div>
@@ -2695,6 +2812,7 @@ function sendChatMessage() {
 
     // 2. 将极其耗时的 JSON 读写和 DOM 全量渲染扔进异步队列，延迟 10ms 执行
     setTimeout(() => {
+        // 存入当前账号的视角
         let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
         history.push(newMsg);
         ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
@@ -2703,6 +2821,27 @@ function sendChatMessage() {
         sessions = sessions.filter(id => id !== currentChatRoomCharId);
         sessions.unshift(currentChatRoomCharId);
         ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
+
+        // 【新增】：左手倒右手双向同步 (如果对方是真实用户账号)
+        let allEntities = getAllEntities();
+        const targetEntity = allEntities.find(e => e.id === currentChatRoomCharId);
+        if (targetEntity && targetEntity.isAccount) {
+            // 存入对方账号的视角
+            let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+            // 在对方视角里，这条消息是我发来的，所以 role 是 'char'
+            let targetMsg = { ...newMsg, role: 'char' };
+            targetHistory.push(targetMsg);
+            ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+
+            let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+            targetSessions = targetSessions.filter(id => id !== currentLoginId);
+            targetSessions.unshift(currentLoginId);
+            ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+            
+            // 增加对方视角的未读数
+            let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+            ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+        }
         
         if (typeof renderChatList === 'function') renderChatList();
         
@@ -2726,7 +2865,7 @@ function openChatRoom(charId) {
         if (typeof renderChatList === 'function') renderChatList(); // 刷新列表消除红点
     }
     
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let chars = getAllEntities();
     const char = chars.find(c => c.id === charId);
     
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
@@ -2774,7 +2913,7 @@ let currentProfileCharId = null;
 
 function openCharProfilePanel(charId) {
     currentProfileCharId = charId;
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let chars = getAllEntities();
     const char = chars.find(c => c.id === charId);
     
     if (char) {
@@ -2963,13 +3102,14 @@ function renderEmojiGroups() {
 }
 
 function promptAddEmojiGroup() {
-    const name = prompt("请输入新分组名称：");
-    if (name && name.trim() !== "") {
-        if (emojiGroups.includes(name.trim())) return alert('分组已存在！');
-        emojiGroups.push(name.trim());
-        ChatDB.setItem('chat_emoji_groups', JSON.stringify(emojiGroups));
-        renderEmojiGroups();
-    }
+    openGlobalPrompt('新建分组', '请输入新分组名称', '⸝⸝⸝ ╸▵╺⸝⸝⸝', (name) => {
+        if (name && name.trim() !== "") {
+            if (emojiGroups.includes(name.trim())) return alert('分组已存在！');
+            emojiGroups.push(name.trim());
+            ChatDB.setItem('chat_emoji_groups', JSON.stringify(emojiGroups));
+            renderEmojiGroups();
+        }
+    });
 }
 
 function deleteEmojiGroup(groupName, e) {
@@ -3648,13 +3788,14 @@ function applyChatCustomCss() {
 function saveChatCssPreset() {
     const css = document.getElementById('chatCustomCssInput').value.trim();
     if (!css) return alert('CSS 内容为空！');
-    const name = prompt('请输入预设名称：');
-    if (name && name.trim()) {
-        let presets = JSON.parse(ChatDB.getItem('chat_css_presets') || '[]');
-        presets.push({ id: Date.now().toString(), name: name.trim(), css: css });
-        ChatDB.setItem('chat_css_presets', JSON.stringify(presets));
-        renderChatCssPresets();
-    }
+    openGlobalPrompt('保存预设', '请输入预设名称', '⸝⸝⸝ ╸▵╺⸝⸝⸝', (name) => {
+        if (name && name.trim()) {
+            let presets = JSON.parse(ChatDB.getItem('chat_css_presets') || '[]');
+            presets.push({ id: Date.now().toString(), name: name.trim(), css: css });
+            ChatDB.setItem('chat_css_presets', JSON.stringify(presets));
+            renderChatCssPresets();
+        }
+    });
 }
 
 function renderChatCssPresets() {
@@ -3815,9 +3956,16 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
     const badgeAware = ChatDB.getItem(`chat_badge_aware_${targetCharId}`) === 'true';
     const boundEmojiGroups = JSON.parse(ChatDB.getItem(`chat_char_emoji_groups_${targetCharId}`) || '[]');
 
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let chars = getAllEntities();
     const char = chars.find(c => c.id === targetCharId);
     if (!char) return;
+    
+    // 如果对方是真实用户账号，拦截 AI 回复
+    if (char.isAccount) {
+        isGeneratingApiReply = false;
+        if (!isProactive) alert('对方是真实用户账号，无法使用 AI 自动回复。');
+        return;
+    }
 
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
     const account = accounts.find(a => a.id === currentLoginId);
@@ -4993,6 +5141,20 @@ function openPaymentPanel(amount) {
     updatePasswordDots(0);
     
     const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    
+    // 检查免密支付状态
+    if (account && account.freePay) {
+        document.getElementById('payPwdInputArea').style.display = 'none';
+        document.getElementById('freePayConfirmBtn').style.display = 'block';
+        document.getElementById('payPwdHintText').innerText = '已开启免密支付';
+    } else {
+        document.getElementById('payPwdInputArea').style.display = 'flex';
+        document.getElementById('freePayConfirmBtn').style.display = 'none';
+        document.getElementById('payPwdHintText').innerText = '请输入支付密码';
+    }
+    
     // 检查我收到的亲属卡 (对方赠送给我的)
     const familyCard = JSON.parse(ChatDB.getItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`) || 'null');
     
@@ -5006,7 +5168,9 @@ function openPaymentPanel(amount) {
     }
 
     document.getElementById('paymentPanelOverlay').classList.add('show');
-    setTimeout(() => document.getElementById('payPasswordInput').focus(), 100);
+    if (!account || !account.freePay) {
+        setTimeout(() => document.getElementById('payPasswordInput').focus(), 100);
+    }
 }
 
 function closePaymentPanel() {
@@ -5054,7 +5218,7 @@ function updatePasswordDots(length) {
     });
 }
 
-function executePayment() {
+function executePayment(isFreePay = false) {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId || !currentChatRoomCharId) return;
 
@@ -5063,20 +5227,22 @@ function executePayment() {
     const account = accounts.find(a => a.id === currentLoginId);
     if (!account) return;
 
-    const inputPass = document.getElementById('payPasswordInput').value;
+    if (!isFreePay) {
+        const inputPass = document.getElementById('payPasswordInput').value;
 
-    if (!account.payPassword) {
-        alert('您尚未设置支付密码，请前往“我-设置-支付密码管理”进行设置。');
-        document.getElementById('payPasswordInput').value = '';
-        updatePasswordDots(0);
-        return;
-    }
+        if (!account.payPassword) {
+            alert('您尚未设置支付密码，请前往“我-设置-支付密码管理”进行设置。');
+            document.getElementById('payPasswordInput').value = '';
+            updatePasswordDots(0);
+            return;
+        }
 
-    if (inputPass !== account.payPassword) {
-        alert('支付密码错误！');
-        document.getElementById('payPasswordInput').value = '';
-        updatePasswordDots(0);
-        return;
+        if (inputPass !== account.payPassword) {
+            alert('支付密码错误！');
+            document.getElementById('payPasswordInput').value = '';
+            updatePasswordDots(0);
+            return;
+        }
     }
 
     // 2. 校验通过，执行原有支付逻辑
@@ -5593,8 +5759,42 @@ function openChatAppSettingsPanel() {
     const account = accounts.find(a => a.id === currentLoginId);
     if (account) {
         document.getElementById('payPassStatusText').innerText = account.payPassword ? '已设置' : '未设置';
+        document.getElementById('freePayToggle').checked = account.freePay === true;
     }
     document.getElementById('chatAppSettingsPanel').style.display = 'flex';
+}
+
+// 切换免密支付
+function toggleFreePay(el) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const idx = accounts.findIndex(a => a.id === currentLoginId);
+    if (idx !== -1) {
+        if (el.checked && !accounts[idx].payPassword) {
+            alert('请先设置支付密码！');
+            el.checked = false;
+            return;
+        }
+        accounts[idx].freePay = el.checked;
+        ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    }
+}
+
+// 注销当前账号
+function deleteCurrentAccount() {
+    if (confirm('警告：注销账号将永久删除该账号信息，不可恢复！\n确定要注销吗？')) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+        accounts = accounts.filter(a => a.id !== currentLoginId);
+        ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+        ChatDB.removeItem('current_login_account');
+        
+        alert('账号已注销！');
+        closeChatAppSettingsPanel();
+        document.getElementById('wechatPanel').style.display = 'none';
+        document.getElementById('chatPanel').style.display = 'flex';
+        switchChatMode('login');
+    }
 }
 function closeChatAppSettingsPanel() { document.getElementById('chatAppSettingsPanel').style.display = 'none'; }
 
@@ -5715,13 +5915,14 @@ function saveChatThemeSettings() {
 function saveChatThemePreset() {
     const css = document.getElementById('chatThemeCssInput').value.trim();
     if (!css) return alert('内容为空！');
-    const name = prompt('预设名称：');
-    if (name) {
-        let ps = JSON.parse(ChatDB.getItem('chat_theme_presets') || '[]');
-        ps.push({ id: Date.now().toString(), name, css });
-        ChatDB.setItem('chat_theme_presets', JSON.stringify(ps));
-        alert('已存入预设库');
-    }
+    openGlobalPrompt('保存预设', '请输入预设名称', '⸝⸝⸝ ╸▵╺⸝⸝⸝', (name) => {
+        if (name && name.trim()) {
+            let ps = JSON.parse(ChatDB.getItem('chat_theme_presets') || '[]');
+            ps.push({ id: Date.now().toString(), name: name.trim(), css: css });
+            ChatDB.setItem('chat_theme_presets', JSON.stringify(ps));
+            alert('已存入预设库');
+        }
+    });
 }
 
 function openChatThemePresetModal() {
@@ -6911,4 +7112,120 @@ function openMusicInviteDetail(index) {
 
 function closeMusicInviteDetail() {
     document.getElementById('musicInviteDetailOverlay').classList.remove('show');
+}
+
+// ==========================================
+// 面具管理全屏面板逻辑
+// ==========================================
+function openMaskManagerPanel() {
+    document.getElementById('maskManagerPanel').style.display = 'flex';
+    renderMaskManagerList();
+}
+
+function closeMaskManagerPanel() {
+    document.getElementById('maskManagerPanel').style.display = 'none';
+}
+
+function renderMaskManagerList() {
+    const listEl = document.getElementById('maskManagerList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+
+    if (personas.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 40px;">暂无面具，请点击右上角 Addition 添加</div>';
+        return;
+    }
+
+    personas.forEach(p => {
+        // 找到绑定了该面具的账号
+        const boundAccounts = accounts.filter(a => a.personaId === p.id);
+        
+        // 左右分配账号
+        const leftAccounts = [];
+        const rightAccounts = [];
+        boundAccounts.forEach((acc, index) => {
+            if (index % 2 === 0) leftAccounts.push(acc);
+            else rightAccounts.push(acc);
+        });
+
+        const renderAccountHtml = (acc) => `
+            <div class="mask-capsule-item">
+                <div class="mask-capsule-img" style="background-image: url('${acc.avatarUrl || ''}');"></div>
+                <div class="mask-capsule-name">${acc.netName || '未命名'}</div>
+            </div>
+        `;
+
+        const item = document.createElement('div');
+        item.className = 'mask-topology-card';
+        
+        item.innerHTML = `
+            <div class="mask-delete-btn" onclick="deletePersonaFromManager('${p.id}')">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="#ff3b30" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            
+            <div class="mask-topo-layout">
+                <div class="mask-topo-side">
+                    ${leftAccounts.map(renderAccountHtml).join('')}
+                </div>
+                
+                <div class="mask-topo-center">
+                    <div class="mask-center-avatar-wrap" onclick="editPersonaById('${p.id}')" style="cursor: pointer;" title="点击编辑面具">
+                        <div class="mask-center-avatar" style="background-image: url('${p.avatarUrl || ''}');"></div>
+                    </div>
+                    <div class="mask-center-name">“${p.realName || '未命名'}”</div>
+                    
+                    <!-- 底部标签 -->
+                    <div class="mask-topo-tags">
+                    </div>
+                </div>
+                
+                <div class="mask-topo-side">
+                    ${rightAccounts.map(renderAccountHtml).join('')}
+                </div>
+            </div>
+           
+        `;
+        listEl.appendChild(item);
+    });
+}
+
+
+function deletePersonaFromManager(id) {
+    if (confirm('确定要删除这个面具吗？')) {
+        let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
+        personas = personas.filter(p => p.id !== id);
+        ChatDB.setItem('chat_personas', JSON.stringify(personas));
+        renderMaskManagerList();
+        if (typeof renderChatPersonas === 'function') renderChatPersonas(); // 同步刷新注册弹窗里的列表
+    }
+}
+// ==========================================
+// 全局通用输入弹窗逻辑 (复刻主题APP预设弹窗)
+// ==========================================
+let globalPromptCallback = null;
+
+function openGlobalPrompt(title, desc, placeholder, callback, defaultValue = '') {
+    document.getElementById('globalPromptTitle').innerText = title;
+    document.getElementById('globalPromptDesc').innerText = desc;
+    const inputEl = document.getElementById('globalPromptInput');
+    inputEl.placeholder = placeholder || '⸝⸝⸝ ╸▵╺⸝⸝⸝';
+    inputEl.value = defaultValue;
+    globalPromptCallback = callback;
+    
+    document.getElementById('globalPromptConfirmBtn').onclick = () => {
+        const val = inputEl.value;
+        closeGlobalPrompt();
+        if (globalPromptCallback) globalPromptCallback(val);
+    };
+    
+    document.getElementById('globalPromptModalOverlay').classList.add('show');
+    setTimeout(() => inputEl.focus(), 100);
+}
+
+function closeGlobalPrompt() {
+    document.getElementById('globalPromptModalOverlay').classList.remove('show');
+    globalPromptCallback = null;
 }
