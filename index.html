@@ -944,7 +944,8 @@
                     </div>
                 </div>
             </div>
-            <div class="header-close" style="visibility: hidden; font-size: 15px;">DONE</div>
+            <!-- 【修改】：将隐藏的 DONE 改为可见的 ADD 按钮 -->
+            <div class="header-close" style="color: #8888; font-size: 15px; font-weight: bold; cursor: pointer;" onclick="openPersonaPanel()">ADD</div>
         </div>
 
         <!-- 注册内容区 (默认显示) -->
@@ -1045,7 +1046,7 @@
     <!-- =========================================
          6. 全屏人设编辑页 (子面板)
          ========================================= -->
-    <div class="theme-panel instant-panel" id="personaPanel" style="z-index: 280; background-color: #fafafa;">
+    <div class="theme-panel instant-panel" id="personaPanel" style="z-index: 550; background-color: #fafafa;">
         <div class="panel-header">
             <div class="header-close" onclick="closePersonaPanel()" style="font-size: 15px;">CANCEL</div>
             <div class="header-title-wrapper">
@@ -1134,6 +1135,7 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="#bbb" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <input type="text" id="chatSessionSearchInput" placeholder="Searching for session..." oninput="renderChatList()" style="background: transparent; border: none; outline: none; width: 100%; margin-left: 8px; font-size: 14px;">
             </div>
+            
             <!-- 动态渲染的聊天列表将放在这里 -->
             <div id="chatSessionList" style="display: flex; flex-direction: column; gap: 12px;"></div>
         </div>
@@ -1381,13 +1383,6 @@
             <div class="header-close" id="emojiEditBtn" style="color: #8888; font-size: 15px; font-weight: bold; cursor: pointer;" onclick="toggleEmojiEditMode()">EDIT</div>
         </div>
         <div class="panel-content" style="padding: 20px;">
-            <!-- 导入区域 -->
-            <div style="background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border: 1px solid #eee; margin-bottom: 20px;">
-                <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 8px;">批量导入表情包 (格式: 描述:URL)</div>
-                <textarea id="emojiImportInput" style="width: 100%; height: 80px; background: #f9f9f9; border: 1px solid #eaeaea; border-radius: 8px; padding: 10px; font-size: 12px; resize: none; outline: none;" placeholder="例如：&#10;开心:https://example.com/1.png&#10;难过：https://example.com/2.png"></textarea>
-                <div onclick="importEmojis()" style="background: #111; color: #fff; text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 10px;">导入到当前分组</div>
-            </div>
-            
             <!-- 表情包展示网格 -->
             <div id="emojiGrid" class="emoji-manager-grid">
                 <!-- 动态渲染 -->
@@ -1421,7 +1416,7 @@
          ========================================= -->
     <div class="theme-panel instant-panel" id="searchAddPanel" style="z-index: 215; background-color: #fafafa;">
         <div class="panel-header">
-            <div class="header-close" onclick="closeSearchAddPanel() style="font-size: 15px;">CANCEL</div>
+            <div class="header-close" style="font-size: 15px;" onclick="closeSearchAddPanel()">CANCEL</div>
             <div class="header-title-wrapper">
                 <div class="header-title" style="cursor: default;">添加朋友</div>
             </div>
@@ -1665,7 +1660,7 @@
             <div class="header-title-wrapper">
                 <div class="header-title" style="cursor: default;">Memory Bank</div>
             </div>
-            <div class="header-close" style="color: #8888;" onclick="openMemorySettingsModal()">SETTINGS</div>
+            <div class="header-close" style="color: #8888; font-size: 15px;" onclick="openMemorySettingsModal()">SETTINGS</div>
         </div>
 
         <div class="panel-content" style="padding: 0; display: flex; flex-direction: column;">
@@ -2535,6 +2530,20 @@
                 </div>
             </div>
 
+            <div style="padding: 25px 20px 10px; font-size: 13px; color: #888;">账号管理</div>
+            <div class="wechat-settings-group">
+                <div class="wechat-settings-item">
+                    <div class="wechat-settings-left">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 21l6-6M9 3L3 9M4 4l5 5"/></svg>
+                        <span>关联账号</span>
+                    </div>
+                    <label class="ios-switch" style="transform: scale(0.8); margin: 0;">
+                        <input type="checkbox" id="toggleLinkedAccount">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
             <div class="wechat-settings-group" style="margin-top: 30px;">
                 <div class="wechat-settings-item" onclick="deleteCurrentAccount()" style="justify-content: center;">
                     <span style="color: #ff3b30; font-weight: bold; font-size: 16px;">注销当前账号</span>
@@ -2726,7 +2735,6 @@
                         </div>
 
                         <div style="display: flex; justify-content: space-between; width: 100%; margin-top: 20px; gap: 10px;">
-                            <div class="music-me-btn"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 最近</div>
                             <div class="music-me-btn" onclick="openLocalImportModal()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> 本地</div>
                             <div class="music-me-btn" onclick="toggleGlobalMusicCapsule()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="6" width="20" height="12" rx="6" ry="6"></rect></svg> 胶囊</div>
                             <div class="music-me-btn" onclick="document.getElementById('musicMeBgInput').click()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="6.5"></line></svg> 装扮</div>
@@ -2824,25 +2832,55 @@
     </div>
 
     <!-- 【新增】：歌单详情全屏面板 -->
-    <div class="theme-panel instant-panel" id="musicPlaylistDetailPanel" style="z-index: 165; background-color: #fafafa;">
-        <div class="panel-header">
-            <div class="header-close" onclick="closePlaylistDetail()" style="font-size: 15px;">BACK</div>
-            <div class="header-title-wrapper"><div class="header-title" style="cursor: default;">歌单详情</div></div>
+    <div class="theme-panel instant-panel" id="musicPlaylistDetailPanel" style="z-index: 165; background-color: #fff;">
+        <!-- 动态模糊背景 -->
+        <div id="playlistDetailBg" style="position: absolute; top: 0; left: 0; width: 100%; height: 300px; background-size: cover; background-position: center; filter: blur(30px) brightness(0.7); z-index: 0; transform: scale(1.2);"></div>
+        
+        <div class="panel-header" style="background: transparent; border-bottom: none; z-index: 10;">
+            <div class="header-close" onclick="closePlaylistDetail()" style="font-size: 15px; color: #fff;">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </div>
+            <div class="header-title-wrapper"><div class="header-title" style="background: transparent; color: #fff; box-shadow: none; font-size: 16px;"></div></div>
             <div class="header-close" style="visibility: hidden; font-size: 15px;">DONE</div>
         </div>
-        <div class="panel-content" style="padding: 0;">
-            <div style="padding: 20px; display: flex; gap: 15px; background: #fff; border-bottom: 1px solid #eee;">
-                <div id="playlistDetailCover" style="width: 100px; height: 100px; border-radius: 12px; background-size: cover; background-position: center; background-color: #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div>
-                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px;">
-                    <div id="playlistDetailName" style="font-size: 18px; font-weight: bold; color: #111;"></div>
-                    <div id="playlistDetailCount" style="font-size: 12px; color: #888;"></div>
+        
+        <div class="panel-content" style="padding: 0; z-index: 1; position: relative;">
+            <!-- 顶部信息区 -->
+            <div style="padding: 20px 20px 30px; display: flex; gap: 15px; position: relative;">
+                <div id="playlistDetailCover" style="width: 110px; height: 110px; border-radius: 12px; background-size: cover; background-position: center; background-color: #eee; box-shadow: 0 10px 20px rgba(0,0,0,0.3); position: relative;">
+                    <div style="position: absolute; top: 4px; right: 6px; color: #fff; font-size: 10px; font-weight: bold; display: flex; align-items: center; gap: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                        <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span id="playlistDetailPlayCount">1.2万</span>
+                    </div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; padding-top: 5px;">
+                    <div id="playlistDetailName" style="font-size: 17px; font-weight: bold; color: #fff; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div id="playlistDetailCreatorAvatar" style="width: 24px; height: 24px; border-radius: 50%; background-size: cover; background-position: center; background-color: #ccc;"></div>
+                        <div id="playlistDetailCreatorName" style="font-size: 12px; color: rgba(255,255,255,0.8);"></div>
+                    </div>
+                    <div id="playlistDetailDesc" style="font-size: 11px; color: rgba(255,255,255,0.6); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;"></div>
                 </div>
             </div>
-            <div id="playlistDetailTracks" style="padding: 10px 20px; display: flex; flex-direction: column; gap: 10px;">
-                <!-- 动态渲染歌曲列表 -->
+            
+            <!-- 列表区 -->
+            <div style="flex: 1; background: #fff; border-radius: 20px 20px 0 0; padding-bottom: 100px; min-height: 500px;">
+                <!-- 播放全部栏 -->
+                <div style="display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f5f5f5; position: sticky; top: 0; background: #fff; border-radius: 20px 20px 0 0; z-index: 5;">
+                    <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="playAllPlaylistSongs()">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: #ff3b30; display: flex; justify-content: center; align-items: center;">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="#fff" style="margin-left: 2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        </div>
+                        <div style="font-size: 15px; font-weight: bold; color: #111;">播放全部 <span id="playlistDetailCount" style="font-size: 12px; color: #888; font-weight: normal;"></span></div>
+                    </div>
+                </div>
+                
+                <div id="playlistDetailTracks" style="display: flex; flex-direction: column;">
+                    <!-- 动态渲染歌曲列表 -->
+                </div>
+                <!-- 新增：加载更多按钮 -->
+                <div id="playlistLoadMoreBtn" style="display: none; text-align: center; padding: 15px; margin: 20px; background: #f4f4f4; color: #333; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer;">加载更多歌曲</div>
             </div>
-            <!-- 新增：加载更多按钮 -->
-            <div id="playlistLoadMoreBtn" style="display: none; text-align: center; padding: 15px; margin: 0 20px 100px; background: #111; color: #fff; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer;">加载更多歌曲</div>
         </div>
     </div>
 
@@ -2968,24 +3006,22 @@
                 
                 <!-- 歌词/信息显示区 (默认隐藏) -->
                 <div id="mpLyricArea" style="display: none; flex-direction: column; align-items: center; justify-content: center; width: 80%; height: 100%; text-align: center;">
-                    <div id="mpLyricTitle" style="font-size: 24px; font-weight: bold; color: #fff; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); flex-shrink: 0;">暂无播放</div>
-                    <div id="mpLyricArtist" style="font-size: 16px; color: rgba(255,255,255,0.8); margin-bottom: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); flex-shrink: 0;">未知歌手</div>
-                    <div id="mpLyricContent" style="position: relative; font-size: 14px; color: rgba(255,255,255,0.8); line-height: 2.2; text-shadow: 0 1px 2px rgba(0,0,0,0.5); height: 250px; overflow-y: auto; width: 100%; padding: 0 10px; scrollbar-width: none; -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);">
+                    <div id="mpLyricContent" style="position: relative; font-size: 15px; color: rgba(255,255,255,0.6); line-height: 2.4; text-shadow: 0 1px 2px rgba(0,0,0,0.5); height: 350px; overflow-y: auto; width: 100%; padding: 0 10px; scrollbar-width: none; -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);">
                         (暂无歌词数据)<br>
                         享受纯净音乐时光...
                     </div>
                 </div>
             </div>
 
-            <!-- 底部控制区 -->
-            <div style="padding: 0 20px 40px; display: flex; flex-direction: column; gap: 20px;">
+            <!-- 底部控制区 (整体上移，按键变细，播放控制实心) -->
+            <div style="padding: 0 20px 60px; display: flex; flex-direction: column; gap: 20px;">
                 
                 <!-- 进度条上方功能按钮组 -->
                 <div style="display: flex; justify-content: space-around; align-items: center; padding: 0 10px;">
                     <!-- 分享 -->
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;" onclick="openMusicShareModal()">
                         <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; cursor: pointer;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M15 14l5-5-5-5"></path>
                                 <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"></path>
                             </svg>
@@ -2994,13 +3030,13 @@
                     <!-- 评论 (改为唤起悬浮输入栏) -->
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;" onclick="toggleMusicFloatingInput()">
                         <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; cursor: pointer;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                         </div>
                     </div>
                     <!-- 音效 -->
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                         <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2" fill="none"><path d="M12 2v20M17 5v14M7 9v6M22 9v6M2 11v2"></path></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5v14M7 9v6M22 9v6M2 11v2"></path></svg>
                         </div>
                     </div>
                     <!-- 歌词 (改为打开全屏聊天) -->
@@ -3031,22 +3067,22 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; color: #fff; padding: 0 10px;">
                     <!-- 播放模式切换按钮 -->
                     <div id="mpPlayModeBtn" onclick="togglePlayMode()" style="cursor: pointer; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center;">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                     </div>
                     
-                    <!-- 上一首 -->
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="cursor: pointer;" onclick="playPrevMusicSong()"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
-                    <!-- 播放/暂停 -->
+                    <!-- 上一首 (实心+圆角) -->
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="cursor: pointer;" onclick="playPrevMusicSong()"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                    <!-- 播放/暂停 (实心+圆角) -->
                     <div style="width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; cursor: pointer;" onclick="toggleMusicPlay()">
-                        <svg id="mpPlayBtn" viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
-                        <svg id="mpPauseBtn" viewBox="0 0 24 24" width="48" height="48" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        <svg id="mpPlayBtn" viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M8 5v14l11-7z" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                        <svg id="mpPauseBtn" viewBox="0 0 24 24" width="48" height="48" fill="currentColor" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
                     </div>
-                    <!-- 下一首 -->
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="cursor: pointer;" onclick="playNextMusicSong()"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
+                    <!-- 下一首 (实心+圆角) -->
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="cursor: pointer;" onclick="playNextMusicSong()"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
                     
-                    <!-- 播放列表按钮 (已移回正确位置) -->
+                    <!-- 播放列表按钮 -->
                     <div onclick="openMpPlaylist()" style="cursor: pointer; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center;">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                     </div>
                 </div>
             </div>
@@ -3450,11 +3486,6 @@
          ========================================= -->
     <div class="phone-check-overlay" id="phoneCheckOverlay">
         <div class="phone-frame-container">
-            <!-- 左上角 Char 头像 (邮票) -->
-            <div class="char-stamp-avatar" onclick="toggleSidebar()">
-                <div class="char-stamp-inner"></div>
-            </div>
-
             <!-- 物理边框 -->
             <div class="phone-hardware-frame">
                 <!-- 屏幕内容 -->
@@ -3472,9 +3503,9 @@
                                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                                 <span>换壁纸</span>
                             </div>
-                            <div class="sidebar-item" onclick="alert('一键生成功能开发中...')">
-                                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                                <span>一键生成</span>
+                            <div class="sidebar-item" onclick="togglePhoneFullscreen()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                                <span>全屏切换</span>
                             </div>
                         </div>
                         <div class="sidebar-bottom">
@@ -3503,7 +3534,7 @@
                             <!-- 渐变背景层 -->
                             <div class="profile-bg" id="widgetBg" onclick="triggerWidgetBgUpload()"></div>
                             <!-- 头像 (居中) -->
-                            <div class="profile-avatar"></div>
+                            <div class="profile-avatar" onclick="toggleSidebar()" style="cursor: pointer;"></div>
                             <!-- 内容层 (透明底) -->
                             <div class="profile-content">
                                 <div class="profile-name">≮ · · ≯</div>
@@ -3523,9 +3554,9 @@
                             <div class="app-icon" id="app-icon-1"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
                             <div class="app-name">WeChat</div>
                         </div>
-                        <div class="desktop-app" style="grid-row: 5; grid-column: 2;">
-                            <div class="app-icon" id="app-icon-2"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></div>
-                            <div class="app-name">Instagram</div>
+                        <div class="desktop-app" style="grid-row: 5; grid-column: 2;" onclick="openPhoneTiktok()">
+                            <div class="app-icon" id="app-icon-2"><svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"></path></svg></div>
+                            <div class="app-name">TikTok</div>
                         </div>
                         <div class="desktop-app" style="grid-row: 5; grid-column: 3;">
                             <div class="app-icon" id="app-icon-3"><svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></div>
@@ -3730,7 +3761,169 @@
                         </div>
                     </div>
 
+                    <!-- 新增：TikTok 主界面 -->
+                    <div class="phone-tiktok-app" id="phoneTiktokApp">
+                        <div class="tk-pages-container">
+                            <!-- 1. Home 页面 (推荐视频流) -->
+                            <div class="tk-page active" id="tk-page-home">
+                                <div class="tk-top-nav">
+                                    <div class="tk-global-back" onclick="closePhoneTiktok()">BACK</div>
+                                    <div class="tk-nav-links">
+                                        <span class="active">For You</span>
+                                    </div>
+                                    <div class="tk-search-icon" onclick="generateTiktokDataAPI()">
+                                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    </div>
+                                </div>
+                                <!-- 视频滑动容器 -->
+                                <div class="tk-video-scroll-container" id="tkHomeFeed">
+                                    <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#888; font-size:14px;">点击右上角搜索按钮生成推荐视频</div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Search 页面 (抖音热搜) -->
+                            <div class="tk-page" id="tk-page-search">
+                                <div class="tk-search-header">Search</div>
+                                <div class="tk-search-list" id="tkSearchList">
+                                    <div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">暂无热搜，请点击主页右上角生成</div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Inbox 页面 (私信列表) -->
+                            <div class="tk-page" id="tk-page-inbox">
+                                <div class="tk-inbox-header">Inbox</div>
+                                <div class="tk-inbox-list" id="tkInboxList">
+                                    <div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">暂无私信，请点击主页右上角生成</div>
+                                </div>
+                            </div>
+
+                            <!-- 4. Profile 页面 (个人主页) -->
+                            <div class="tk-page" id="tk-page-profile">
+                                <div class="tk-profile-header">
+                                    <div style="width: 24px;"></div>
+                                    <div class="tk-profile-title">Profile</div>
+                                    <div style="width: 24px;"></div>
+                                </div>
+                                <div class="tk-profile-info">
+                                    <div class="tk-profile-avatar-large"></div>
+                                    <div class="tk-profile-handle">@user</div>
+                                    <div class="tk-profile-stats">
+                                        <div class="tk-stat-item"><strong>128</strong><span>Following</span></div>
+                                        <div class="tk-stat-item"><strong>10.5K</strong><span>Followers</span></div>
+                                        <div class="tk-stat-item"><strong>1.2M</strong><span>Likes</span></div>
+                                    </div>
+                                    <div class="tk-profile-actions">
+                                        <button>Edit profile</button>                                       
+                                    </div>                                 
+                                </div>
+                                <div class="tk-profile-tabs">
+                                    <div class="tk-profile-tab active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></div>
+                                </div>
+                                <div class="tk-profile-grid" id="tkProfileGrid">
+                                    <!-- 动态生成作品网格 -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 底部导航栏 -->
+                        <div class="tk-bottom-nav" id="tk-bottom-nav">
+                            <div class="tk-nav-item active" id="tk-nav-home" onclick="switchTiktokTab('home')">
+                                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Home</span>
+                            </div>
+                            <div class="tk-nav-item" id="tk-nav-search" onclick="switchTiktokTab('search')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span>Search</span>
+                            </div>
+                            <div class="tk-nav-plus" onclick="openTiktokCamera()">+</div>
+                            <div class="tk-nav-item" id="tk-nav-inbox" onclick="switchTiktokTab('inbox')">
+                                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg><span>Inbox</span>
+                            </div>
+                            <div class="tk-nav-item" id="tk-nav-profile" onclick="switchTiktokTab('profile')">
+                                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span>Profile</span>
+                            </div>
+                        </div>
+
+                        <!-- 评论区弹窗 -->
+                        <div class="tk-comments-panel" id="tkCommentsPanel">
+                            <div class="tk-comments-header">
+                                <span>评论</span>
+                                <div class="tk-comments-close" onclick="closeTkComments()">×</div>
+                            </div>
+                            <div class="tk-comments-list" id="tkCommentsList"></div>
+                        </div>
+
+                        <!-- 私信聊天室 -->
+                        <div class="tk-chat-room" id="tkChatRoom">
+                            <div class="tk-chat-header">
+                                <div class="tk-chat-back" onclick="closeTkChatRoom()">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="#fff" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                </div>
+                                <div class="tk-chat-title" id="tkChatTitle">Name</div>
+                                <div style="width: 24px;"></div>
+                            </div>
+                            <div class="tk-chat-history" id="tkChatHistory"></div>
+                        </div>
+
+                         <!-- 5. Camera 页面 (全屏覆盖) -->
+                        <div class="tk-page-camera" id="tk-page-camera">
+                            <div class="tk-cam-header">
+                                <div class="tk-cam-close" onclick="closeTiktokCamera()">×</div>
+                                <div class="tk-cam-music"> Add sound</div>
+                                <div style="width: 28px;"></div>
+                            </div>
+                            <div class="tk-cam-sidebar">
+                                <div class="tk-cam-tool"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg><span>Flip</span></div>
+                                <div class="tk-cam-tool"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><span>Speed</span></div>
+                                <div class="tk-cam-tool"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg><span>Filters</span></div>
+                            </div>
+
+                            <!-- 新增：直接显示在中间的草稿箱区域 -->
+                            <div class="tk-cam-center-drafts">
+                                <div class="tk-draft-nav" onclick="prevTkDraft()">&lt;</div>
+                                <div class="tk-draft-content-box">
+                                    <div class="tk-draft-title">Drafts / 未发布</div>
+                                    <div class="tk-draft-text" id="tkCamDraftText">暂无草稿</div>
+                                </div>
+                                <div class="tk-draft-nav" onclick="nextTkDraft()">&gt;</div>
+                            </div>
+
+                            <div class="tk-cam-bottom">
+                                <div class="tk-cam-controls">
+                                    <div class="tk-cam-side-btn">
+                                        <div class="tk-box" style="background-image: url('https://i.postimg.cc/J4BQbg2b/Image-1769156709676-857.jpg');"></div>
+                                        <span>Effects</span>
+                                    </div>
+                                    <div class="tk-cam-record-btn"><div class="tk-cam-record-inner"></div></div>
+                                    <!-- 修改：去掉了 onclick 报错事件，变成纯装饰 -->
+                                    <div class="tk-cam-side-btn">
+                                        <div class="tk-box" style="background-image: url('https://i.postimg.cc/15NKpTjw/Image-1769156709958-690.jpg');"></div>
+                                        <span>Upload</span>
+                                    </div>
+                                </div>
+                                <div class="tk-cam-modes">
+                                    <span>Camera</span><span class="active">Story</span><span>Templates</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    <!-- 表情包导入弹窗 -->
+    <div class="preset-modal-overlay" id="emojiImportModalOverlay">
+        <div class="preset-modal" style="width: 300px;">
+            <div class="preset-modal-title">导入表情包</div>
+            <div style="width: 100%; padding: 15px;">
+                <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 8px;">☆∀☆</div>
+                <textarea id="emojiImportInput" style="width: 100%; height: 150px; background: #f9f9f9; border: 1px solid #eaeaea; border-radius: 8px; padding: 10px; font-size: 12px; resize: none; outline: none;" placeholder="格式：描述:URL&#10;例如：&#10;开心:https://example.com/1.png&#10;难过：https://example.com/2.png"></textarea>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                    <div onclick="document.getElementById('emojiFileInput').click()" style="flex: 1; background: #f0f0f0; color: #333; text-align: center; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">选择文件 (.txt/.json)</div>
+                    <input type="file" id="emojiFileInput" accept=".txt,.json" style="display: none;" onchange="handleEmojiFileImport(event)">
+                </div>
+            </div>
+            <div class="preset-modal-actions">
+                <div class="preset-btn-cancel" style="color: #888;" onclick="closeEmojiImportModal()">取消</div>
+                <div class="preset-btn-confirm" style="color: #8888;" onclick="importEmojis()">导入</div>
             </div>
         </div>
     </div>
@@ -3744,6 +3937,56 @@
         </div>
     </div>
 
+    <!-- =========================================
+         新增：关联账号管理全屏面板 (仿QQ样式)
+         ========================================= -->
+    <div class="theme-panel instant-panel" id="linkedAccountManagerPanel" style="z-index: 320; background-color: #f4f4f5;">
+        <div class="panel-header">
+            <div class="header-close" onclick="closeLinkedAccountManager()" style="font-size: 15px;">BACK</div>
+            <div class="header-title-wrapper">
+                <div class="header-title" style="cursor: default;">我的关联账号</div>
+            </div>
+            <div class="header-close" style="color: #8888; font-size: 15px; cursor: pointer;" onclick="toggleLinkedAccManageMode()" id="linkedAccManageBtn">管理</div>
+        </div>
+        
+        <div class="panel-content" style="padding: 0; background-color: #f4f4f5;">
+            <!-- 顶部开关卡片 -->
+            <div style="padding: 15px 20px 0;">
+                <div style="background: #fff; border-radius: 16px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                    <span style="font-size: 16px; color: #111; font-weight: bold;">关联QQ号消息提醒</span>
+                    <label class="ios-switch" style="margin: 0;">
+                        <input type="checkbox" id="linkedAccMsgToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 横向关联账号头像列表 -->
+            <div style="padding: 20px 20px 10px; display: flex; gap: 20px; overflow-x: auto; border-bottom: 1px solid #eee; background: #f4f4f5;" id="linkedAccTopList">
+                <!-- 动态渲染横向头像 -->
+            </div>
+
+            <!-- 消息列表 -->
+            <div style="flex: 1; background: #fff; display: flex; flex-direction: column;">
+                <!-- 新增：消息列表头部与清空按键 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid #f5f5f5;">
+                    <span style="font-size: 12px; color: #888; font-weight: bold;">未读消息</span>
+                    <span style="font-size: 12px; color: #007AFF; cursor: pointer; font-weight: bold;" onclick="clearLinkedUnread()">清空未读</span>
+                </div>
+                <div id="linkedAccMsgList" style="display: flex; flex-direction: column;">
+                    <!-- 动态渲染消息列表 -->
+                </div>
+            </div>
+
+            <!-- 底部其他账号 (未关联) -->
+            <div style="background: #fff; padding: 15px 20px 30px; border-top: 1px solid #eee;">
+                <div style="font-size: 12px; color: #888; margin-bottom: 15px;">其他QQ账号（以下账号不会被自动关联）</div>
+                <div style="display: flex; gap: 20px; overflow-x: auto;" id="linkedAccOtherList">
+                    <!-- 动态渲染未关联账号 -->
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- 隐藏的上传输入框 -->
     <input type="file" id="wallpaperUploadInput" accept="image/*" style="display: none;" onchange="handleWallpaperUpload(event)">
     <input type="file" id="iconUploadInput" accept="image/*" style="display: none;" onchange="handleIconUpload(event)">
@@ -3767,6 +4010,7 @@
         }
 </script>
 <!-- 引入外部 JS 文件 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="script.js"></script>
 <script src="chat.js"></script>
 <script src="music.js"></script>

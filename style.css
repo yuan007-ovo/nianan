@@ -4468,6 +4468,7 @@ body.ios-standalone .home-screen {
 .phone-frame-container {
     position: relative; width: 360px; height: 720px; transform: scale(1);
     animation: phonePopUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transition: all 0.3s ease;
 }
 @keyframes phonePopUp {
     from { transform: scale(0.8) translateY(50px); opacity: 0; }
@@ -4479,11 +4480,36 @@ body.ios-standalone .home-screen {
     background: #fff; border-radius: 40px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.2), inset 0 0 0 2px #eee, inset 0 0 0 6px #fff;
     padding: 12px; box-sizing: border-box; z-index: 1;
+    transition: all 0.3s ease;
 }
 
 .phone-screen-content {
     position: relative; width: 100%; height: 100%; background: #f4f4f5;
     border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;
+    transition: all 0.3s ease;
+}
+
+/* 全屏模式样式 */
+.phone-check-overlay.is-fullscreen .phone-frame-container {
+    width: 100%; height: 100%; border-radius: 0;
+}
+.phone-check-overlay.is-fullscreen .phone-hardware-frame {
+    border-radius: 0; padding: 0; box-shadow: none; border: none; background: #000;
+}
+.phone-check-overlay.is-fullscreen .phone-screen-content {
+    border-radius: 0;
+}
+
+/* 强制保障非全屏模式下的手机边框 */
+.phone-check-overlay:not(.is-fullscreen) .phone-frame-container {
+    width: 360px !important; height: 720px !important;
+}
+.phone-check-overlay:not(.is-fullscreen) .phone-hardware-frame {
+    border-radius: 40px !important; padding: 12px !important; background: #fff !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2), inset 0 0 0 2px #eee, inset 0 0 0 6px #fff !important;
+}
+.phone-check-overlay:not(.is-fullscreen) .phone-screen-content {
+    border-radius: 28px !important;
 }
 
 .phone-wallpaper {
@@ -4965,6 +4991,238 @@ body.ios-standalone .home-screen {
 }
 
 /* =========================================
+   查手机 - TikTok 主界面样式
+   ========================================= */
+.phone-tiktok-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; color: #fff; 
+    z-index: 40; /* 降低层级，确保在手机屏幕内部，不遮挡外层边框 */
+    display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+.phone-tiktok-app.show { display: flex; transform: translateY(0); }
+
+.tk-pages-container { flex: 1; position: relative; overflow: hidden; }
+.tk-page {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; flex-direction: column; background: #000;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.tk-page.active { display: flex; }
+
+/* 视频滑动容器 */
+.tk-video-scroll-container {
+    height: 100%; width: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
+    scrollbar-width: none; /* 隐藏滚动条 */
+}
+.tk-video-scroll-container::-webkit-scrollbar { display: none; }
+
+.tk-video-item {
+    height: 100%; width: 100%; scroll-snap-align: start; position: relative;
+    background: linear-gradient(135deg, #2b2b36 0%, #15151a 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+
+.tk-top-nav { position: absolute; top: 40px; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 20px; box-sizing: border-box; }
+.tk-global-back { position: absolute; left: 20px; font-size: 14px; font-weight: bold; color: #fff; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.tk-nav-links { display: flex; gap: 20px; font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, 0.6); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.tk-nav-links .active { color: #fff; position: relative; }
+.tk-nav-links .active::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 24px; height: 3px; background: #fff; border-radius: 3px; }
+.tk-search-icon { position: absolute; right: 20px; cursor: pointer; }
+
+.tk-right-actions { position: absolute; right: 12px; bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 22px; z-index: 10; }
+.tk-action-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.tk-action-item svg { width: 34px; height: 34px; fill: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform 0.1s; }
+.tk-action-item:active svg { transform: scale(0.9); }
+.tk-action-text { font-size: 12px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+.tk-avatar-wrapper { position: relative; width: 48px; height: 48px; border-radius: 50%; border: 2px solid #fff; background-color: #333; background-size: cover; background-position: center; margin-bottom: 10px; }
+.tk-avatar-plus { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; background: #fe2c55; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: bold; border: 2px solid #000; }
+
+.tk-record-disc { width: 48px; height: 48px; border-radius: 50%; background: #222; border: 8px solid #111; display: flex; justify-content: center; align-items: center; animation: tkSpin 4s linear infinite; margin-top: 15px; box-sizing: border-box; }
+.tk-record-disc-inner { width: 20px; height: 20px; border-radius: 50%; background-color: #555; background-size: cover; }
+@keyframes tkSpin { 100% { transform: rotate(360deg); } }
+
+.tk-bottom-info { position: absolute; bottom: 20px; left: 15px; right: 80px; z-index: 10; display: flex; flex-direction: column; gap: 10px; }
+.tk-username { font-size: 17px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.tk-description { font-size: 14px; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.tk-tags { font-weight: bold; }
+.tk-music-ticker { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 5px; }
+.tk-music-ticker svg { width: 16px; height: 16px; fill: #fff; }
+.tk-marquee { width: 150px; overflow: hidden; white-space: nowrap; }
+.tk-marquee span { display: inline-block; animation: tkMarquee 5s linear infinite; }
+@keyframes tkMarquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+.tk-inbox-header { padding: 40px 20px 15px; font-size: 18px; font-weight: bold; text-align: center; border-bottom: 1px solid #222; }
+.tk-inbox-list { padding: 10px 20px; display: flex; flex-direction: column; gap: 20px; }
+.tk-inbox-item { display: flex; align-items: center; gap: 15px; cursor: pointer; }
+.tk-inbox-avatar { width: 54px; height: 54px; border-radius: 50%; background: #333; display: flex; justify-content: center; align-items: center; background-size: cover; background-position: center; flex-shrink: 0; }
+.tk-inbox-avatar svg { width: 24px; height: 24px; fill: #fff; }
+.tk-inbox-info { flex: 1; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+.tk-inbox-name { font-size: 16px; font-weight: bold; }
+.tk-inbox-desc { font-size: 13px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tk-inbox-right { font-size: 12px; color: #666; }
+
+.tk-profile-header { padding: 40px 20px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+.tk-profile-title { font-size: 18px; font-weight: bold; }
+.tk-profile-header svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2; }
+.tk-profile-info { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+.tk-profile-avatar-large { width: 96px; height: 96px; border-radius: 50%; background-color: #333; background-size: cover; background-position: center; margin-bottom: 12px; }
+.tk-profile-handle { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
+.tk-profile-stats { display: flex; gap: 30px; margin-bottom: 20px; }
+.tk-stat-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tk-stat-item strong { font-size: 17px; }
+.tk-stat-item span { font-size: 12px; color: #888; }
+.tk-profile-actions { display: flex; gap: 10px; margin-bottom: 20px; }
+.tk-profile-actions button { background: #333; color: #fff; border: none; padding: 10px 30px; border-radius: 20px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.tk-profile-bio { font-size: 14px; text-align: center; color: #ccc; }
+.tk-profile-tabs { display: flex; border-bottom: 1px solid #222; margin-top: 10px; }
+.tk-profile-tab { flex: 1; display: flex; justify-content: center; padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; }
+.tk-profile-tab.active { border-bottom-color: #fff; }
+.tk-profile-tab svg { width: 24px; height: 24px; fill: #888; }
+.tk-profile-tab.active svg { fill: #fff; }
+.tk-profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.tk-grid-item { aspect-ratio: 3/4; background: #222; background-size: cover; background-position: center; cursor: pointer; display: flex; justify-content: center; align-items: center; color: #888; font-size: 12px; text-align: center; padding: 10px; }
+
+/* 抖音热搜样式 */
+.tk-search-header { padding: 40px 20px 15px; font-size: 18px; font-weight: bold; text-align: center; border-bottom: 1px solid #222; }
+.tk-search-list { padding: 10px 20px; display: flex; flex-direction: column; gap: 15px; }
+.tk-search-item { display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid #222; }
+.tk-search-rank { font-size: 18px; font-weight: bold; font-style: italic; width: 24px; text-align: center; }
+.tk-search-rank.top1 { color: #fe2c55; }
+.tk-search-rank.top2 { color: #ff8c00; }
+.tk-search-rank.top3 { color: #f4b860; }
+.tk-search-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.tk-search-title { font-size: 15px; color: #fff; }
+.tk-search-hot { font-size: 12px; color: #888; }
+
+.tk-bottom-nav { height: 60px; background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0; z-index: 50; }
+.tk-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: rgba(255,255,255,0.5); font-size: 10px; font-weight: 600; cursor: pointer; width: 60px; }
+.tk-nav-item.active { color: #fff; }
+.tk-nav-item svg { width: 24px; height: 24px; fill: currentColor; }
+.tk-nav-plus { width: 44px; height: 30px; background: #fff; border-radius: 12px; position: relative; display: flex; justify-content: center; align-items: center; color: #000; font-size: 20px; font-weight: bold; cursor: pointer; }
+.tk-nav-plus::before { content: ''; position: absolute; left: -4px; width: 10px; height: 100%; background: #25f4ee; border-radius: 12px; z-index: -1; }
+.tk-nav-plus::after { content: ''; position: absolute; right: -4px; width: 10px; height: 100%; background: #fe2c55; border-radius: 12px; z-index: -1; }
+
+/* 评论区弹窗 */
+.tk-comments-panel {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 70%;
+    background: #fff; color: #000; border-radius: 20px 20px 0 0;
+    z-index: 2000; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tk-comments-panel.show { display: flex; transform: translateY(0); }
+.tk-comments-header { padding: 15px; text-align: center; font-weight: bold; font-size: 16px; border-bottom: 1px solid #eee; position: relative; }
+.tk-comments-close { position: absolute; right: 15px; top: 15px; font-size: 20px; cursor: pointer; color: #888; line-height: 1; }
+.tk-comments-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+.tk-comment-item { display: flex; gap: 10px; }
+.tk-comment-avatar { width: 36px; height: 36px; border-radius: 50%; background: #eee; flex-shrink: 0; }
+.tk-comment-content { flex: 1; }
+.tk-comment-user { font-size: 13px; color: #888; font-weight: bold; margin-bottom: 4px; }
+.tk-comment-text { font-size: 14px; color: #111; line-height: 1.4; }
+
+/* 私信聊天室 */
+.tk-chat-room {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #111; z-index: 2000; display: none; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tk-chat-room.show { display: flex; transform: translateX(0); }
+.tk-chat-header { padding: 40px 15px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+.tk-chat-back { cursor: pointer; }
+.tk-chat-title { font-size: 16px; font-weight: bold; }
+.tk-chat-history { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; }
+.tk-chat-bubble { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
+.tk-chat-left { align-self: flex-start; background: #333; color: #fff; border-bottom-left-radius: 4px; }
+.tk-chat-right { align-self: flex-end; background: #fe2c55; color: #fff; border-bottom-right-radius: 4px; }
+
+/* 草稿箱弹窗 */
+.tk-drafts-panel {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #111; z-index: 2000; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tk-drafts-panel.show { display: flex; transform: translateY(0); }
+.tk-drafts-header { padding: 40px 15px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; font-weight: bold; }
+.tk-drafts-close { font-size: 24px; cursor: pointer; line-height: 1; }
+.tk-drafts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+.tk-draft-item { aspect-ratio: 3/4; background: #222; display: flex; justify-content: center; align-items: center; padding: 10px; text-align: center; font-size: 12px; color: #888; }
+/* 5. Camera 页面 (全屏覆盖) */
+.tk-page-camera {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; color: #fff; z-index: 60; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tk-page-camera.show { display: flex; transform: translateY(0); }
+
+.tk-cam-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 40px 20px 10px; z-index: 10;
+}
+.tk-cam-close { font-size: 28px; cursor: pointer; line-height: 1; }
+.tk-cam-music {
+    background: rgba(255,255,255,0.2); padding: 6px 16px; border-radius: 20px;
+    font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 6px;
+}
+
+.tk-cam-sidebar {
+    position: absolute; right: 15px; top: 100px;
+    display: flex; flex-direction: column; gap: 20px; z-index: 10;
+}
+.tk-cam-tool {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+}
+.tk-cam-tool svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 2; fill: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.tk-cam-tool span { font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+.tk-cam-bottom {
+    position: absolute; bottom: 30px; left: 0; width: 100%;
+    display: flex; flex-direction: column; gap: 20px; z-index: 10;
+}
+.tk-cam-controls {
+    display: flex; justify-content: space-around; align-items: center; padding: 0 30px;
+}
+.tk-cam-side-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+}
+.tk-box {
+    width: 36px; height: 36px; border-radius: 8px; border: 2px solid #fff;
+    background-size: cover; background-position: center;
+}
+.tk-cam-side-btn span { font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+.tk-cam-record-btn {
+    width: 80px; height: 80px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.5);
+    display: flex; justify-content: center; align-items: center; cursor: pointer;
+}
+.tk-cam-record-inner {
+    width: 60px; height: 60px; background: #fe2c55; border-radius: 50%;
+}
+
+.tk-cam-modes {
+    display: flex; justify-content: center; gap: 20px; font-size: 14px; font-weight: bold; color: rgba(255,255,255,0.6);
+}
+.tk-cam-modes span.active { color: #fff; }
+/* 相机页面中间草稿箱样式 */
+.tk-cam-center-drafts {
+    position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+    width: 85%; display: flex; align-items: center; justify-content: space-between; z-index: 5;
+}
+.tk-draft-nav {
+    width: 36px; height: 36px; background: rgba(255,255,255,0.15); border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold;
+    cursor: pointer; backdrop-filter: blur(5px); transition: background 0.2s;
+}
+.tk-draft-nav:active { background: rgba(255,255,255,0.3); }
+.tk-draft-content-box {
+    flex: 1; margin: 0 15px; background: rgba(0,0,0,0.4); border-radius: 16px; padding: 20px;
+    text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+}
+.tk-draft-title { font-size: 12px; color: #aaa; margin-bottom: 10px; font-weight: bold; letter-spacing: 1px; }
+.tk-draft-text { font-size: 15px; line-height: 1.5; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+/* =========================================
    新增：桌面编辑模式与小组件弹窗样式
    ========================================= */
 .desktop-edit-capsule {
@@ -5289,4 +5547,145 @@ body.ios-standalone .home-screen {
     height: 20px;
     background: #fff;
     box-shadow: 0 0 4px rgba(0,0,0,0.1);
+}
+/* =========================================
+   关联账号专属样式 (仿QQ)
+   ========================================= */
+/* 会话列表中的专属图标 */
+.linked-session-avatar {
+    background: linear-gradient(135deg, #5AC8FA 0%, #007AFF 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+}
+
+/* 关联账号横向头像项 */
+.linked-avatar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+}
+.linked-avatar-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #eee;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+/* 头像右下角的无限符号/链接符号 */
+.linked-avatar-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 18px;
+    height: 18px;
+    background: #34c759;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+}
+.linked-avatar-badge svg {
+    width: 10px;
+    height: 10px;
+    fill: currentColor;
+}
+.linked-avatar-name {
+    font-size: 12px;
+    color: #333;
+    font-weight: bold;
+    max-width: 60px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+/* 删除模式下的抖动和删除按钮 */
+.linked-avatar-item.is-deleting {
+    animation: jiggle 0.3s infinite alternate;
+}
+.linked-delete-btn {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    background: #ff3b30;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* 关联账号消息列表项 */
+.linked-msg-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.2s;
+}
+.linked-msg-item:active {
+    background: #f9f9f9;
+}
+.linked-msg-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background-color: #eee;
+    background-size: cover;
+    background-position: center;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+.linked-msg-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+.linked-msg-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.linked-msg-preview {
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.linked-msg-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    margin-left: 10px;
+}
+.linked-msg-time {
+    font-size: 12px;
+    color: #ccc;
 }

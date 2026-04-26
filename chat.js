@@ -554,6 +554,12 @@ if (doRegisterBtn) {
         if (!netName || !account || !password) return alert('请填写完整的注册信息！');
         if (!isAgreed) return alert('请先阅读并勾选同意服务协议！');
         
+        // 【新增】：检查账号是否已存在
+        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+        if (accounts.some(a => a.account === account)) {
+            return alert('该账号已被注册，请更换一个账号！');
+        }
+        
         const personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
         const persona = personas.find(p => p.id === currentSelectedPersonaId);
         
@@ -566,7 +572,6 @@ if (doRegisterBtn) {
             avatarUrl: persona ? persona.avatarUrl : ''
         };
         
-        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
         accounts.push(newAccount);
         ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
         
@@ -1296,6 +1301,15 @@ function renderChatList() {
     }
 
     let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
+    
+    // 动态注入关联账号虚拟会话
+    const isLinkedEnabled = ChatDB.getItem(`linked_account_enabled_${currentLoginId}`) === 'true';
+    if (isLinkedEnabled && !sessions.includes('linked_account_virtual_id')) {
+        sessions.push('linked_account_virtual_id');
+    } else if (!isLinkedEnabled && sessions.includes('linked_account_virtual_id')) {
+        sessions = sessions.filter(id => id !== 'linked_account_virtual_id');
+    }
+
     let allChars = getAllEntities();
     let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
     let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
@@ -1309,27 +1323,114 @@ function renderChatList() {
         return;
     }
 
-    // 排序逻辑：置顶优先，然后按最后消息时间
+    // 获取关联账号的清空时间戳
+    const linkedClearTime = parseInt(ChatDB.getItem(`linked_account_clear_time_${currentLoginId}`) || '0');
+
+    let sessionTimes = {};
+    let linkedSessionData = { unread: 0, text: '暂无新消息', timeStr: '', timestamp: 0 };
+    
+    sessions.forEach(charId => {
+        if (charId === 'linked_account_virtual_id') {
+            let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+            linkedAccounts.forEach(accId => {
+                let accSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
+                accSessions.forEach(targetId => {
+                    let unread = parseInt(ChatDB.getItem(`unread_${accId}_${targetId}`) || '0');
+                    // 【核心修复】：只有当存在未读消息时，才去抓取历史记录作为预览！
+                    if (unread > 0) {
+                        linkedSessionData.unread += unread;
+                        
+                        let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
+                        if (history.length > 0) {
+                            let lastMsg = history[history.length - 1];
+                            if (lastMsg.timestamp > linkedClearTime && lastMsg.timestamp > linkedSessionData.timestamp) {
+                                linkedSessionData.timestamp = lastMsg.timestamp;
+                                let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
+                                if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                                else if (lastMsg.type === 'voice') contentText = '[语音]';
+                                
+                                const targetEntity = allChars.find(e => e.id === targetId);
+                                const targetName = targetEntity ? (targetEntity.netName || targetEntity.name) : '未知';
+                                linkedSessionData.text = `${targetName}: ${contentText}`;
+                                
+                                const date = new Date(lastMsg.timestamp);
+                                const now = new Date();
+                                linkedSessionData.timeStr = date.toDateString() === now.toDateString() 
+                                    ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+                                    : `${date.getMonth() + 1}/${date.getDate()}`;
+                            }
+                        }
+                    }
+                });
+            });
+            sessionTimes[charId] = linkedSessionData.timestamp;
+        } else {
+            let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
+            sessionTimes[charId] = history.length > 0 ? history[history.length - 1].timestamp : 0;
+        }
+    });
+
+    // 排序逻辑：置顶优先，然后按最后消息时间倒序
     sessions.sort((a, b) => {
         const statA = stats[a] || {};
         const statB = stats[b] || {};
-        if (statA.pinned !== statB.pinned) return statB.pinned ? 1 : -1;
-        return 0; 
+        if (statA.pinned !== statB.pinned) return statA.pinned ? -1 : 1;
+        return sessionTimes[b] - sessionTimes[a];
     });
 
     let renderCount = 0;
 
     sessions.forEach(charId => {
+        if (charId === 'linked_account_virtual_id') {
+            if (keyword && !'我的关联账号'.includes(keyword)) return;
+            renderCount++;
+            
+            const charStat = stats[charId] || {};
+            const unreadBadgeHtml = linkedSessionData.unread > 0 ? `<div class="wechat-unread-badge">${linkedSessionData.unread > 99 ? '99+' : linkedSessionData.unread}</div>` : '';
+            
+            const item = document.createElement('div');
+            item.className = `wechat-list-item ${charStat.pinned ? 'is-pinned' : ''}`;
+            
+            item.ontouchstart = (e) => handleSessionPressStart(e, charId);
+            item.ontouchend = handleSessionPressEnd;
+            item.onmousedown = (e) => handleSessionPressStart(e, charId);
+            item.onmouseup = handleSessionPressEnd;
+            item.onclick = () => openLinkedAccountManager();
+
+            item.innerHTML = `
+                <div style="position: relative;">
+                    <div class="wechat-avatar linked-session-avatar" style="background: #007AFF; display: flex; justify-content: center; align-items: center;">
+                        <svg viewBox="0 0 24 24" width="26" height="26" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    ${unreadBadgeHtml}
+                </div>
+                <div class="wechat-info">
+                    <div class="wechat-name-row">
+                        ${charStat.pinned ? '<span class="top-tag">Top</span>' : ''}
+                        <span class="wechat-name">我的关联账号</span>
+                    </div>
+                    <div class="wechat-msg" style="color: ${linkedSessionData.unread > 0 ? '#333' : '#888'}">${linkedSessionData.text}</div>
+                </div>
+                <div class="wechat-right-col">
+                    <div class="wechat-time">${linkedSessionData.timeStr}</div>
+                </div>
+            `;
+            listEl.appendChild(item);
+            return;
+        }
+
         const char = allChars.find(c => c.id === charId);
         if (!char) return;
 
         const charStat = stats[charId] || {};
         const displayName = remarks[charId] || char.netName || char.name;
         
-        // 搜索过滤
-        if (keyword && !displayName.toLowerCase().includes(keyword)) {
-            return;
-        }
+        if (keyword && !displayName.toLowerCase().includes(keyword)) return;
         
         renderCount++;
         const wornBadgeHtml = getWornBadgeHtml(charId);
@@ -1353,14 +1454,12 @@ function renderChatList() {
                 : `${date.getMonth() + 1}/${date.getDate()}`;
         }
 
-        // 获取未读数
         const unreadCount = parseInt(ChatDB.getItem(`unread_${currentLoginId}_${charId}`) || '0');
         const unreadBadgeHtml = unreadCount > 0 ? `<div class="wechat-unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</div>` : '';
 
         const item = document.createElement('div');
         item.className = `wechat-list-item ${charStat.pinned ? 'is-pinned' : ''}`;
         
-        // 绑定长按事件
         item.ontouchstart = (e) => handleSessionPressStart(e, charId);
         item.ontouchend = handleSessionPressEnd;
         item.onmousedown = (e) => handleSessionPressStart(e, charId);
@@ -1393,7 +1492,185 @@ function renderChatList() {
     }
 }
 
+function renderLinkedAccounts() {
+    const topListEl = document.getElementById('linkedAccTopList');
+    const msgListEl = document.getElementById('linkedAccMsgList');
+    const otherListEl = document.getElementById('linkedAccOtherList');
+    
+    topListEl.innerHTML = '';
+    msgListEl.innerHTML = '';
+    otherListEl.innerHTML = '';
 
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+    let allEntities = getAllEntities();
+    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+    
+    // 获取清空时间戳
+    const linkedClearTime = parseInt(ChatDB.getItem(`linked_account_clear_time_${currentLoginId}`) || '0');
+
+    if (linkedAccounts.length === 0) {
+        topListEl.innerHTML = '<div style="font-size: 13px; color: #aaa; padding: 10px 0;">暂无关联账号</div>';
+        msgListEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; padding: 40px 0;">暂无消息</div>';
+    } else {
+        let allMsgItems = []; 
+
+        linkedAccounts.forEach(accId => {
+            const accEntity = allEntities.find(e => e.id === accId);
+            if (!accEntity) return;
+            const accName = accEntity.netName || accEntity.name;
+
+            let totalUnreadCount = 0;
+
+            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
+            sessions.forEach(targetId => {
+                let unread = parseInt(ChatDB.getItem(`unread_${accId}_${targetId}`) || '0');
+                if (unread > 0) {
+                    totalUnreadCount += unread;
+                    
+                    let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
+                    if (history.length > 0) {
+                        let lastMsg = history[history.length - 1];
+                        // 【核心修复】：只有晚于清空时间的消息，才显示在面板列表中
+                        if (lastMsg.timestamp > linkedClearTime) {
+                            let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
+                            if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                            else if (lastMsg.type === 'voice') contentText = '[语音]';
+                            
+                            const targetEntity = allEntities.find(e => e.id === targetId);
+                            
+                            allMsgItems.push({
+                                accId: accId,
+                                accName: accName,
+                                targetId: targetId,
+                                targetEntity: targetEntity,
+                                unread: unread,
+                                text: contentText,
+                                timestamp: lastMsg.timestamp
+                            });
+                        }
+                    }
+                }
+            });
+
+            const isSelected = currentSelectedLinkedAccId === accId;
+            const isDimmed = currentSelectedLinkedAccId !== 'all' && !isSelected;
+
+            const avatarItem = document.createElement('div');
+            avatarItem.className = `linked-avatar-item ${isLinkedAccManaging ? 'is-deleting' : ''}`;
+            avatarItem.style.opacity = isDimmed ? '0.4' : '1';
+            avatarItem.style.transition = 'opacity 0.2s';
+            
+            const unreadBadge = totalUnreadCount > 0 ? `<div class="wechat-unread-badge" style="top: -4px; right: -4px;">${totalUnreadCount > 99 ? '99+' : totalUnreadCount}</div>` : '';
+            const deleteBtn = isLinkedAccManaging ? `<div class="linked-delete-btn" onclick="event.stopPropagation(); removeLinkedAccount('${accId}')">×</div>` : '';
+            const borderStyle = isSelected ? 'border: 2px solid #007AFF;' : 'border: 2px solid #fff;';
+
+            avatarItem.innerHTML = `
+                <div class="linked-avatar-img" style="background-image: url('${accEntity.avatarUrl || ''}'); ${borderStyle}">
+                    ${deleteBtn}
+                    ${!isLinkedAccManaging ? `
+                    <div class="linked-avatar-badge">
+                        <svg viewBox="0 0 24 24"><path d="M18.6 6.62c-1.44 0-2.8.56-3.77 1.53L12 10.66 9.16 8.16a5.38 5.38 0 0 0-3.77-1.54C2.42 6.62 0 9.04 0 12s2.42 5.38 5.39 5.38c1.44 0 2.8-.56 3.77-1.53L12 13.34l2.84 2.5c.97.97 2.33 1.53 3.77 1.53 2.97 0 5.39-2.42 5.39-5.38s-2.42-5.38-5.39-5.38zm0 8.76c-.9 0-1.75-.35-2.36-.99l-4.24-3.73 4.24-3.73c.61-.64 1.46-.99 2.36-.99 1.87 0 3.39 1.52 3.39 3.38s-1.52 3.38-3.39 3.38zM5.39 15.38c-.9 0-1.75-.35-2.36-.99C2.42 13.75 2 12.9 2 12s.42-1.75 1.03-2.39c.61-.64 1.46-.99 2.36-.99 1.87 0 3.39 1.52 3.39 3.38s-1.52 3.38-3.39 3.38z"/></svg>
+                    </div>
+                    ` : ''}
+                    ${unreadBadge}
+                </div>
+                <div class="linked-avatar-name" style="color: ${isSelected ? '#007AFF' : '#333'};">${accName}</div>
+            `;
+            
+            avatarItem.onclick = () => {
+                if (!isLinkedAccManaging) {
+                    currentSelectedLinkedAccId = (currentSelectedLinkedAccId === accId) ? 'all' : accId;
+                    renderLinkedAccounts();
+                }
+            };
+            topListEl.appendChild(avatarItem);
+        });
+
+        allMsgItems.sort((a, b) => b.timestamp - a.timestamp);
+        
+        if (currentSelectedLinkedAccId !== 'all') {
+            allMsgItems = allMsgItems.filter(item => item.accId === currentSelectedLinkedAccId);
+        }
+
+        if (allMsgItems.length === 0) {
+            msgListEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; padding: 40px 0;">暂无新消息</div>';
+        } else {
+            allMsgItems.forEach(item => {
+                const targetName = item.targetEntity ? (remarks[item.targetId] || item.targetEntity.netName || item.targetEntity.name) : '未知';
+                const targetAvatar = item.targetEntity ? item.targetEntity.avatarUrl : '';
+                
+                const date = new Date(item.timestamp);
+                const now = new Date();
+                const timeStr = date.toDateString() === now.toDateString() 
+                    ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+                    : `${date.getMonth() + 1}/${date.getDate()}`;
+
+                const msgItem = document.createElement('div');
+                msgItem.className = 'linked-msg-item';
+                msgItem.onclick = () => showToast('仅代收消息，如需回复请在设置中切换账号', 'text', 2000);
+                
+                const msgUnreadBadge = `<div class="wechat-unread-badge" style="position: relative; top: 0; right: 0;">${item.unread > 99 ? '99+' : item.unread}</div>`;
+
+                msgItem.innerHTML = `
+                    <div class="linked-msg-avatar" style="background-image: url('${targetAvatar}');"></div>
+                    <div class="linked-msg-info">
+                        <div class="linked-msg-name">${targetName}</div>
+                        <div class="linked-msg-preview">${item.accName}: ${item.text}</div>
+                    </div>
+                    <div class="linked-msg-right">
+                        <div class="linked-msg-time">${timeStr}</div>
+                        ${msgUnreadBadge}
+                    </div>
+                `;
+                msgListEl.appendChild(msgItem);
+            });
+        }
+    }
+
+    const availableEntities = allEntities.filter(e => e.id !== currentLoginId && !linkedAccounts.includes(e.id));
+    
+    if (availableEntities.length === 0) {
+        otherListEl.innerHTML = '<div style="font-size: 12px; color: #ccc;">没有可关联的其他账号</div>';
+    } else {
+        availableEntities.forEach(entity => {
+            const otherItem = document.createElement('div');
+            otherItem.className = 'linked-avatar-item';
+            otherItem.onclick = () => addLinkedAccount(entity.id);
+            otherItem.innerHTML = `
+                <div class="linked-avatar-img" style="background-image: url('${entity.avatarUrl || ''}'); opacity: 0.6;">
+                    <div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #ccc; border-radius: 50%; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px; font-weight: bold;">+</div>
+                </div>
+                <div class="linked-avatar-name" style="color: #888;">${entity.netName || entity.name}</div>
+            `;
+            otherListEl.appendChild(otherItem);
+        });
+    }
+}
+
+function clearLinkedUnread() {
+    if (confirm('确定要清空所有关联账号的未读消息提醒吗？')) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        if (!currentLoginId) return;
+        let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+        
+        linkedAccounts.forEach(accId => {
+            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
+            sessions.forEach(targetId => {
+                ChatDB.setItem(`unread_${accId}_${targetId}`, '0');
+            });
+        });
+        
+        // 【核心修复】：记录清空时间戳，用于过滤旧消息
+        ChatDB.setItem(`linked_account_clear_time_${currentLoginId}`, Date.now().toString());
+        
+        renderLinkedAccounts();
+        if (typeof renderChatList === 'function') renderChatList();
+        showToast('未读消息已清空', 'success', 1500);
+    }
+}
 
 // 4. 长按菜单逻辑
 function handleSessionPressStart(e, charId) {
@@ -1442,6 +1719,11 @@ function actionToggleSpecial() {
 }
 
 function actionDeleteSession() {
+    if (currentActionSessionId === 'linked_account_virtual_id') {
+        alert('关联账号会话无法直接删除，请前往设置关闭开关。');
+        closeSessionMenu();
+        return;
+    }
     if (confirm('确定删除该会话吗？聊天记录将保留。')) {
         const currentLoginId = ChatDB.getItem('current_login_account');
         let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
@@ -2822,10 +3104,10 @@ function sendChatMessage() {
         sessions.unshift(currentChatRoomCharId);
         ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
 
-        // 【新增】：左手倒右手双向同步 (如果对方是真实用户账号)
+        // 【新增】：左手倒右手双向同步 (无论对方是User还是Char，保证关联账号能代收消息)
         let allEntities = getAllEntities();
         const targetEntity = allEntities.find(e => e.id === currentChatRoomCharId);
-        if (targetEntity && targetEntity.isAccount) {
+        if (targetEntity) {
             // 存入对方账号的视角
             let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
             // 在对方视角里，这条消息是我发来的，所以 role 是 'char'
@@ -2891,6 +3173,16 @@ function openChatRoom(charId) {
                 alert('暂无心声记录');
             }
         };
+
+        // 【新增】：如果对方是用户账号(小号)，隐藏 AI 回复按钮
+        const apiBtn = document.querySelector('.cr-api-btn');
+        if (apiBtn) {
+            if (char.isAccount) {
+                apiBtn.style.display = 'none';
+            } else {
+                apiBtn.style.display = 'flex';
+            }
+        }
         
         document.getElementById('chatRoomInput').value = '';
         closeChatPanels(); 
@@ -3133,6 +3425,59 @@ function deleteEmojiGroup(groupName, e) {
 }
 
 // --- 导入与渲染逻辑 ---
+function openEmojiImportModal() {
+    document.getElementById('emojiImportInput').value = '';
+    document.getElementById('emojiImportModalOverlay').classList.add('show');
+}
+
+function closeEmojiImportModal() {
+    document.getElementById('emojiImportModalOverlay').classList.remove('show');
+}
+
+function handleEmojiFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const content = e.target.result;
+        if (file.name.endsWith('.json')) {
+            try {
+                const data = JSON.parse(content);
+                let emojis = JSON.parse(ChatDB.getItem('chat_emojis') || '[]');
+                let addedCount = 0;
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        if (item.desc && item.url) {
+                            emojis.push({
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                                desc: item.desc,
+                                url: item.url,
+                                group: currentEmojiGroup
+                            });
+                            addedCount++;
+                        }
+                    });
+                }
+                if (addedCount > 0) {
+                    ChatDB.setItem('chat_emojis', JSON.stringify(emojis));
+                    alert(`成功导入 ${addedCount} 个表情包！`);
+                    renderEmojis();
+                    closeEmojiImportModal();
+                } else {
+                    alert('未在 JSON 中找到有效的表情包数据。');
+                }
+            } catch (err) {
+                alert('JSON 解析失败，请确保格式正确。');
+            }
+        } else {
+            // txt 格式，直接填入 textarea 让用户确认
+            document.getElementById('emojiImportInput').value = content;
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
 function importEmojis() {
     const input = document.getElementById('emojiImportInput').value.trim();
     if (!input) return alert('请输入表情包信息！');
@@ -3165,6 +3510,7 @@ function importEmojis() {
         document.getElementById('emojiImportInput').value = '';
         alert(`成功导入 ${addedCount} 个表情包！`);
         renderEmojis();
+        closeEmojiImportModal();
     } else {
         alert('未识别到有效的表情包格式，请检查输入！');
     }
@@ -3196,11 +3542,25 @@ function renderEmojis() {
     const grid = document.getElementById('emojiGrid');
     grid.innerHTML = '';
     
+    // 始终在最前面渲染一个“添加”按钮
+    const addBtn = document.createElement('div');
+    addBtn.className = 'emoji-manager-item';
+    addBtn.innerHTML = `
+        <div class="emoji-manager-img" style="background: #f4f4f4; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 1px dashed #ccc;" onclick="openEmojiImportModal()">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="#aaa" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </div>
+        <div class="emoji-manager-desc">导入表情包</div>
+    `;
+    grid.appendChild(addBtn);
+    
     let emojis = JSON.parse(ChatDB.getItem('chat_emojis') || '[]');
     let currentEmojis = emojis.filter(e => e.group === currentEmojiGroup);
 
     if (currentEmojis.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; font-size: 12px; padding: 20px 0;">当前分组暂无表情包</div>';
+        const emptyHint = document.createElement('div');
+        emptyHint.style.cssText = 'grid-column: 1 / -1; text-align: center; color: #aaa; font-size: 12px; padding: 20px 0;';
+        emptyHint.innerText = '当前分组暂无表情包';
+        grid.appendChild(emptyHint);
         return;
     }
 
@@ -4080,6 +4440,46 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
         if (!hasBadge) {
             systemPrompt += `- 目前暂无特殊的互动标识。\n`;
         }
+    }
+
+    // 【新增】：关联账号未读消息情报注入
+    const isLinkedEnabled = ChatDB.getItem(`linked_account_enabled_${currentLoginId}`) !== 'false';
+    let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+    let linkedMsgContext = "";
+
+    if (isLinkedEnabled && linkedAccounts.length > 0) {
+        let allEntities = getAllEntities();
+        linkedAccounts.forEach(accId => {
+            const accEntity = allEntities.find(e => e.id === accId);
+            if (!accEntity) return;
+            
+            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
+            sessions.forEach(targetId => {
+                let unread = parseInt(ChatDB.getItem(`unread_${accId}_${targetId}`) || '0');
+                if (unread > 0) {
+                    let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
+                    if (history.length > 0) {
+                        let lastMsg = history[history.length - 1];
+                        let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
+                        if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                        else if (lastMsg.type === 'voice') contentText = '[语音]';
+                        
+                        const targetEntity = allEntities.find(e => e.id === targetId);
+                        const targetName = targetEntity ? (targetEntity.netName || targetEntity.name) : '未知';
+                        const accName = accEntity.netName || accEntity.name;
+                        
+                        linkedMsgContext += `- 你的关联账号【${accName}】收到了来自【${targetName}】的未读消息："${contentText}"\n`;
+                    }
+                }
+            });
+        });
+    }
+
+    if (linkedMsgContext) {
+        systemPrompt += `\n【系统机密情报：关联账号消息监控】\n`;
+        systemPrompt += `你感知到 ${userName} 的其他关联账号目前收到了以下未读消息：\n`;
+        systemPrompt += linkedMsgContext;
+        systemPrompt += `(你可以根据你的人设，在聊天中自然地提及这些事，比如提醒 ${userName} 去回消息，或者表现出吃醋、八卦、好奇、质问等符合你人设反应。)\n`;
     }
 
     if (activeWbs.bottom.length > 0) systemPrompt += `\n[补充信息]\n${activeWbs.bottom.join('\n')}\n`;
@@ -5761,6 +6161,12 @@ function openChatAppSettingsPanel() {
         document.getElementById('payPassStatusText').innerText = account.payPassword ? '已设置' : '未设置';
         document.getElementById('freePayToggle').checked = account.freePay === true;
     }
+    
+    // 同步关联账号开关状态
+    const linkedEnabled = ChatDB.getItem(`linked_account_enabled_${currentLoginId}`) === 'true';
+    const toggle = document.getElementById('toggleLinkedAccount');
+    if (toggle) toggle.checked = linkedEnabled;
+
     document.getElementById('chatAppSettingsPanel').style.display = 'flex';
 }
 
@@ -6127,6 +6533,28 @@ function getCurrentPersonaIdForMemory() {
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
     const account = accounts.find(a => a.id === currentLoginId);
     return account ? account.personaId : currentLoginId;
+}
+
+function openMemoryPanel() {
+    if (!currentProfileCharId) return;
+    initMemoryData(currentProfileCharId);
+    
+    // 填充头部角色信息
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentProfileCharId);
+    if (char) {
+        const avatarEl = document.getElementById('memoryCharAvatar');
+        if (avatarEl) avatarEl.style.backgroundImage = `url('${char.avatarUrl || ''}')`;
+        const nameEl = document.getElementById('memoryCharName');
+        if (nameEl) nameEl.innerText = char.netName || char.name || '未命名';
+    }
+    
+    document.getElementById('charMemoryPanel').style.display = 'flex';
+    switchMemoryTab('summary'); // 默认打开总结 Tab
+}
+
+function closeMemoryPanel() {
+    document.getElementById('charMemoryPanel').style.display = 'none';
 }
 
 function initMemoryData(charId) {
@@ -7229,3 +7657,299 @@ function closeGlobalPrompt() {
     document.getElementById('globalPromptModalOverlay').classList.remove('show');
     globalPromptCallback = null;
 }
+// ==========================================
+// 关联账号 (Linked Accounts) 核心逻辑
+// ==========================================
+
+function initLinkedAccountToggle() {
+    const toggle = document.getElementById('toggleLinkedAccount');
+    if (!toggle) return;
+    
+    toggle.addEventListener('change', (e) => {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        if (!currentLoginId) return;
+        
+        ChatDB.setItem(`linked_account_enabled_${currentLoginId}`, e.target.checked ? 'true' : 'false');
+        if (typeof renderChatList === 'function') renderChatList();
+    });
+}
+
+let isLinkedAccManaging = false;
+let currentSelectedLinkedAccId = 'all'; // 新增：记录当前选中的关联账号ID
+
+function toggleLinkedAccManageMode() {
+    isLinkedAccManaging = !isLinkedAccManaging;
+    const btn = document.getElementById('linkedAccManageBtn');
+    if (isLinkedAccManaging) {
+        btn.innerText = '完成';
+    } else {
+        btn.innerText = '管理';
+    }
+    renderLinkedAccounts();
+}
+
+function openLinkedAccountManager() {
+    isLinkedAccManaging = false;
+    currentSelectedLinkedAccId = 'all'; // 每次打开重置为显示全部
+    document.getElementById('linkedAccManageBtn').innerText = '管理';
+    document.getElementById('linkedAccountManagerPanel').style.display = 'flex';
+    
+    // 同步开关状态
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    const isEnabled = ChatDB.getItem(`linked_account_enabled_${currentLoginId}`) !== 'false'; // 默认开启
+    document.getElementById('linkedAccMsgToggle').checked = isEnabled;
+    
+    document.getElementById('linkedAccMsgToggle').onchange = (e) => {
+        ChatDB.setItem(`linked_account_enabled_${currentLoginId}`, e.target.checked ? 'true' : 'false');
+        if (typeof renderChatList === 'function') renderChatList();
+    };
+
+    renderLinkedAccounts();
+}
+
+function closeLinkedAccountManager() {
+    document.getElementById('linkedAccountManagerPanel').style.display = 'none';
+}
+
+function renderLinkedAccounts() {
+    const topListEl = document.getElementById('linkedAccTopList');
+    const msgListEl = document.getElementById('linkedAccMsgList');
+    const otherListEl = document.getElementById('linkedAccOtherList');
+    
+    topListEl.innerHTML = '';
+    msgListEl.innerHTML = '';
+    otherListEl.innerHTML = '';
+
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+    let allEntities = getAllEntities();
+    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
+
+    // 1. 渲染顶部已关联账号头像
+    if (linkedAccounts.length === 0) {
+        topListEl.innerHTML = '<div style="font-size: 13px; color: #aaa; padding: 10px 0;">暂无关联账号</div>';
+        msgListEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; padding: 40px 0;">暂无消息</div>';
+    } else {
+        let allMsgItems = []; // 收集所有未读消息项
+
+        linkedAccounts.forEach(accId => {
+            const accEntity = allEntities.find(e => e.id === accId);
+            if (!accEntity) return;
+            const accName = accEntity.netName || accEntity.name;
+
+            // 计算该账号的总未读数 (用于顶部头像红点)
+            let totalUnreadCount = 0;
+
+            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
+            sessions.forEach(targetId => {
+                let unread = parseInt(ChatDB.getItem(`unread_${accId}_${targetId}`) || '0');
+                if (unread > 0) {
+                    totalUnreadCount += unread;
+                    
+                    let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
+                    if (history.length > 0) {
+                        let lastMsg = history[history.length - 1];
+                        let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
+                        if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                        else if (lastMsg.type === 'voice') contentText = '[语音]';
+                        
+                        const targetEntity = allEntities.find(e => e.id === targetId);
+                        
+                        allMsgItems.push({
+                            accId: accId,
+                            accName: accName,
+                            targetId: targetId,
+                            targetEntity: targetEntity,
+                            unread: unread,
+                            text: contentText,
+                            timestamp: lastMsg.timestamp
+                        });
+                    }
+                }
+            });
+
+            // 判断当前头像是否被选中
+            const isSelected = currentSelectedLinkedAccId === accId;
+            const isDimmed = currentSelectedLinkedAccId !== 'all' && !isSelected;
+
+            // 渲染顶部头像
+            const avatarItem = document.createElement('div');
+            avatarItem.className = `linked-avatar-item ${isLinkedAccManaging ? 'is-deleting' : ''}`;
+            avatarItem.style.opacity = isDimmed ? '0.4' : '1';
+            avatarItem.style.transition = 'opacity 0.2s';
+            
+            const unreadBadge = totalUnreadCount > 0 ? `<div class="wechat-unread-badge" style="top: -4px; right: -4px;">${totalUnreadCount > 99 ? '99+' : totalUnreadCount}</div>` : '';
+            const deleteBtn = isLinkedAccManaging ? `<div class="linked-delete-btn" onclick="event.stopPropagation(); removeLinkedAccount('${accId}')">×</div>` : '';
+            const borderStyle = isSelected ? 'border: 2px solid #007AFF;' : 'border: 2px solid #fff;';
+
+            avatarItem.innerHTML = `
+                <div class="linked-avatar-img" style="background-image: url('${accEntity.avatarUrl || ''}'); ${borderStyle}">
+                    ${deleteBtn}
+                    ${!isLinkedAccManaging ? `
+                    <div class="linked-avatar-badge">
+                        <svg viewBox="0 0 24 24"><path d="M18.6 6.62c-1.44 0-2.8.56-3.77 1.53L12 10.66 9.16 8.16a5.38 5.38 0 0 0-3.77-1.54C2.42 6.62 0 9.04 0 12s2.42 5.38 5.39 5.38c1.44 0 2.8-.56 3.77-1.53L12 13.34l2.84 2.5c.97.97 2.33 1.53 3.77 1.53 2.97 0 5.39-2.42 5.39-5.38s-2.42-5.38-5.39-5.38zm0 8.76c-.9 0-1.75-.35-2.36-.99l-4.24-3.73 4.24-3.73c.61-.64 1.46-.99 2.36-.99 1.87 0 3.39 1.52 3.39 3.38s-1.52 3.38-3.39 3.38zM5.39 15.38c-.9 0-1.75-.35-2.36-.99C2.42 13.75 2 12.9 2 12s.42-1.75 1.03-2.39c.61-.64 1.46-.99 2.36-.99 1.87 0 3.39 1.52 3.39 3.38s-1.52 3.38-3.39 3.38z"/></svg>
+                    </div>
+                    ` : ''}
+                    ${unreadBadge}
+                </div>
+                <div class="linked-avatar-name" style="color: ${isSelected ? '#007AFF' : '#333'};">${accName}</div>
+            `;
+            
+            avatarItem.onclick = () => {
+                if (!isLinkedAccManaging) {
+                    currentSelectedLinkedAccId = (currentSelectedLinkedAccId === accId) ? 'all' : accId;
+                    renderLinkedAccounts();
+                }
+            };
+            topListEl.appendChild(avatarItem);
+        });
+
+        // 渲染消息列表 (按时间倒序)
+        allMsgItems.sort((a, b) => b.timestamp - a.timestamp);
+        
+        // 过滤
+        if (currentSelectedLinkedAccId !== 'all') {
+            allMsgItems = allMsgItems.filter(item => item.accId === currentSelectedLinkedAccId);
+        }
+
+        if (allMsgItems.length === 0) {
+            msgListEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; padding: 40px 0;">暂无新消息</div>';
+        } else {
+            allMsgItems.forEach(item => {
+                const targetName = item.targetEntity ? (remarks[item.targetId] || item.targetEntity.netName || item.targetEntity.name) : '未知';
+                const targetAvatar = item.targetEntity ? item.targetEntity.avatarUrl : '';
+                
+                const date = new Date(item.timestamp);
+                const now = new Date();
+                const timeStr = date.toDateString() === now.toDateString() 
+                    ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+                    : `${date.getMonth() + 1}/${date.getDate()}`;
+
+                const msgItem = document.createElement('div');
+                msgItem.className = 'linked-msg-item';
+                msgItem.onclick = () => showToast('仅代收消息，如需回复请在设置中切换账号', 'text', 2000);
+                
+                const msgUnreadBadge = `<div class="wechat-unread-badge" style="position: relative; top: 0; right: 0;">${item.unread > 99 ? '99+' : item.unread}</div>`;
+
+                msgItem.innerHTML = `
+                    <div class="linked-msg-avatar" style="background-image: url('${targetAvatar}');"></div>
+                    <div class="linked-msg-info">
+                        <div class="linked-msg-name">${targetName}</div>
+                        <div class="linked-msg-preview">${item.accName}: ${item.text}</div>
+                    </div>
+                    <div class="linked-msg-right">
+                        <div class="linked-msg-time">${timeStr}</div>
+                        ${msgUnreadBadge}
+                    </div>
+                `;
+                msgListEl.appendChild(msgItem);
+            });
+        }
+    }
+
+    // 2. 渲染底部未关联账号
+    const availableEntities = allEntities.filter(e => e.id !== currentLoginId && !linkedAccounts.includes(e.id));
+    
+    if (availableEntities.length === 0) {
+        otherListEl.innerHTML = '<div style="font-size: 12px; color: #ccc;">没有可关联的其他账号</div>';
+    } else {
+        availableEntities.forEach(entity => {
+            const otherItem = document.createElement('div');
+            otherItem.className = 'linked-avatar-item';
+            otherItem.onclick = () => addLinkedAccount(entity.id);
+            otherItem.innerHTML = `
+                <div class="linked-avatar-img" style="background-image: url('${entity.avatarUrl || ''}'); opacity: 0.6;">
+                    <div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #ccc; border-radius: 50%; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px; font-weight: bold;">+</div>
+                </div>
+                <div class="linked-avatar-name" style="color: #888;">${entity.netName || entity.name}</div>
+            `;
+            otherListEl.appendChild(otherItem);
+        });
+    }
+}
+
+function clearLinkedUnread() {
+    if (confirm('确定要清空所有关联账号的未读消息提醒吗？')) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        if (!currentLoginId) return;
+        let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+        
+        linkedAccounts.forEach(accId => {
+            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
+            sessions.forEach(targetId => {
+                ChatDB.setItem(`unread_${accId}_${targetId}`, '0');
+            });
+        });
+        
+        renderLinkedAccounts();
+        if (typeof renderChatList === 'function') renderChatList();
+        showToast('未读消息已清空', 'success', 1500);
+    }
+}
+
+function addLinkedAccount(id) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+    if (!linkedAccounts.includes(id)) {
+        linkedAccounts.push(id);
+        ChatDB.setItem(`linked_accounts_${currentLoginId}`, JSON.stringify(linkedAccounts));
+    }
+    renderLinkedAccounts();
+    if (typeof renderChatList === 'function') renderChatList();
+}
+
+function removeLinkedAccount(id) {
+    if (confirm('确定要解除关联该账号吗？')) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+        linkedAccounts = linkedAccounts.filter(accId => accId !== id);
+        ChatDB.setItem(`linked_accounts_${currentLoginId}`, JSON.stringify(linkedAccounts));
+        renderLinkedAccounts();
+        if (typeof renderChatList === 'function') renderChatList();
+    }
+}
+
+function switchToLinkedAccount(id) {
+    const allEntities = getAllEntities();
+    const targetEntity = allEntities.find(e => e.id === id);
+    
+    if (!targetEntity) return alert('目标账号不存在！');
+
+    // 如果目标是 Char，需要确保它在 chat_accounts 中有一个对应的虚拟账号记录，否则无法作为主体登录
+    if (!targetEntity.isAccount) {
+        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+        let virtualAcc = accounts.find(a => a.id === id);
+        if (!virtualAcc) {
+            // 为 Char 创建一个虚拟登录账号
+            virtualAcc = {
+                id: id,
+                personaId: id, // 虚拟绑定自己
+                netName: targetEntity.name,
+                account: 'virtual_' + id,
+                password: '',
+                avatarUrl: targetEntity.avatarUrl,
+                isVirtual: true
+            };
+            accounts.push(virtualAcc);
+            ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+        }
+    }
+
+    ChatDB.setItem('current_login_account', id);
+    closeLinkedAccountManager();
+    
+    // 刷新整个微信界面
+    renderMePage();
+    if (typeof renderChatList === 'function') renderChatList();
+    if (typeof renderContactList === 'function') renderContactList();
+    if (typeof renderMoments === 'function') renderMoments();
+    
+    alert(`已切换至账号: ${targetEntity.netName || targetEntity.name}`);
+}
+
+// 初始化开关事件
+window.addEventListener('ChatDBReady', () => {
+    initLinkedAccountToggle();
+});
