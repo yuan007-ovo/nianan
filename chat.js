@@ -4763,12 +4763,17 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                 }
 
                 if (i < messagesArray.length - 1) {
-                    
-                    let unreadCount = parseInt(ChatDB.getItem(`unread_${currentLoginId}_${targetCharId}`) || '0');
-                    ChatDB.setItem(`unread_${currentLoginId}_${targetCharId}`, (unreadCount + 1).toString());
-                    
-                    showMsgNotification(targetCharId, newMsg.content);
-                    if (typeof renderChatList === 'function') renderChatList();
+                    if (targetCharId === currentChatRoomCharId && isChatRoomVisible) {
+                        // 如果当前正停留在该角色的聊天室，直接渲染气泡，不弹窗、不加未读
+                        renderChatHistory(currentChatRoomCharId);
+                    } else {
+                        // 如果不在聊天室，才增加未读并弹窗
+                        let unreadCount = parseInt(ChatDB.getItem(`unread_${currentLoginId}_${targetCharId}`) || '0');
+                        ChatDB.setItem(`unread_${currentLoginId}_${targetCharId}`, (unreadCount + 1).toString());
+                        
+                        showMsgNotification(targetCharId, newMsg.content);
+                        if (typeof renderChatList === 'function') renderChatList();
+                    }
                 }
 
                 if (i < messagesArray.length - 1) {
@@ -6482,12 +6487,18 @@ function showMsgNotification(charId, content) {
         }
     }
 
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const finalBody = `[${timeStr}] ${cleanContent}`;
+
     if (shouldSend && "Notification" in window && Notification.permission === "granted") {
         navigator.serviceWorker.ready.then(function(registration) {
             registration.showNotification(displayName, {
-                body: cleanContent,
+                body: finalBody,
                 icon: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png',
                 badge: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png',
+                image: char.avatarUrl || '',
+                timestamp: Date.now(),
                 vibrate: [200, 100, 200],
                 tag: 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
                 renotify: true
@@ -6495,8 +6506,9 @@ function showMsgNotification(charId, content) {
         }).catch(err => {
             // 降级处理：如果 serviceWorker 不可用，使用普通 Notification
             const sysNotif = new Notification(displayName, {
-                body: cleanContent,
-                icon: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png'
+                body: finalBody,
+                icon: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png',
+                timestamp: Date.now()
             });
             sysNotif.onclick = function() {
                 window.focus();
