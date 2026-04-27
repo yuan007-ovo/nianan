@@ -1395,6 +1395,7 @@ function updateGalleryEmptyState() {
 
 function setDesktopWallpaper(url) {
     document.getElementById('iphone-container').style.backgroundImage = `url(${url})`;
+    if (typeof triggerAutoSave === 'function') triggerAutoSave(); // 新增：触发自动保存
 }
 
 function addWallpaperToGallery(url, isRestore = false) {
@@ -1485,6 +1486,7 @@ function injectFont(url) {
         }
     `;
     document.head.appendChild(style);
+    if (typeof triggerAutoSave === 'function') triggerAutoSave(); // 新增：触发自动保存
 }
 
 // 新增：动态生成 CSS 覆盖核心文本类的字号，实现全局调节
@@ -1781,27 +1783,6 @@ function triggerAutoSave() {
         saveGlobalStateToDB(captureFullState());
     }, 500);
 }
-
-// --- 劫持原有函数以触发自动保存 ---
-const _originalHandleImageUpload = handleImageUpload;
-handleImageUpload = function(element, callback) {
-    _originalHandleImageUpload(element, (imgUrl, targetEl) => {
-        callback(imgUrl, targetEl);
-        triggerAutoSave();
-    });
-};
-
-const _originalSetDesktopWallpaper = setDesktopWallpaper;
-setDesktopWallpaper = function(url) {
-    _originalSetDesktopWallpaper(url);
-    triggerAutoSave();
-};
-
-const _originalInjectFont = injectFont;
-injectFont = function(url) {
-    _originalInjectFont(url);
-    triggerAutoSave();
-};
 
 // 监听文本输入触发保存
 document.addEventListener('input', (e) => {

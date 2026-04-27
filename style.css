@@ -321,8 +321,9 @@ input, textarea, select {
     transform: translateZ(0);
 }
 /* 当状态栏隐藏时，给顶栏额外增加 20px 的高度，让它看起来更舒展 */
-.hide-status-bar .panel-header {
-    padding-top: calc(15px + env(safe-area-inset-top));
+.hide-status-bar .panel-header,
+.hide-status-bar ~ .theme-panel .panel-header {
+    padding-top: calc(15px + env(safe-area-inset-top)) !important;
 }
 .header-dots { display: flex; gap: 6px; }
 .dot { width: 8px; height: 8px; background-color: var(--gray-dark); border-radius: 50%; }
@@ -2581,14 +2582,14 @@ body.ios-standalone .status-bar {
     display: none; /* 兼容旧数据隐藏图标 */
 }
 .chat-desc-img-120 .img-text {
-    font-size: 12px;
+    font-size: 15px;
     color: #666;
     display: -webkit-box;
     -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-all;
-    font-style: italic;
+    font-style: normal;
 }
 
 /* 图片详情查看弹窗样式 */
@@ -4533,12 +4534,13 @@ body.ios-standalone .status-bar {
     gap: 10px; padding: 10px 15px;
 }
 
-/* 桌面小组件 (背景向下渐变透明) */
 .profile-widget {
-    grid-column: 1 / 5; grid-row: 1 / 5; background: transparent;
+    grid-column: 1 / 5; grid-row: 1 / 4; /* 这里改成 1 / 4，压缩整体高度 */
+    background: transparent;
     border-radius: 24px; display: flex; flex-direction: column;
     position: relative; overflow: hidden; height: 100%;
 }
+
 .profile-bg {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background-color: #ffffff; /* 初始白色背景 */
@@ -4548,21 +4550,21 @@ body.ios-standalone .status-bar {
     mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
 }
 /* 已经删除了多余的提示文字代码 */
-
 .profile-avatar {
     width: 70px; height: 70px; border-radius: 50%;
     background-image: url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1000&auto=format&fit=crop'); /* 统一 Char 头像 */
     background-size: cover; background-position: center; border: 3px solid #fff;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: absolute;
-    top: 45%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
+    top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; /* top 改为 50% 完美居中 */
 }
 
 .profile-content {
-    width: 100%; height: 100%; padding: 0 10px 10px;
+    width: 100%; height: 100%; padding: 0 10px  60px; /* 底部留白改为 20px */
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     background: transparent; position: relative; z-index: 1;
     pointer-events: none; /* 让点击穿透到背景 */
 }
+
 .profile-content > * { pointer-events: auto; } /* 恢复内部元素的点击 */
 
 .profile-name { font-size: 16px; font-weight: bold; color: #111; display: flex; align-items: center; gap: 4px; text-shadow: 0 1px 5px rgba(255,255,255,0.8); }
@@ -5696,3 +5698,764 @@ body.ios-standalone .status-bar {
     font-size: 12px;
     color: #ccc;
 }
+/* =========================================
+   查手机 - 备忘录 APP 专属样式
+   ========================================= */
+.phone-notes-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f2f2f7; z-index: 45; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+.phone-notes-app.show { display: flex; transform: translateY(0); }
+
+/* --- 列表页 --- */
+.notes-list-page {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    display: flex; flex-direction: column; transition: transform 0.3s ease;
+}
+
+/* 顶部 Header 包含标题和按钮 */
+.notes-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 44px; padding: 10px 20px;
+}
+.notes-large-title { 
+    font-size: 34px; font-weight: 800; color: #000; 
+    cursor: pointer; transition: opacity 0.2s;
+}
+.notes-large-title:active { opacity: 0.5; }
+
+.notes-gen-btn {
+    width: 36px; height: 36px; border-radius: 50%; background: #d4af37;
+    display: flex; justify-content: center; align-items: center;
+    color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+    transition: transform 0.1s;
+}
+.notes-gen-btn:active { transform: scale(0.9); }
+.notes-gen-btn svg { width: 20px; height: 20px; }
+
+.notes-search-bar {
+    margin: 0 20px 15px; background: rgba(0,0,0,0.06); border-radius: 10px;
+    padding: 8px 10px; display: flex; align-items: center; gap: 8px; color: #8e8e93;
+}
+.notes-search-bar input { border: none; background: transparent; font-size: 17px; outline: none; width: 100%; }
+
+/* --- 可爱文件夹网格 --- */
+.notes-grid {
+    flex: 1; padding: 15px 20px 20px; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px 20px; align-content: start;
+}
+
+.notes-folder-item {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    cursor: pointer; transition: transform 0.1s;
+}
+.notes-folder-item:active { transform: scale(0.95); }
+
+.notes-folder-icon-wrapper {
+    position: relative; width: 100%; aspect-ratio: 1.3 / 1;
+}
+
+/* --- 小熊耳朵 (在最底层) --- */
+.notes-bear-ear {
+    position: absolute; top: -10%; width: 35%; height: 40%;
+    border-radius: 50%; z-index: -1; /* 关键：放在文件夹下面 */
+    border: 1.5px solid rgba(255,255,255,0.3);
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.2);
+}
+.notes-bear-ear.left { left: -5%; }
+.notes-bear-ear.right { right: -5%; }
+
+/* 1. 文件夹后片 (耳朵 Tab) */
+.notes-folder-tab {
+    position: absolute; top: 5%; left: 0; width: 45%; height: 30%;
+    border-radius: 10px 10px 0 0; border: 1.5px solid rgba(255,255,255,0.3); border-bottom: none;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.2); z-index: 0;
+}
+
+/* 2. 夹在中间的纸张 */
+.notes-folder-paper {
+    position: absolute; bottom: 10%; width: 70%; height: 75%;
+    background: #fff; border-radius: 6px 6px 0 0;
+    box-shadow: 0 -2px 6px rgba(0,0,0,0.08); border: 1px solid #eaeaea; z-index: 1;
+}
+.notes-folder-paper-1 {
+    left: 12%; transform: rotate(-8deg) translateY(-15px);
+    background-image: repeating-linear-gradient(to bottom, transparent, transparent 8px, #f0f0f0 8px, #f0f0f0 10px);
+    background-position: 0 10px;
+}
+.notes-folder-paper-2 {
+    right: 10%; transform: rotate(6deg) translateY(-10px); background-color: #fafafa;
+}
+
+/* 3. 文件夹前片 (磨砂玻璃主体) */
+.notes-folder-body {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 75%;
+    backdrop-filter: blur(12px) saturate(120%); -webkit-backdrop-filter: blur(12px) saturate(120%);
+    border-radius: 14px; border: 1.5px solid rgba(255,255,255,0.3);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.05), inset 0 2px 6px rgba(255,255,255,0.2);
+    z-index: 2; display: flex; justify-content: center; align-items: center;
+}
+
+/* --- 两套颜色样式 --- */
+/* 样式 1：浅棕色 (图1) */
+.notes-style-1 .notes-folder-tab, .notes-style-1 .notes-folder-body, .notes-style-1 .notes-bear-ear {
+    background: rgba(184, 122, 61, 0.85);
+}
+/* 样式 2：深棕色 (图2) */
+.notes-style-2 .notes-folder-tab, .notes-style-2 .notes-folder-body, .notes-style-2 .notes-bear-ear {
+    background: rgba(122, 75, 40, 0.85);
+}
+
+/* --- 小熊表情绘制 --- */
+.notes-cute-face {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    transform: translateY(4px); opacity: 0.9;
+}
+.notes-eyes-row { display: flex; gap: 22px; margin-bottom: 2px; }
+.notes-eye { width: 7px; height: 7px; background-color: #3a2010; border-radius: 50%; }
+
+/* 白色的鼻子底色 */
+.notes-mouth-bg {
+    width: 22px; height: 16px; background-color: #fff; border-radius: 10px;
+    display: flex; justify-content: center; align-items: center; position: relative;
+}
+/* 正 Y 形鼻子/嘴巴 (微笑) */
+.notes-mouth-line {
+    position: absolute; background-color: #3a2010; border-radius: 2px;
+}
+.notes-mouth-line.top { width: 4px; height: 4px; top: 3px; border-radius: 50%; }
+.notes-mouth-line.left { width: 2px; height: 5px; top: 6px; left: 8px; transform: rotate(45deg); }
+.notes-mouth-line.right { width: 2px; height: 5px; top: 6px; right: 8px; transform: rotate(-45deg); }
+
+.notes-folder-text-info { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.notes-folder-title { font-size: 14px; font-weight: 700; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.notes-folder-count { font-size: 11px; color: #8e8e93; font-weight: 500; }
+
+/* --- 详情页 --- */
+.note-detail-page {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #fff; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.3s ease;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.05); z-index: 10;
+}
+.note-detail-page.show { transform: translateX(0); }
+
+.note-detail-nav {
+    height: 44px; display: flex; justify-content: space-between; align-items: center;
+    padding: 0 15px; margin-top: 44px;
+}
+.note-nav-btn { font-size: 17px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #d4af37; }
+.note-nav-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.note-detail-actions { display: flex; gap: 20px; color: #d4af37; }
+
+.note-editor {
+    flex: 1; padding: 10px 20px; overflow-y: auto; font-size: 17px; line-height: 1.5; color: #000; outline: none;
+}
+.note-editor-title { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+.note-editor-time { font-size: 13px; color: #8e8e93; text-align: center; margin-bottom: 20px; }
+
+.note-detail-toolbar {
+    height: 83px; background: #f9f9f9; border-top: 1px solid #d1d1d6;
+    display: flex; justify-content: space-around; align-items: flex-start; padding: 15px 20px 0;
+}
+.note-detail-toolbar svg { width: 24px; height: 24px; fill: #8e8e93; cursor: pointer; }
+
+/* =========================================
+   查手机 - Shopping APP 专属样式
+   ========================================= */
+.phone-shop-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f2f2f7; z-index: 45; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+.phone-shop-app.show { display: flex; transform: translateY(0); }
+
+.shop-page {
+    flex: 1; overflow-y: auto; padding-bottom: 100px;
+    -webkit-overflow-scrolling: touch; display: none;
+}
+.shop-page.active { display: block; }
+.shop-page::-webkit-scrollbar { display: none; }
+
+.shop-header {
+    background: rgba(242, 242, 247, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    padding: 44px 20px 10px; position: sticky; top: 0; z-index: 100;
+}
+.shop-large-title {
+    font-size: 28px; font-weight: 800; color: #111; letter-spacing: 0.5px; margin-bottom: 10px; cursor: pointer;
+}
+.shop-gen-btn {
+    width: 32px; height: 32px; border-radius: 50%; background: #ff5000;
+    display: flex; justify-content: center; align-items: center;
+    color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 80, 0, 0.3);
+    transition: transform 0.1s;
+}
+.shop-gen-btn:active { transform: scale(0.9); }
+.shop-gen-btn svg { width: 16px; height: 16px; }
+
+/* 首页 */
+.shop-search-bar {
+    display: flex; align-items: center; background: #e3e3e8; border-radius: 12px; padding: 8px 12px; gap: 8px; margin-bottom: 10px;
+}
+.shop-search-bar svg { width: 18px; height: 18px; stroke: #8e8e93; stroke-width: 2; fill: none; }
+.shop-search-bar input { border: none; background: transparent; font-size: 16px; color: #111; width: 100%; outline: none; }
+
+.shop-banner-scroll {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 15px; padding: 15px 20px; scrollbar-width: none;
+}
+.shop-banner-scroll::-webkit-scrollbar { display: none; }
+.shop-banner-card {
+    min-width: 85%; height: 160px; border-radius: 20px; scroll-snap-align: center;
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    padding: 20px; display: flex; flex-direction: column; justify-content: space-between; color: #fff;
+    box-shadow: 0 8px 20px rgba(255, 154, 158, 0.3);
+}
+.shop-banner-card:nth-child(2) { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); box-shadow: 0 8px 20px rgba(161, 140, 209, 0.3); }
+.shop-banner-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
+.shop-banner-title { font-size: 22px; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.shop-section-title { font-size: 20px; font-weight: 800; color: #111; padding: 10px 20px 15px; }
+.shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 20px 20px; }
+.shop-item-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); cursor: pointer; }
+.shop-item-img { width: 100%; aspect-ratio: 1; background-color: #f0f0f0; background-size: cover; background-position: center; }
+.shop-item-info { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.shop-item-title { font-size: 14px; font-weight: 600; color: #111; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
+.shop-item-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.shop-item-price { font-size: 16px; font-weight: 800; color: #ff5000; }
+.shop-item-price::before { content: '¥'; font-size: 12px; margin-right: 2px; }
+.shop-item-add { width: 24px; height: 24px; background: #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+.shop-item-add svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 2.5; }
+
+/* 购物车 */
+.shop-cart-list { padding: 10px 20px; display: flex; flex-direction: column; gap: 15px; }
+.shop-cart-item { background: #fff; border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+.shop-checkbox { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ccc; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+.shop-checkbox.active { background: #ff5000; border-color: #ff5000; }
+.shop-checkbox.active::after { content: ''; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); margin-bottom: 2px; }
+.shop-cart-img { width: 80px; height: 80px; border-radius: 10px; background-color: #f0f0f0; background-size: cover; background-position: center; flex-shrink: 0; }
+.shop-cart-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; height: 80px; }
+.shop-cart-title { font-size: 14px; font-weight: 600; color: #111; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shop-cart-sku { font-size: 11px; color: #8e8e93; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; align-self: flex-start; margin-top: 4px; }
+.shop-cart-price-row { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+.shop-cart-price { font-size: 16px; font-weight: 800; color: #ff5000; }
+.shop-cart-price::before { content: '¥'; font-size: 12px; margin-right: 2px; }
+.shop-cart-qty { display: flex; align-items: center; border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden; }
+.shop-cart-qty span { width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: bold; cursor: pointer; background: #fff; }
+.shop-cart-qty span:nth-child(2) { width: 30px; border-left: 1px solid #eaeaea; border-right: 1px solid #eaeaea; font-size: 13px; background: #f9f9f9; }
+
+.shop-cart-checkout-bar {
+    position: absolute; bottom: 85px; left: 0; width: 100%; height: 60px;
+    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 90;
+}
+.shop-checkout-left { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #8e8e93; }
+.shop-checkout-right { display: flex; align-items: center; gap: 15px; }
+.shop-checkout-total { font-size: 13px; color: #111; }
+.shop-checkout-total span { font-size: 18px; font-weight: 800; color: #ff5000; }
+.shop-checkout-btn { background: #ff5000; color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; }
+
+/* 我的 */
+.shop-profile-header-card {
+    margin: 10px 20px 20px; padding: 25px 20px; border-radius: 20px;
+    background: linear-gradient(135deg, #2c2c2e 0%, #111 100%); color: #fff;
+    display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+.shop-profile-avatar { width: 64px; height: 64px; border-radius: 50%; background-color: #eee; background-size: cover; background-position: center; border: 2px solid rgba(255,255,255,0.2); }
+.shop-profile-info { display: flex; flex-direction: column; gap: 6px; }
+.shop-profile-name { font-size: 20px; font-weight: 800; }
+.shop-profile-tag { font-size: 11px; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; align-self: flex-start; }
+
+.shop-profile-section { background: #fff; margin: 0 20px 20px; border-radius: 16px; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+.shop-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f5f5f5; padding-bottom: 10px; }
+.shop-section-title { font-size: 15px; font-weight: bold; color: #111; }
+.shop-section-more { font-size: 12px; color: #8e8e93; display: flex; align-items: center; }
+
+.shop-order-grid { display: flex; justify-content: space-between; padding: 5px 10px; }
+.shop-order-item { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; }
+.shop-order-item svg { width: 26px; height: 26px; stroke: #333; stroke-width: 1.5; fill: none; }
+.shop-order-item span { font-size: 12px; color: #555; }
+.shop-order-badge { position: absolute; top: -4px; right: -4px; background: #ff5000; color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 10px; border: 1px solid #fff; }
+
+.shop-menu-list { display: flex; flex-direction: column; }
+.shop-menu-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+.shop-menu-item:last-child { border-bottom: none; padding-bottom: 5px; }
+.shop-menu-item-left { display: flex; align-items: center; gap: 12px; font-size: 15px; color: #111; }
+.shop-menu-item-left svg { width: 20px; height: 20px; stroke: #888; stroke-width: 2; fill: none; }
+.shop-menu-item-right svg { width: 16px; height: 16px; stroke: #ccc; stroke-width: 2; fill: none; }
+
+/* 最近购买列表 */
+.shop-recent-orders { display: flex; flex-direction: column; gap: 15px; }
+.shop-recent-order-item { display: flex; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid #f5f5f5; }
+.shop-recent-order-item:last-child { border-bottom: none; padding-bottom: 0; }
+.shop-recent-img { width: 60px; height: 60px; border-radius: 8px; background-color: #f0f0f0; background-size: cover; background-position: center; flex-shrink: 0; }
+.shop-recent-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.shop-recent-title { font-size: 14px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-recent-status { font-size: 11px; color: #ff5000; }
+.shop-recent-price { font-size: 14px; font-weight: bold; color: #333; }
+
+/* 商品详情全屏页 (仿淘宝) */
+.shop-detail-page {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f2f2f7; z-index: 200; display: none; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.shop-detail-page.show { display: flex; transform: translateX(0); }
+.shop-detail-back-btn {
+    position: absolute; top: 40px; left: 15px; width: 32px; height: 32px;
+    background: rgba(0,0,0,0.4); border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    z-index: 10; cursor: pointer;
+}
+.shop-detail-scroll-content {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 20px;
+}
+.shop-detail-hero-img {
+    width: 100%; aspect-ratio: 1; background: #fff; display: flex; justify-content: center; align-items: center;
+}
+.shop-detail-header-info {
+    background: #fff; padding: 15px 20px; margin-bottom: 0; /* 去除间距 */
+}
+.shop-detail-price-row { margin-bottom: 8px; }
+.shop-detail-price { font-size: 28px; font-weight: 800; color: #ff5000; }
+.shop-detail-title { font-size: 16px; font-weight: bold; color: #111; line-height: 1.4; }
+
+/* 角色内心想法区 */
+.shop-detail-thought-section {
+    background: #fff; padding: 0 20px 15px; margin-bottom: 0; /* 去除间距 */
+}
+.shop-detail-thought-header {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: bold; color: #ff5000; margin-bottom: 8px;
+}
+.shop-detail-thought-content {
+    background: #fff0e6; border-radius: 12px; padding: 12px 15px; font-size: 13px; color: #ff5000; line-height: 1.5; font-style: italic;
+}
+
+/* 买家秀评价区 */
+.shop-detail-review-section {
+    background: #fff; padding: 15px 20px; margin-bottom: 0; border-top: 1px solid #f5f5f5; /* 用细线分割代替间距 */
+}
+.shop-detail-review-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+}
+.shop-detail-review-title { font-size: 15px; font-weight: bold; color: #111; }
+.shop-detail-review-title span { font-size: 13px; color: #888; font-weight: normal; }
+.shop-detail-review-more { font-size: 12px; color: #ff5000; display: flex; align-items: center; gap: 2px; cursor: pointer; }
+.shop-detail-review-list { display: flex; flex-direction: column; gap: 15px; }
+.shop-detail-review-item { display: flex; flex-direction: column; gap: 8px; }
+.shop-detail-review-user { display: flex; align-items: center; gap: 8px; }
+.shop-detail-review-avatar { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
+.shop-detail-review-name { font-size: 12px; color: #555; }
+.shop-detail-review-text { font-size: 13px; color: #333; line-height: 1.5; }
+
+/* 详情描述区 */
+.shop-detail-desc-section {
+    background: #fff; padding: 15px 20px; border-top: 1px solid #f5f5f5; /* 用细线分割代替间距 */
+}
+.shop-detail-section-title { font-size: 14px; color: #888; margin-bottom: 10px; text-align: center; position: relative; }
+.shop-detail-section-title::before, .shop-detail-section-title::after {
+    content: ''; position: absolute; top: 50%; width: 30%; height: 1px; background: #eee;
+}
+.shop-detail-section-title::before { left: 0; }
+.shop-detail-section-title::after { right: 0; }
+.shop-detail-desc { font-size: 14px; color: #333; line-height: 1.6; }
+
+.shop-detail-bottom-bar {
+    height: 60px; background: #fff; border-top: 1px solid #eee; display: flex; align-items: center; padding: 0 10px; padding-bottom: env(safe-area-inset-bottom);
+}
+.shop-detail-icon-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; width: 50px; gap: 2px; color: #666; cursor: pointer;
+}
+.shop-detail-icon-btn span { font-size: 10px; }
+.shop-detail-btn-group {
+    flex: 1; display: flex; gap: 10px; padding: 0 10px;
+}
+.shop-detail-btn {
+    flex: 1; height: 40px; border-radius: 20px; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: bold; color: #fff; cursor: pointer;
+}
+.shop-detail-btn.cart { background: linear-gradient(90deg, #ffd000, #ff9402); }
+.shop-detail-btn.buy { background: linear-gradient(90deg, #ff6034, #ee0a24); }
+
+/* 商城详情弹窗图片描述全显，不省略 */
+.shop-detail-full-text {
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    overflow-y: auto;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: #f4f4f4;
+    /* 隐藏滚动条但允许滚动 */
+    scrollbar-width: none;
+}
+.shop-detail-full-text::-webkit-scrollbar {
+    display: none;
+}
+
+/* 底部导航 */
+.shop-bottom-nav {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
+    background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-around;
+    padding-top: 10px; padding-bottom: 25px; z-index: 100;
+}
+.shop-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8e8e93; cursor: pointer; width: 60px; }
+.shop-nav-item.active { color: #111; }
+.shop-nav-item svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; }
+.shop-nav-item.active svg { fill: currentColor; }
+.shop-nav-item span { font-size: 10px; font-weight: 600; }
+/* =========================================
+   查手机 - 相册与录音 APP 专属样式
+   ========================================= */
+.phone-gallery-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #fcfcfc; z-index: 45; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+.phone-gallery-app.show { display: flex; transform: translateY(0); }
+
+.pg-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 40px 20px 20px; flex-shrink: 0; position: relative;
+}
+.pg-header-text { margin-left: 0; }
+.pg-date { font-size: 12px; color: #888; font-weight: 600; margin-bottom: 2px; }
+.pg-title { font-size: 28px; font-weight: 800; color: #111; letter-spacing: -0.5px; transition: opacity 0.2s; cursor: pointer; }
+.pg-title:active { opacity: 0.5; }
+
+.pg-gen-btn {
+    width: 36px; height: 36px; border-radius: 50%; background: #111;
+    display: flex; justify-content: center; align-items: center;
+    color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s;
+}
+.pg-gen-btn:active { transform: scale(0.9); }
+.pg-gen-btn svg { width: 18px; height: 18px; }
+
+.pg-avatar {
+    width: 40px; height: 40px; border-radius: 50%; background-color: #eee;
+    border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    background-size: cover; background-position: center;
+}
+
+.pg-pages-wrapper { flex: 1; position: relative; overflow: hidden; }
+.pg-page {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    padding: 0 20px; overflow-y: auto; padding-bottom: 100px;
+    display: none; flex-direction: column; animation: pgFadeIn 0.3s ease;
+}
+.pg-page.active { display: flex; }
+.pg-page::-webkit-scrollbar { display: none; }
+@keyframes pgFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.pg-hero-card {
+    width: 100%; border-radius: 24px; padding: 25px 20px; background-color: #2c2c2e; color: #fff;
+    margin-bottom: 25px; position: relative; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.15); flex-shrink: 0;
+}
+.pg-hero-card::before {
+    content: ''; position: absolute; bottom: -50%; right: -20%; width: 150%; height: 150%;
+    background: radial-gradient(circle, transparent 20%, #2c2c2e 20%, #2c2c2e 80%, transparent 80%, transparent),
+                radial-gradient(circle, transparent 20%, #2c2c2e 20%, #2c2c2e 80%, transparent 80%, transparent) 50px 50px,
+                linear-gradient(#3a3a3c 2px, transparent 2px) 0 -1px,
+                linear-gradient(90deg, #3a3a3c 2px, #2c2c2e 2px) -1px 0;
+    background-size: 100px 100px, 100px 100px, 50px 50px, 50px 50px; opacity: 0.15; transform: rotate(15deg); pointer-events: none;
+}
+
+.pg-album-hero-title { font-size: 18px; font-weight: 700; margin-bottom: 15px; position: relative; z-index: 2; }
+.pg-album-stack { display: flex; position: relative; height: 100px; z-index: 2; }
+.pg-album-stack img {
+    width: 100px; height: 100px; border-radius: 16px; object-fit: cover;
+    border: 3px solid #2c2c2e; position: absolute; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+.pg-album-stack img:nth-child(1) { left: 0; z-index: 3; transform: rotate(-5deg); }
+.pg-album-stack img:nth-child(2) { left: 40px; z-index: 2; transform: rotate(2deg); }
+.pg-album-stack img:nth-child(3) { left: 80px; z-index: 1; transform: rotate(8deg); }
+
+.pg-section-title { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 15px; }
+.pg-gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.pg-grid-item { display: flex; flex-direction: column; gap: 8px; }
+.pg-grid-img { width: 100%; aspect-ratio: 1; border-radius: 20px; background-color: #eee; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.pg-grid-info { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; }
+.pg-grid-title { font-size: 13px; font-weight: 600; color: #111; }
+.pg-grid-count { font-size: 12px; color: #aaa; font-weight: 500; }
+
+.pg-record-hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 2; }
+.pg-record-status { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #ff3b30; }
+.pg-record-dot { width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%; animation: pgPulse 1.5s infinite; }
+@keyframes pgPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+.pg-record-time { font-size: 36px; font-weight: 800; letter-spacing: 1px; position: relative; z-index: 2; text-align: center; margin-bottom: 20px; }
+.pg-sound-wave { display: flex; justify-content: center; align-items: center; gap: 4px; height: 40px; position: relative; z-index: 2; }
+.pg-wave-bar { width: 4px; background-color: #fff; border-radius: 2px; animation: pgWaveAnim 1s ease-in-out infinite alternate; }
+.pg-wave-bar:nth-child(1) { height: 10px; animation-delay: 0.0s; } .pg-wave-bar:nth-child(2) { height: 25px; animation-delay: 0.2s; }
+.pg-wave-bar:nth-child(3) { height: 40px; animation-delay: 0.4s; } .pg-wave-bar:nth-child(4) { height: 20px; animation-delay: 0.6s; }
+.pg-wave-bar:nth-child(5) { height: 30px; animation-delay: 0.8s; } .pg-wave-bar:nth-child(6) { height: 15px; animation-delay: 1.0s; }
+@keyframes pgWaveAnim { 0% { transform: scaleY(0.5); opacity: 0.5; } 100% { transform: scaleY(1); opacity: 1; } }
+
+.pg-timeline-container { position: relative; padding-left: 14px; }
+.pg-timeline-line { position: absolute; left: 14px; top: 10px; bottom: 0; width: 2px; background-color: #e5e5e5; z-index: 1; }
+.pg-task-row { display: flex; margin-bottom: 25px; position: relative; z-index: 2; }
+.pg-timeline-node { width: 30px; height: 30px; display: flex; justify-content: center; align-items: flex-start; flex-shrink: 0; margin-left: -14px; margin-right: 15px; background-color: #fcfcfc; padding-top: 5px; }
+.pg-timeline-node::after { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #aaa; background-color: #fcfcfc; }
+.pg-timeline-node.active::after { border-color: #111; background-color: #111; box-shadow: 0 0 0 3px #fcfcfc, 0 0 0 4px #111; }
+.pg-task-card { flex: 1; background-color: transparent; color: #111; padding-top: 0; }
+.pg-task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.pg-task-title { font-size: 16px; font-weight: 700; }
+.pg-task-time { font-size: 12px; font-weight: 600; color: #aaa; }
+.pg-task-desc { font-size: 13px; color: #888; display: flex; align-items: center; gap: 10px; }
+.pg-play-btn-small { width: 24px; height: 24px; background-color: #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.pg-play-btn-small svg { width: 10px; height: 10px; fill: #fff; margin-left: 2px; }
+
+.pg-bottom-nav {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 80px;
+    background: linear-gradient(to top, rgba(252,252,252,1) 70%, rgba(252,252,252,0));
+    display: flex; justify-content: center; align-items: center; gap: 50px; padding-bottom: 15px; z-index: 10;
+}
+.pg-nav-item { color: #ccc; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: color 0.2s; }
+.pg-nav-item.active { color: #111; }
+.pg-nav-item.pg-add-btn { width: 50px; height: 50px; background-color: #2c2c2e; border-radius: 50%; color: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.15); transition: transform 0.1s; }
+.pg-nav-item.pg-add-btn:active { transform: scale(0.95); }
+.pg-nav-item svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.pg-nav-item.active svg { fill: currentColor; }
+/* =========================================
+   查手机 - 相册详情弹窗与录音联动样式
+   ========================================= */
+/* 相册详情弹窗 */
+.pg-album-detail-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    z-index: 200; display: none; justify-content: center; align-items: center;
+    opacity: 0; transition: opacity 0.2s;
+}
+.pg-album-detail-overlay.show { display: flex; opacity: 1; }
+.pg-album-detail-card {
+    width: 85%; background: #fff; border-radius: 24px; overflow: hidden;
+    display: flex; flex-direction: column; position: relative;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    transform: scale(0.9); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pg-album-detail-overlay.show .pg-album-detail-card { transform: scale(1); }
+.pg-album-detail-close {
+    position: absolute; top: 15px; right: 15px; width: 30px; height: 30px;
+    background: rgba(0,0,0,0.5); color: #fff; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 20px; cursor: pointer; z-index: 10; line-height: 1;
+}
+.pg-album-detail-img {
+    width: 100%; aspect-ratio: 1; background: #f4f4f4;
+    display: flex; justify-content: center; align-items: center;
+}
+.pg-album-detail-info { 
+    padding: 20px; display: flex; flex-direction: column; gap: 6px; 
+    text-align: center;
+}
+.pg-album-detail-title { font-size: 18px; font-weight: bold; color: #111; }
+.pg-album-detail-count { font-size: 13px; color: #888; }
+
+/* 录音联动样式 */
+.pg-record-hero-title {
+    font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.8);
+    text-align: center; margin-bottom: 5px; position: relative; z-index: 2;
+}
+/* 默认波浪暂停 */
+.pg-wave-bar { animation-play-state: paused; opacity: 0.3; }
+/* 播放状态波浪运行 */
+.pg-sound-wave.playing .pg-wave-bar { animation-play-state: running; opacity: 1; }
+
+/* 时间轴点击效果 */
+.pg-task-row { cursor: pointer; transition: opacity 0.2s; }
+.pg-task-row:active { opacity: 0.6; }
+/* 录音具体内容文本样式 */
+.pg-record-hero-content {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    margin-bottom: 15px;
+    max-height: 60px;
+    overflow-y: auto;
+    line-height: 1.5;
+    padding: 0 10px;
+    font-style: italic;
+    /* 隐藏滚动条 */
+    scrollbar-width: none;
+}
+.pg-record-hero-content::-webkit-scrollbar {
+    display: none;
+}
+/* 弹窗内图片描述文本，允许滚动，不省略 */
+.pg-album-detail-desc-text {
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    overflow-y: auto;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+/* =========================================
+   查手机 - Browser APP 专属样式
+   ========================================= */
+.phone-browser-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f0f2f5; z-index: 45; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+.phone-browser-app.show { display: flex; transform: translateY(0); }
+
+/* 新增顶部栏样式 */
+.browser-top-bar { display: flex; justify-content: space-between; align-items: center; padding: 44px 15px 10px; background: #fff; border-bottom: 1px solid #f0f0f0; z-index: 10; }
+.browser-top-left { display: flex; align-items: center; gap: 4px; font-size: 16px; font-weight: bold; color: #111; cursor: pointer; }
+.browser-top-right { width: 32px; height: 32px; border-radius: 50%; background: #f4f4f4; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s; }
+.browser-top-right:active { transform: scale(0.9); }
+.browser-top-right svg { width: 16px; height: 16px; stroke: #333; }
+
+.browser-view-container { flex: 1; position: relative; overflow: hidden; background: #fff; padding-top: 0; }
+.browser-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; }
+.browser-view.active { display: flex; }
+
+/* 主页 */
+#browser-view-home { justify-content: flex-start; align-items: center; padding: 20px; background: #fff; }
+.browser-home-logo { margin-bottom: 20px; display: flex; justify-content: center; align-items: center; }
+.browser-home-logo svg { width: 64px; height: 64px; stroke: #1a1a1a; stroke-width: 1.5; fill: none; }
+.browser-home-search-box { width: 100%; background-color: #f2f2f7; height: 50px; border-radius: 25px; display: flex; align-items: center; padding: 0 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative; z-index: 2; }
+
+/* 搜索记录下拉框 */
+.browser-search-history-dropdown { width: 100%; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 10px; padding: 10px 0; max-height: 250px; overflow-y: auto; display: none; z-index: 1; border: 1px solid #eee; }
+.browser-search-history-dropdown.show { display: block; animation: fadeIn 0.2s; }
+.browser-history-item { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f9f9f9; transition: background 0.2s; cursor: pointer; }
+.browser-history-item:active { background: #f5f5f5; }
+.browser-history-text { font-size: 14px; color: #333; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.browser-home-search-box svg { width: 20px; height: 20px; fill: #8e8e93; margin-right: 12px; flex-shrink: 0; }
+.browser-home-search-box input { flex: 1; border: none; background: transparent; outline: none; font-size: 16px; color: #333; }
+
+/* 网页浏览 (论坛帖子) */
+.browser-header { padding: 10px 16px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; }
+.browser-address-bar { flex: 1; background-color: #f2f2f7; height: 36px; border-radius: 18px; display: flex; align-items: center; padding: 0 16px; font-size: 14px; color: #333; }
+.browser-address-bar input { flex: 1; border: none; background: transparent; outline: none; color: #333; }
+.browser-web-content { flex: 1; background-color: #f0f2f5; display: flex; flex-direction: column; }
+
+/* 论坛帖子专属样式 */
+.browser-forum-post { padding: 20px; background: #fff; margin-bottom: 10px; width: 100%; }
+.browser-forum-title { font-size: 20px; font-weight: 900; color: #111; margin-bottom: 15px; line-height: 1.4; }
+.browser-forum-body { font-size: 15px; color: #333; line-height: 1.6; white-space: pre-wrap; }
+.browser-forum-comments-section { background: #fff; padding: 20px; width: 100%; flex: 1; }
+.browser-forum-comments-header { font-size: 16px; font-weight: bold; color: #111; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.browser-forum-comment-item { display: flex; gap: 12px; margin-bottom: 15px; border-bottom: 1px solid #f9f9f9; padding-bottom: 15px; }
+.browser-forum-comment-avatar { width: 36px; height: 36px; border-radius: 50%; background: #eee; flex-shrink: 0; }
+.browser-forum-comment-info { flex: 1; }
+.browser-forum-comment-user { font-size: 13px; font-weight: bold; color: #576b95; margin-bottom: 4px; }
+.browser-forum-comment-text { font-size: 14px; color: #333; line-height: 1.5; }
+
+/* 多标签管理 */
+#browser-view-tabs { background-color: #f2f2f7; padding: 20px; overflow-y: auto; }
+.browser-tabs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.browser-tabs-title { font-size: 24px; font-weight: bold; color: #1a1a1a; }
+.browser-add-tab-btn { width: 32px; height: 32px; background: #007aff; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.browser-add-tab-btn svg { width: 16px; height: 16px; stroke: #fff; stroke-width: 2; }
+.browser-tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.browser-tab-card { background: #fff; border-radius: 12px; height: 160px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; overflow: hidden; display: flex; flex-direction: column; border: 2px solid transparent; }
+.browser-tab-card.active-tab { border-color: #007aff; }
+.browser-tab-card-header { padding: 8px 12px; background: #f8f8f8; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #333; }
+.browser-tab-card-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%; }
+.browser-close-tab { width: 16px; height: 16px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.browser-close-tab svg { width: 12px; height: 12px; stroke: #8e8e93; stroke-width: 2; }
+.browser-tab-card-content { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 12px; color: #ccc; background: #fafafa; }
+
+/* 底部导航栏 */
+.browser-footer { height: 83px; background-color: #f8f8f8; border-top: 1px solid #e5e5ea; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 12px; padding-bottom: 25px; z-index: 10; }
+.browser-nav-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; cursor: pointer; }
+.browser-nav-btn svg { width: 24px; height: 24px; fill: none; stroke: #007aff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.browser-nav-btn.disabled svg { stroke: #c7c7cc; }
+.browser-tab-count { width: 22px; height: 22px; border: 2px solid #007aff; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: bold; color: #007aff; }
+
+/* =========================================
+   查手机 - icity 日记 APP 专属样式
+   ========================================= */
+.phone-icity-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f4f4f5; z-index: 45; display: none; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+.phone-icity-app.show { display: flex; transform: translateY(0); }
+
+.icity-top-bar {
+    background-color: #ffffff;
+    padding: 44px 20px 10px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #eaeaea;
+    flex-shrink: 0;
+}
+.icity-top-left {
+    display: flex; align-items: baseline; cursor: pointer; transition: opacity 0.2s;
+}
+.icity-top-left:active { opacity: 0.5; }
+.icity-top-right {
+    width: 32px; height: 32px; border-radius: 50%; background: #f4f4f4;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; transition: transform 0.1s; color: #333;
+}
+.icity-top-right:active { transform: scale(0.9); }
+.icity-top-right svg { width: 16px; height: 16px; stroke: currentColor; }
+
+.icity-logo {
+    font-size: 36px; font-weight: 900; color: #888;
+    font-family: "Arial Black", Impact, sans-serif;
+    -webkit-text-stroke: 1.5px #888;
+    letter-spacing: 1px; line-height: 1;
+}
+.icity-sub {
+    font-size: 22px; font-weight: bold; color: #888;
+    margin-left: 4px; line-height: 1;
+}
+
+.icity-content-area {
+    flex: 1; overflow-y: auto; padding: 20px 15px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.icity-card {
+    background-color: #ffffff; border: 1px solid #eaeaea;
+    border-radius: 8px; padding: 20px 20px 15px 20px;
+    display: flex; flex-direction: column; box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.icity-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+.icity-avatar {
+    width: 46px; height: 46px; border-radius: 50%; background-color: #333;
+    background-size: cover; background-position: center;
+}
+.icity-user-info { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.icity-bottle-icon { width: 14px; height: 16px; fill: #ccc; }
+.icity-handle { font-size: 15px; color: #aaa; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+
+.icity-text { font-size: 15px; color: #666; line-height: 1.8; text-align: justify; margin-bottom: 15px; }
+
+.icity-time-row { display: flex; align-items: center; gap: 6px; color: #bbb; margin-bottom: 20px; }
+.icity-time-icon { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+.icity-time-text { font-size: 13px; font-weight: 500; letter-spacing: 0.5px; }
+
+.icity-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 15px; }
+.icity-action-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    color: #aaa; font-size: 14px; font-weight: bold; flex: 1; cursor: pointer; transition: color 0.2s;
+}
+.icity-action-btn:active { color: #888; }
+.icity-action-btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
+.icity-divider { width: 1px; height: 14px; background-color: #e0e0e0; }
+.icity-action-more { flex: 0.5; }
+.icity-action-more svg { fill: currentColor; stroke: none; }

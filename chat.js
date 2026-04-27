@@ -398,6 +398,8 @@ function enterWechat(accountId) {
     chatPanel.style.display = 'none';
     wechatPanel.style.display = 'flex';
     renderMePage(); // 渲染个人主页数据
+    renderChatList(); // 新增：进入微信面板时渲染列表
+    renderContactList(); // 新增：进入微信面板时渲染通讯录
 }
 
 // 渲染个人主页 (Me)
@@ -1738,14 +1740,6 @@ function actionMarkRead() {
     closeSessionMenu();
 }
 
-// 5. 劫持发送消息，更新互动数据
-const _originalSendChatMessage_interaction = sendChatMessage;
-sendChatMessage = function() {
-    const charId = currentChatRoomCharId;
-    _originalSendChatMessage_interaction();
-    updateInteractionStats(charId, true);
-};
-
 // 劫持 AI 回复，更新互动数据
 const _originalGenerateApiReply_interaction = generateApiReply;
 generateApiReply = async function() {
@@ -2044,13 +2038,6 @@ function renderContactList() {
     switchContactSubTab('categories'); // 默认打开 Categories
 }
 
-// 确保在进入微信面板时渲染列表
-const originalEnterWechat = enterWechat;
-enterWechat = function(accountId) {
-    originalEnterWechat(accountId);
-    renderChatList();
-    renderContactList();
-};
 // ==========================================
 // 角色库分组与 Create 弹窗逻辑
 // ==========================================
@@ -3134,6 +3121,9 @@ function sendChatMessage() {
         if (document.getElementById('musicChatPanel') && document.getElementById('musicChatPanel').style.display === 'flex' && typeof window.currentListenTogetherCharId !== 'undefined' && window.currentListenTogetherCharId === currentChatRoomCharId) {
             if (typeof renderMusicChatHistory === 'function') renderMusicChatHistory();
         }
+        
+        // 新增：更新互动数据
+        updateInteractionStats(currentChatRoomCharId, true);
     }, 10);
 }
 
@@ -3700,6 +3690,11 @@ function handleMoreAction(action) {
         document.getElementById('sendVoiceModalOverlay').classList.add('show');
     } else if (action === 'transfer') {
         openTransferPanel(); // 新增：打开转账面板
+    } else if (action === 'familycard') {
+        // 新增：亲属卡逻辑
+        switchFcTab('gift');
+        document.getElementById('familyCardLimitInput').value = '';
+        document.getElementById('sendFamilyCardModalOverlay').classList.add('show');
     } else {
         alert(`功能 [${action}] 正在开发中...`);
     }
@@ -4378,6 +4373,26 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
     systemPrompt += `【核心规则】\n`;
     if (timeAware) {
         systemPrompt += `A. 当前时间：现在是 ${currentTimeStr}。你应知晓时间流逝，但除非对话相关，否则不要主动提及。\n`;
+        
+        // 【新增】：计算用户回复/主动找你的时间间隔
+        if (!isProactive && fullHistory.length >= 2) {
+            const currentMsg = fullHistory[fullHistory.length - 1];
+            const prevMsg = fullHistory[fullHistory.length - 2];
+            const timeGapMs = currentMsg.timestamp - prevMsg.timestamp;
+            const gapMinutes = Math.floor(timeGapMs / 60000);
+            
+            if (gapMinutes >= 20) { // 超过20分钟算作有间隔
+                const gapHours = Math.floor(gapMinutes / 60);
+                const gapDays = Math.floor(gapHours / 24);
+                let timeGapStr = gapDays > 0 ? `${gapDays}天${gapHours % 24}小时` : (gapHours > 0 ? `${gapHours}小时${gapMinutes % 60}分钟` : `${gapMinutes}分钟`);
+                
+                if (prevMsg.role === 'char') {
+                    systemPrompt += `   - [时间感知情报]：距离你上一条消息，${userName} 隔了 ${timeGapStr} 才回复你。话题可能已中断，你可以根据人设做出反应。\n`;
+                } else {
+                    systemPrompt += `   - [时间感知情报]：距离上次聊天，${userName} 隔了 ${timeGapStr} 再次主动找你。话题可能已中断，你可以根据人设做出反应。\n`;
+                }
+            }
+        }
     } else {
         systemPrompt += `A. 时间感知：你没有时间观念，不知道现在几点。\n`;
     }
@@ -4437,19 +4452,28 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
             systemPrompt += `- 闲聊水花：你们累计已经发了超过 100 条消息。\n`;
             hasBadge = true;
         }
+        // 【新增】：共鸣唱片感知
+        if (stats.musicStreak >= 3) {
+            systemPrompt += `- 共鸣唱片：你们已经连续一起听歌 ${stats.musicStreak} 天了，音乐品味产生了强烈的共鸣。\n`;
+            hasBadge = true;
+        }
         if (!hasBadge) {
             systemPrompt += `- 目前暂无特殊的互动标识。\n`;
         }
     }
 
-    // 【新增】：关联账号未读消息情报注入
+    // 【深度整合】：关联账号与 Char 自身未读消息的终极情报注入
     const isLinkedEnabled = ChatDB.getItem(`linked_account_enabled_${currentLoginId}`) !== 'false';
     let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
-    let linkedMsgContext = "";
-
+    let allEntities = getAllEntities();
+    
+    let otherLinkedMsgContext = ""; // User 其他小号收到的消息
+    let charUnreadContext = "";     // Char 自己收到的消息
+    
+    // 1. 收集 User 关联账号（小号）的消息
     if (isLinkedEnabled && linkedAccounts.length > 0) {
-        let allEntities = getAllEntities();
         linkedAccounts.forEach(accId => {
+            if (accId === targetCharId) return; // 排除 Char 自己，下面单独处理
             const accEntity = allEntities.find(e => e.id === accId);
             if (!accEntity) return;
             
@@ -4468,18 +4492,51 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                         const targetName = targetEntity ? (targetEntity.netName || targetEntity.name) : '未知';
                         const accName = accEntity.netName || accEntity.name;
                         
-                        linkedMsgContext += `- 你的关联账号【${accName}】收到了来自【${targetName}】的未读消息："${contentText}"\n`;
+                        otherLinkedMsgContext += `- ${userName} 的小号/关联账号【${accName}】收到了来自【${targetName}】的未读消息："${contentText}"\n`;
                     }
                 }
             });
         });
     }
 
-    if (linkedMsgContext) {
-        systemPrompt += `\n【系统机密情报：关联账号消息监控】\n`;
-        systemPrompt += `你感知到 ${userName} 的其他关联账号目前收到了以下未读消息：\n`;
-        systemPrompt += linkedMsgContext;
-        systemPrompt += `(你可以根据你的人设，在聊天中自然地提及这些事，比如提醒 ${userName} 去回消息，或者表现出吃醋、八卦、好奇、质问等符合你人设反应。)\n`;
+    // 2. 收集 Char 自己的未读消息
+    let charSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${targetCharId}`) || '[]');
+    charSessions.forEach(senderId => {
+        if (senderId === currentLoginId) return; // 排除当前正在聊天的 User 大号
+        let unread = parseInt(ChatDB.getItem(`unread_${targetCharId}_${senderId}`) || '0');
+        if (unread > 0) {
+            let history = JSON.parse(ChatDB.getItem(`chat_history_${targetCharId}_${senderId}`) || '[]');
+            if (history.length > 0) {
+                let lastMsg = history[history.length - 1];
+                let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
+                if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                else if (lastMsg.type === 'voice') contentText = '[语音]';
+                
+                const senderEntity = allEntities.find(e => e.id === senderId);
+                const senderName = senderEntity ? (senderEntity.netName || senderEntity.name) : '未知';
+                
+                charUnreadContext += `- 【${senderName}】(ID: ${senderId}) 给你发了 ${unread} 条未读消息，最新一条是："${contentText}"\n`;
+            }
+        }
+    });
+
+    // 3. 组合 Prompt
+    if (otherLinkedMsgContext || charUnreadContext) {
+        systemPrompt += `\n【系统机密情报：消息监控与感知】\n`;
+        
+        if (charUnreadContext) {
+            systemPrompt += `你收到了其他人的未读消息：\n${charUnreadContext}`;
+            // 核心修罗场逻辑：判断 User 是否关联了 Char
+            if (linkedAccounts.includes(targetCharId)) {
+                systemPrompt += `【高能警告】：${userName} 已经通过「关联账号」功能绑定了你！TA 的手机上能实时看到你收到的这些消息！\n`;
+            }
+            systemPrompt += `如果你想查看（已读）某个人的消息，请在 JSON 根节点添加字段 "read_messages": ["对方的ID"]。查看后未读红点会消失。\n`;
+        }
+        
+        if (otherLinkedMsgContext) {
+            systemPrompt += `你感知到 ${userName} 的其他关联账号目前收到了以下未读消息：\n${otherLinkedMsgContext}`;
+            systemPrompt += `(你可以根据你的人设，在聊天中自然地提及这些事，比如提醒 ${userName} 去回消息，或者表现出吃醋、八卦、好奇等反应。)\n`;
+        }
     }
 
     if (activeWbs.bottom.length > 0) systemPrompt += `\n[补充信息]\n${activeWbs.bottom.join('\n')}\n`;
@@ -4662,6 +4719,16 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                 const jsonMatch = replyRaw.match(/\{[\s\S]*\}/s);
                 const jsonStr = jsonMatch ? jsonMatch[0] : replyRaw;
                 parsedData = JSON.parse(jsonStr);
+                
+                // 【新增】：处理 char 自主已读消息
+                if (parsedData.read_messages && Array.isArray(parsedData.read_messages)) {
+                    parsedData.read_messages.forEach(senderId => {
+                        ChatDB.setItem(`unread_${targetCharId}_${senderId}`, '0');
+                    });
+                    // 刷新关联账号列表和聊天列表，消除红点
+                    if (typeof renderLinkedAccounts === 'function') renderLinkedAccounts();
+                    if (typeof renderChatList === 'function') renderChatList();
+                }
                 
                 innerVoice = parsedData.inner_voice || "";
                 messagesArray = parsedData.messages || [];
@@ -5710,18 +5777,6 @@ function switchFcTab(tab) {
     }
 }
 
-const _originalHandleMoreAction = handleMoreAction;
-handleMoreAction = function(action) {
-    if (action === 'familycard') {
-        closeChatPanels();
-        switchFcTab('gift');
-        document.getElementById('familyCardLimitInput').value = '';
-        document.getElementById('sendFamilyCardModalOverlay').classList.add('show');
-    } else {
-        _originalHandleMoreAction(action);
-    }
-};
-
 function closeSendFamilyCardModal() {
     document.getElementById('sendFamilyCardModalOverlay').classList.remove('show');
 }
@@ -6495,8 +6550,8 @@ function showMsgNotification(charId, content) {
         navigator.serviceWorker.ready.then(function(registration) {
             registration.showNotification(displayName, {
                 body: finalBody,
-                icon: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png',
-                badge: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png',
+                icon: char.avatarUrl || 'https://i.postimg.cc/1RGRdT9k/IMG-20260427-175620.png',
+                badge: char.avatarUrl || 'https://i.postimg.cc/1RGRdT9k/IMG-20260427-175620.png',
                 image: char.avatarUrl || '',
                 timestamp: Date.now(),
                 vibrate: [200, 100, 200],
@@ -6507,7 +6562,7 @@ function showMsgNotification(charId, content) {
             // 降级处理：如果 serviceWorker 不可用，使用普通 Notification
             const sysNotif = new Notification(displayName, {
                 body: finalBody,
-                icon: char.avatarUrl || 'https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png',
+                icon: char.avatarUrl || 'https://i.postimg.cc/1RGRdT9k/IMG-20260427-175620.png',
                 timestamp: Date.now()
             });
             sysNotif.onclick = function() {
@@ -7908,6 +7963,14 @@ function addLinkedAccount(id) {
         linkedAccounts.push(id);
         ChatDB.setItem(`linked_accounts_${currentLoginId}`, JSON.stringify(linkedAccounts));
     }
+    
+    // 【新增】：双向关联，把当前账号也加到目标账号的关联列表里
+    let targetLinkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${id}`) || '[]');
+    if (!targetLinkedAccounts.includes(currentLoginId)) {
+        targetLinkedAccounts.push(currentLoginId);
+        ChatDB.setItem(`linked_accounts_${id}`, JSON.stringify(targetLinkedAccounts));
+    }
+
     renderLinkedAccounts();
     if (typeof renderChatList === 'function') renderChatList();
 }
@@ -7918,6 +7981,12 @@ function removeLinkedAccount(id) {
         let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
         linkedAccounts = linkedAccounts.filter(accId => accId !== id);
         ChatDB.setItem(`linked_accounts_${currentLoginId}`, JSON.stringify(linkedAccounts));
+        
+        // 【新增】：双向解除关联，把当前账号从目标账号的关联列表中移除
+        let targetLinkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${id}`) || '[]');
+        targetLinkedAccounts = targetLinkedAccounts.filter(accId => accId !== currentLoginId);
+        ChatDB.setItem(`linked_accounts_${id}`, JSON.stringify(targetLinkedAccounts));
+
         renderLinkedAccounts();
         if (typeof renderChatList === 'function') renderChatList();
     }

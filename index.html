@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>小年糕机</title>
+    <title>溪玉机</title>
     
     <!-- 基本配置 -->
     <!-- 【关键修改】：删除写死的 theme-color，让 iOS 自动穿透显示你的壁纸 -->
@@ -17,8 +17,8 @@
     <!-- 优化视口配置：viewport-fit=cover 是延伸到刘海和底部的核心 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <!-- 图标配置 -->
-    <link rel="apple-touch-icon" href="https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png">
-    <link rel="icon" type="image/jpeg" href="https://img.heliar.top/file/1776863020186_IMG_20260422_210259.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/1RGRdT9k/IMG-20260427-175620.png">
+    <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/1RGRdT9k/IMG-20260427-175620.png">
         
     <!-- Web App Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -374,7 +374,7 @@
             <!-- 顶部信息卡片 -->
             <div class="info-card">
                 <div class="info-card-content">
-                    <div class="info-card-title">恭喜你 你捡到了一个小年糕糕糕...</div>
+                    <div class="info-card-title">欢迎来到溪玉机...</div>
                 </div>
                 <div class="info-card-divider"></div>
                 <div class="info-card-footer">
@@ -2402,8 +2402,6 @@
             
             <!-- 免密支付确认按钮 -->
             <div id="freePayConfirmBtn" onclick="executePayment(true)" style="display: none; width: 80%; background: #111; color: #fff; text-align: center; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px;">确认支付</div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -3495,6 +3493,11 @@
                     <div class="char-sidebar" id="charSidebar">
                         <div class="sidebar-avatar"></div>
                         <div class="sidebar-menu">
+                            <!-- 新增：一键生成按键 -->
+                            <div class="sidebar-item" onclick="generateAllPhoneDataAPI()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                <span style="color: #ff3b30; font-weight: bold;">一键生成</span>
+                            </div>
                             <div class="sidebar-item" onclick="openIconModal()">
                                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                                 <span>换图标</span>
@@ -3538,42 +3541,98 @@
                             <!-- 内容层 (透明底) -->
                             <div class="profile-content">
                                 <div class="profile-name">≮ · · ≯</div>
-                                <div class="profile-handle">@HATABUuuu</div>
-                                <div class="profile-bio">
-                                    ⊹ ˚ . ✟ 湖のほとりに天使が舞い降りた ✟ ⊹ ˚ .
-                                </div>
-                                <div class="profile-location">
-                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                    鄞州区
-                                </div>
                             </div>
                         </div>
 
-                        <!-- 第5行：4个 APP -->
-                        <div class="desktop-app" style="grid-row: 5; grid-column: 1;" onclick="openPhoneWechatLogin()">
+                        <!-- 第4行：4个 APP -->
+                        <div class="desktop-app" style="grid-row: 4; grid-column: 1;" onclick="openPhoneWechatLogin()">
                             <div class="app-icon" id="app-icon-1"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
                             <div class="app-name">WeChat</div>
                         </div>
-                        <div class="desktop-app" style="grid-row: 5; grid-column: 2;" onclick="openPhoneTiktok()">
+                        <div class="desktop-app" style="grid-row: 4; grid-column: 2;" onclick="openPhoneTiktok()">
                             <div class="app-icon" id="app-icon-2"><svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"></path></svg></div>
                             <div class="app-name">TikTok</div>
                         </div>
-                        <div class="desktop-app" style="grid-row: 5; grid-column: 3;">
-                            <div class="app-icon" id="app-icon-3"><svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></div>
-                            <div class="app-name">YouTube</div>
+                        <div class="desktop-app" style="grid-row: 4; grid-column: 3;" onclick="openPhoneNotes()">
+                            <div class="app-icon" id="app-icon-3"><svg viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>
+                            <div class="app-name">备忘录</div>
                         </div>
-                        <div class="desktop-app" style="grid-row: 5; grid-column: 4;">
-                            <div class="app-icon" id="app-icon-4"><svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></div>
-                            <div class="app-name">Twitter</div>
+                        <div class="desktop-app" style="grid-row: 4; grid-column: 4;" onclick="openPhoneShop()">
+                            <div class="app-icon" id="app-icon-4"><svg viewBox="0 0 24 24" fill="none" stroke="#ff5000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></div>
+                            <div class="app-name">商城</div>
                         </div>
                     </div>
 
                     <!-- Dock 栏 (3个 APP) -->
                     <div class="phone-dock">
-                        <div class="app-icon" id="app-icon-5"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div>
-                        <div class="app-icon" id="app-icon-6"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
-                        <div class="app-icon" id="app-icon-7"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg></div>
+                        <div class="app-icon" id="app-icon-5" onclick="openPhoneIcity()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></div>
+                        <div class="app-icon" id="app-icon-6" onclick="openPhoneGallery()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                        <div class="app-icon" id="app-icon-7" onclick="openPhoneBrowser()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
                     </div>
+                    <!-- 新增：icity 日记 APP 主界面 -->
+                    <div class="phone-icity-app" id="phoneIcityApp">
+                        <!-- 白色顶栏 -->
+                        <div class="icity-top-bar">
+                            <div class="icity-top-left" onclick="closePhoneIcity()">
+                                <span class="icity-logo">icity</span><span class="icity-sub">· 我的日记</span>
+                            </div>
+                            <div class="icity-top-right" onclick="generatePhoneIcityAPI()" title="生成日记">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            </div>
+                        </div>
+
+                        <!-- 内容滚动区 -->
+                        <div class="icity-content-area">
+                            <!-- 日记卡片 -->
+                            <div class="icity-card">
+                                <!-- 卡片头部 -->
+                                <div class="icity-card-header">
+                                    <div class="icity-avatar" id="icityAvatar"></div>
+                                    <div class="icity-user-info">
+                                        <svg class="icity-bottle-icon" viewBox="0 0 24 24">
+                                            <path d="M8 2h8v3H8zM7 5h10v2l-2 2v11a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V9L7 7z"/>
+                                        </svg>
+                                        <div class="icity-handle" id="icityHandle">@User</div>
+                                    </div>
+                                </div>
+
+                                <!-- 卡片内容 -->
+                                <div class="icity-text" id="icityText">点击右上角按钮生成日记内容...</div>
+
+                                <!-- 时间戳 -->
+                                <div class="icity-time-row">
+                                    <svg class="icity-time-icon" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    <span class="icity-time-text" id="icityTimeText">----/--/-- --:--</span>
+                                </div>
+
+                                <!-- 底部操作栏 -->
+                                <div class="icity-actions">
+                                    <div class="icity-action-btn">
+                                        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                                        喜欢
+                                    </div>
+                                    <div class="icity-divider"></div>
+                                    <div class="icity-action-btn">
+                                        <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path><line x1="12" y1="7" x2="12" y2="13"></line><line x1="9" y1="10" x2="15" y2="10"></line></svg>
+                                        小纸条
+                                    </div>
+                                    <div class="icity-divider"></div>
+                                    <div class="icity-action-btn">
+                                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        存为图片
+                                    </div>
+                                    <div class="icity-divider"></div>
+                                    <div class="icity-action-btn icity-action-more">
+                                        <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 新增：微信登录界面 (覆盖在屏幕内) -->
                     <div class="phone-wechat-login" id="phoneWechatLogin">
                         <div class="pwl-header">
@@ -3905,6 +3964,436 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 新增：备忘录 APP 主界面 -->
+                    <div class="phone-notes-app" id="phoneNotesApp">
+                        <!-- 列表页 -->
+                        <div class="notes-list-page" id="notesListPage">
+                            
+                            <!-- 顶部 Header：包含大标题和右上角生成按钮 -->
+                            <div class="notes-header">
+                                <div class="notes-large-title" onclick="closePhoneNotes()">备忘录</div>
+                                <div class="notes-gen-btn" onclick="generatePhoneNotesAPI()" title="生成备忘录">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                </div>
+                            </div>
+                            
+                            <div class="notes-search-bar">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                                <input type="text" placeholder="搜索">
+                            </div>
+                            
+                            <!-- 可爱文件夹网格 (动态渲染) -->
+                            <div class="notes-grid" id="phoneNotesGrid">
+                                <div style="grid-column: 1 / 3; text-align: center; color: #888; font-size: 13px; margin-top: 40px;">
+                                    点击右上角按钮生成备忘录内容
+                                </div>
+                                <!-- 静态占位结构将在 JS 中被覆盖，这里保留为空即可 -->
+                            </div>
+                        </div>
+
+                        <!-- 详情页 -->
+                        <div class="note-detail-page" id="noteDetailPage">
+                            <div class="note-detail-nav">
+                                <div class="note-nav-btn" onclick="closeNoteDetail()">
+                                    <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+                                    备忘录
+                                </div>
+                                <div class="note-detail-actions">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                                    <span style="font-size: 17px;">完成</span>
+                                </div>
+                            </div>
+                            
+                            <div class="note-editor" id="noteDetailEditor" contenteditable="true">
+                                <!-- 动态渲染内容 -->
+                            </div>
+                            
+                            <div class="note-detail-toolbar">
+                                <svg viewBox="0 0 24 24"><path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/></svg>
+                                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                                <svg viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm8 16H5v-6h6v6zm0-8H5V5h6v6zm8 8h-6v-6h6v6zm0-8h-6V5h6v6z"/></svg>
+                                <svg viewBox="0 0 24 24"><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 新增：Shopping APP 主界面 -->
+                    <div class="phone-shop-app" id="phoneShopApp">
+                        <!-- 1. 首页 (Home) -->
+                        <div class="shop-page active" id="shop-page-home">
+                            <div class="shop-header">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <div class="shop-large-title" style="margin-bottom: 0;" onclick="closePhoneShop()">Shopping</div>
+                                    <div class="shop-gen-btn" onclick="generatePhoneShopAPI()" title="生成商城数据">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                    </div>
+                                </div>
+                                <div class="shop-search-bar">
+                                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <input type="text" placeholder="搜索好物...">
+                                </div>
+                            </div>
+
+                            <div class="shop-banner-scroll">
+                                <div class="shop-banner-card">
+                                    <div class="shop-banner-tag">New Arrival</div>
+                                    <div class="shop-banner-title">春季新品<br>限时 8 折起</div>
+                                </div>
+                                <div class="shop-banner-card">
+                                    <div class="shop-banner-tag">Special Offer</div>
+                                    <div class="shop-banner-title">数码潮物<br>发现你的热爱</div>
+                                </div>
+                            </div>
+
+                            <div class="shop-section-title">为你推荐</div>
+                            <div class="shop-grid" id="shopHomeGrid">
+                                <div style="grid-column: 1 / 3; text-align: center; color: #888; font-size: 13px; margin-top: 40px;">
+                                    点击右上角按钮生成商城数据
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. 购物车 (Cart) -->
+                        <div class="shop-page" id="shop-page-cart">
+                            <div class="shop-header" style="padding-bottom: 20px;">
+                                <div class="shop-large-title" style="margin: 0;" onclick="closePhoneShop()">购物车</div>
+                            </div>
+                            
+                            <div class="shop-cart-list" id="shopCartList">
+                                <div style="text-align: center; color: #888; font-size: 13px; margin-top: 40px;">
+                                    购物车空空如也，点击首页右上角生成
+                                </div>
+                            </div>
+
+                            <!-- 结算悬浮栏 -->
+                            <div class="shop-cart-checkout-bar">
+                                <div class="shop-checkout-left">
+                                    <div class="shop-checkbox active"></div> 全选
+                                </div>
+                                <div class="shop-checkout-right">
+                                    <div class="shop-checkout-total">合计: <span id="shopCartTotal">¥0.00</span></div>
+                                    <div class="shop-checkout-btn">结算</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. 我的 (Profile) -->
+                        <div class="shop-page" id="shop-page-profile">
+                            <div class="shop-header" style="padding-bottom: 10px; background: transparent; backdrop-filter: none; border: none;">
+                                <div class="shop-large-title" style="margin: 0;" onclick="closePhoneShop()">我的</div>
+                            </div>
+
+                            <div class="shop-profile-header-card">
+                                <div class="shop-profile-avatar" id="shopProfileAvatar"></div>
+                                <div class="shop-profile-info">
+                                    <div class="shop-profile-name" id="shopProfileName">User_Name</div>
+                                    <div class="shop-profile-tag">SVIP 高级会员</div>
+                                </div>
+                            </div>
+
+                            <div class="shop-profile-section">
+                                <div class="shop-section-header">
+                                    <div class="shop-section-title">我的订单</div>
+                                    <div class="shop-section-more">全部订单 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                                </div>
+                                <div class="shop-order-grid">
+                                    <div class="shop-order-item">
+                                        <div class="shop-order-badge">0</div>
+                                        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                                        <span>待付款</span>
+                                    </div>
+                                    <div class="shop-order-item">
+                                        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                        <span>待发货</span>
+                                    </div>
+                                    <div class="shop-order-item">
+                                        <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                                        <span>待收货</span>
+                                    </div>
+                                    <div class="shop-order-item">
+                                        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                        <span>退款/售后</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 新增：最近购买列表 -->
+                            <div class="shop-profile-section">
+                                <div class="shop-section-header">
+                                    <div class="shop-section-title">最近购买</div>
+                                </div>
+                                <div class="shop-recent-orders" id="shopRecentOrdersList">
+                                    <div style="text-align: center; color: #888; font-size: 13px; padding: 10px 0;">
+                                        暂无购买记录
+                                    </div>
+                                </div>
+                            </div>                                           </div>
+
+                        <!-- 底部导航栏 -->
+                        <div class="shop-bottom-nav">
+                            <div class="shop-nav-item active" id="shop-nav-home" onclick="switchShopTab('home')">
+                                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                <span>首页</span>
+                            </div>
+                            <div class="shop-nav-item" id="shop-nav-cart" onclick="switchShopTab('cart')">
+                                <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                                <span>购物车</span>
+                            </div>
+                            <div class="shop-nav-item" id="shop-nav-profile" onclick="switchShopTab('profile')">
+                                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                <span>我的</span>
+                            </div>
+                        </div>
+
+                        <!-- 商品详情全屏页 (仿淘宝) -->
+                        <div class="shop-detail-page" id="shopDetailPage">
+                            <!-- 顶部悬浮返回按钮 -->
+                            <div class="shop-detail-back-btn" onclick="closeShopItemDetail()">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="#fff" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </div>
+                            
+                            <div class="shop-detail-scroll-content">
+                                <!-- 商品大图 -->
+                                <div class="shop-detail-hero-img" id="shopDetailImg"></div>
+                                
+                                <!-- 价格与标题区 -->
+                                <div class="shop-detail-header-info">
+                                    <div class="shop-detail-price-row">
+                                        <span class="shop-detail-price" id="shopDetailPrice">¥0.00</span>
+                                    </div>
+                                    <div class="shop-detail-title" id="shopDetailTitle">商品标题</div>
+                                </div>
+
+                                <!-- 角色内心想法区 (仿种草/心愿单) -->
+                                <div class="shop-detail-thought-section" id="shopDetailThoughtSection" style="display: none;">
+                                    <div class="shop-detail-thought-header">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="#ff5000"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                        <span>Ta 的心声</span>
+                                    </div>
+                                    <div class="shop-detail-thought-content" id="shopDetailThought"></div>
+                                </div>
+
+                                <!-- 买家秀评价区 -->
+                                <div class="shop-detail-review-section" id="shopDetailReviewSection" style="display: none;">
+                                    <div class="shop-detail-review-header">
+                                        <span class="shop-detail-review-title">商品评价 <span id="shopDetailReviewCount">(0)</span></span>
+                                        <span class="shop-detail-review-more">查看全部 <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                                    </div>
+                                    <div class="shop-detail-review-list" id="shopDetailReviews"></div>
+                                </div>
+                                
+                                <!-- 详情描述区 -->
+                                <div class="shop-detail-desc-section">
+                                    <div class="shop-detail-section-title">商品详情</div>
+                                    <div class="shop-detail-desc" id="shopDetailDesc"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 底部操作栏 -->
+                            <div class="shop-detail-bottom-bar">
+                                <div class="shop-detail-icon-btn">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#666" stroke-width="1.5" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                    <span>客服</span>
+                                </div>
+                                <div class="shop-detail-icon-btn">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#666" stroke-width="1.5" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                                    <span>收藏</span>
+                                </div>
+                                <div class="shop-detail-btn-group">
+                                    <div class="shop-detail-btn cart">加入购物车</div>
+                                    <div class="shop-detail-btn buy">立即购买</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 新增：相册与录音 APP 主界面 -->
+                    <div class="phone-gallery-app" id="phoneGalleryApp">
+                        <!-- Header -->
+                        <div class="pg-header">
+                            <div class="pg-header-text">
+                                <div class="pg-date">November 13, 2021</div>
+                                <div class="pg-title" id="pg-header-title" onclick="closePhoneGallery()" title="点击返回">Gallery</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="pg-gen-btn" onclick="generatePhoneGalleryAPI()" title="生成相册与录音">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pages Container -->
+                        <div class="pg-pages-wrapper">
+                            
+                            <!-- Page 1: 相册 (Gallery) -->
+                            <div class="pg-page active" id="pg-page-album">
+                                <div class="pg-hero-card">
+                                    <div class="pg-album-hero-title">Recent Memories</div>
+                                    <div class="pg-album-stack" id="pg-album-stack">
+                                        <div style="font-size: 12px; color: #888; margin-top: 20px;">点击右上角生成相册数据</div>
+                                    </div>
+                                </div>
+
+                                <div class="pg-section-title">Albums</div>
+                                
+                                <div class="pg-gallery-grid" id="pg-gallery-grid">
+                                    <!-- 动态渲染相册 -->
+                                </div>
+                            </div>
+
+                            <!-- Page 2: 录音 (Voice Memos) -->
+                            <div class="pg-page" id="pg-page-record">
+                                <div class="pg-hero-card" id="pg-record-hero-card">
+                                    <div class="pg-record-hero-top">
+                                        <div class="pg-record-status">
+                                            <div class="pg-record-dot" id="pg-record-dot" style="animation: none; opacity: 0.5;"></div>
+                                            <span id="pg-record-status-text">Ready</span>
+                                        </div>
+                                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="#fff" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>
+                                    </div>
+                                    <div class="pg-record-hero-title" id="pg-record-hero-title">Select a record</div>
+                                    <div class="pg-record-time" id="pg-record-hero-time">00:00:00</div>
+                                    <!-- 新增：录音具体内容显示区 -->
+                                    <div class="pg-record-hero-content" id="pg-record-hero-content"></div>
+                                    <div class="pg-sound-wave" id="pg-sound-wave">
+                                        <div class="pg-wave-bar"></div><div class="pg-wave-bar"></div><div class="pg-wave-bar"></div>
+                                        <div class="pg-wave-bar"></div><div class="pg-wave-bar"></div><div class="pg-wave-bar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="pg-section-title">Recent Records</div>
+
+                                <div class="pg-timeline-container" id="pg-timeline-container">
+                                    <div class="pg-timeline-line"></div>
+                                    <div style="font-size: 12px; color: #888; margin-top: 20px; margin-left: 20px;">点击右上角生成录音数据</div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- 新增：相册详情弹窗 -->
+                        <div class="pg-album-detail-overlay" id="pgAlbumDetailOverlay">
+                            <div class="pg-album-detail-card">
+                                <div class="pg-album-detail-close" onclick="closePgAlbumDetail()">×</div>
+                                <div class="pg-album-detail-img">
+                                    <div class="pg-album-detail-desc-text" id="pgAlbumDetailDesc"></div>
+                                </div>
+                                <div class="pg-album-detail-info">
+                                    <div class="pg-album-detail-title" id="pgAlbumDetailTitle">相册标题</div>
+                                    <div class="pg-album-detail-count" id="pgAlbumDetailCount">数量</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Nav -->
+                        <div class="pg-bottom-nav">
+                            <div class="pg-nav-item active" id="pg-nav-album" onclick="switchPgTab('album')">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            </div>
+                            <div class="pg-nav-item pg-add-btn">
+                                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </div>
+                            <div class="pg-nav-item" id="pg-nav-record" onclick="switchPgTab('record')">
+                                <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 新增：Browser APP 主界面 -->
+                    <div class="phone-browser-app" id="phoneBrowserApp">
+                        <!-- 新增顶部栏 -->
+                        <div class="browser-top-bar">
+                            <div class="browser-top-left" onclick="closePhoneBrowser()">
+                                <span style="font-size: 24px; font-weight: 900; letter-spacing: 1px;">浏览器</span>
+                            </div>
+                            <div class="browser-top-right" onclick="generatePhoneBrowserAPI()" title="生成浏览器数据">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            </div>
+                        </div>
+
+                        <div class="browser-view-container">
+                            <!-- 1. 主页视图 -->
+                            <div id="browser-view-home" class="browser-view active" onclick="hideBrowserHistory()">
+                                <div style="width: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 60px;">
+                                    <div class="browser-home-logo">
+                                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    </div>
+                                    <div class="browser-home-search-box" onclick="event.stopPropagation(); showBrowserHistory()">
+                                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                                        <!-- 加上 readonly，点击就不会弹键盘了 -->
+                                        <input type="text" id="browser-home-input" placeholder="点击查看搜索记录" autocomplete="off" readonly style="cursor: pointer;">
+                                    </div>
+                                    <!-- 搜索记录下拉框 -->
+                                    <div class="browser-search-history-dropdown" id="browserSearchHistoryDropdown" onclick="event.stopPropagation()">
+                                        <div style="text-align: center; color: #aaa; font-size: 12px; padding: 20px;">点击右上角生成搜索记录</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 搜索详情与内心想法弹窗 -->
+                            <div class="preset-modal-overlay" id="browserThoughtModalOverlay" style="z-index: 9999;">
+                                <div class="preset-modal" style="width: 280px;">
+                                    <div class="preset-modal-title">搜索详情</div>
+                                    <div style="padding: 15px 20px; display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                                        <div id="browserThoughtKeyword" style="font-size: 15px; font-weight: bold; color: #111; text-align: center; border-bottom: 1px dashed #eee; padding-bottom: 10px;"></div>
+                                        <div id="browserThoughtText" style="font-size: 14px; color: #555; text-align: left; line-height: 1.6;"></div>
+                                    </div>
+                                    <div class="preset-modal-actions">
+                                        <div class="preset-btn-confirm" style="width: 100%; border-left: none;" onclick="closeBrowserThoughtModal()">关闭</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. 网页浏览视图 (论坛帖子形式) -->
+                            <div id="browser-view-web" class="browser-view">
+                                <div class="browser-header">
+                                    <div class="browser-address-bar">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="#8e8e93" style="margin-right: 6px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                        <input type="text" id="browser-web-input" autocomplete="off" readonly>
+                                    </div>
+                                </div>
+                                <div class="browser-web-content" id="browser-forum-content" style="justify-content: flex-start; align-items: flex-start; text-align: left; padding: 0; overflow-y: auto; background: #f0f2f5;">
+                                    <!-- 动态渲染论坛帖子 -->
+                                </div>
+                            </div>
+
+                            <!-- 3. 多标签管理视图 -->
+                            <div id="browser-view-tabs" class="browser-view">
+                                <div class="browser-tabs-header">
+                                    <div class="browser-tabs-title">标签页</div>
+                                    <div class="browser-add-tab-btn" onclick="browserCreateNewTab()">
+                                        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    </div>
+                                </div>
+                                <div class="browser-tab-grid" id="browser-tab-grid">
+                                    <!-- 标签卡片由JS动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 底部导航栏 -->
+                        <div class="browser-footer">
+                            <div class="browser-nav-btn disabled" id="browser-btn-back" onclick="browserGoBack()">
+                                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </div>
+                            <div class="browser-nav-btn disabled" id="browser-btn-forward" onclick="browserGoForward()">
+                                <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </div>
+                            <div class="browser-nav-btn" id="browser-btn-home" onclick="browserGoHome()">
+                                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            </div>
+                            <div class="browser-nav-btn" id="browser-btn-tabs" onclick="browserToggleTabs()">
+                                <div class="browser-tab-count" id="browser-tab-count-display">1</div>
+                            </div>
+                            <!-- 退出按钮 -->
+                            <div class="browser-nav-btn" onclick="closePhoneBrowser()">
+                                <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -3933,7 +4422,10 @@
         <div class="icon-modal">
             <div class="icon-modal-title">选择要更换的图标</div>
             <div class="icon-grid" id="iconModalGrid"></div>
-            <div class="icon-modal-close" onclick="closeIconModal()">取消</div>
+            <div style="display: flex; width: 100%; gap: 10px; margin-top: 20px;">
+                <div class="icon-modal-close" style="flex: 1; margin-top: 0; text-align: center;" onclick="closeIconModal()">取消</div>
+                <div class="icon-modal-close" style="flex: 1; margin-top: 0; text-align: center; background: #111; color: #fff;" onclick="saveIconChanges()">保存</div>
+            </div>
         </div>
     </div>
 

@@ -365,6 +365,12 @@ async function musicPerformSearch() {
     const resultsContainer = document.getElementById('music-search-results');
     const banner = document.getElementById('music-home-banner');
     
+    // 新增：控制取消按钮的显示
+    const cancelBtn = document.getElementById('music-search-cancel');
+    if (cancelBtn) {
+        cancelBtn.style.display = kw ? 'block' : 'none';
+    }
+    
     // 隐藏其他区域，实现全屏搜索
     const navIcons = document.querySelector('.music-nav-icons');
     const playlistGrid = document.querySelector('.music-playlist-grid');
@@ -525,6 +531,8 @@ async function musicPlaySong(id, title, artist, cover) {
                     
                     // 👇 核心注入：每次成功播放新歌，立刻更新系统锁屏状态，确立后台霸权
                     updateSystemMediaSession();
+                    // 【修复】：同步更新悬浮胶囊和迷你播放器的 UI
+                    if (typeof updateCapsuleUI === 'function') updateCapsuleUI();
                     
                 }).catch(e => {
                     if (e.name !== 'AbortError') {
@@ -557,8 +565,10 @@ function renderMyPlaylists() {
         div.className = 'music-pl-item';
         // 【修改】：点击整个歌单进入详情页
         div.onclick = () => openPlaylistDetail(pl.id);
+        // 【修复】：判断如果是本地 base64 图片，就不加网易云的压缩参数
+        const displayCover = pl.cover.startsWith('data:image') ? pl.cover : pl.cover + '?param=100y100';
         div.innerHTML = `
-            <div class="music-pl-cover" style="background-image: url('${pl.cover}?param=100y100');"></div>
+            <div class="music-pl-cover" style="background-image: url('${displayCover}');"></div>
             <div class="music-pl-info">
                 <div class="music-pl-title">${pl.name}</div>
                 <div class="music-pl-sub">歌单 · ${pl.trackCount || 0}首</div>
@@ -1410,6 +1420,11 @@ function toggleMusicPlay() {
     } else {
         audioPlayer.pause();
     }
+    // 新增：写入系统消息
+    if (window.currentListenTogetherCharId) {
+        const state = audioPlayer.paused ? '暂停了播放' : '继续了播放';
+        addMusicSystemMessage(`我 ${state}`);
+    }
 }
 
 function seekMusic(event) {
@@ -1796,6 +1811,8 @@ function playLocalSong(song) {
             
             // 👇 核心注入：本地歌曲播放时同样接管系统锁屏
             updateSystemMediaSession();
+            // 【修复】：同步更新悬浮胶囊和迷你播放器的 UI
+            if (typeof updateCapsuleUI === 'function') updateCapsuleUI();
             
         }).catch(e => console.error(e));
     }
@@ -2228,17 +2245,6 @@ function cancelMusicSearch() {
     document.getElementById('music-search-cancel').style.display = 'none';
     musicPerformSearch(); // 传空值会恢复主页 UI
 }
-
-// 拦截原有的搜索函数，控制取消按钮的显示
-const _originalMusicPerformSearch = musicPerformSearch;
-musicPerformSearch = async function() {
-    const kw = document.getElementById('music-search-input').value.trim();
-    const cancelBtn = document.getElementById('music-search-cancel');
-    if (cancelBtn) {
-        cancelBtn.style.display = kw ? 'block' : 'none';
-    }
-    await _originalMusicPerformSearch();
-};
 // ==========================================
 // 【新增】：一起听歌实时交互与 AI 控制逻辑
 // ==========================================
@@ -2354,6 +2360,11 @@ function playNextMusicSong() {
     
     const nextSong = window.currentPlaylistTracks[nextIndex];
     executePlaySongObj(nextSong);
+    
+    // 新增：写入系统消息
+    if (window.currentListenTogetherCharId) {
+        addMusicSystemMessage(`我 切到了下一首`);
+    }
 }
 
 function playPrevMusicSong() {
@@ -2368,6 +2379,11 @@ function playPrevMusicSong() {
     
     const prevSong = window.currentPlaylistTracks[prevIndex];
     executePlaySongObj(prevSong);
+    
+    // 新增：写入系统消息
+    if (window.currentListenTogetherCharId) {
+        addMusicSystemMessage(`我 切到了上一首`);
+    }
 }
 
 function executePlaySongObj(song) {
@@ -2432,6 +2448,19 @@ window.handleAiMusicControl = async function(controlObj) {
             }
             break;
     }
+    
+    // 新增：写入系统消息
+    if (window.currentListenTogetherCharId) {
+        let actionText = '';
+        switch (action) {
+            case 'play': actionText = '继续了播放'; break;
+            case 'pause': actionText = '暂停了播放'; break;
+            case 'next': actionText = '切到了下一首'; break;
+            case 'prev': actionText = '切到了上一首'; break;
+            case 'play_song': actionText = `点播了歌曲: ${target}`; break;
+        }
+        if (actionText) addMusicSystemMessage(`对方 ${actionText}`);
+    }
 };
 
 async function aiSearchAndPlay(keyword) {
@@ -2485,49 +2514,6 @@ function addMusicSystemMessage(content) {
         renderChatHistory(charId);
     }
 }
-
-// 拦截播放控制，写入系统消息
-const _originalToggleMusicPlay = toggleMusicPlay;
-toggleMusicPlay = function() {
-    _originalToggleMusicPlay();
-    if (window.currentListenTogetherCharId) {
-        const state = audioPlayer.paused ? '暂停了播放' : '继续了播放';
-        addMusicSystemMessage(`我 ${state}`);
-    }
-};
-
-const _originalPlayNextMusicSong = playNextMusicSong;
-playNextMusicSong = function() {
-    _originalPlayNextMusicSong();
-    if (window.currentListenTogetherCharId) {
-        addMusicSystemMessage(`我 切到了下一首`);
-    }
-};
-
-const _originalPlayPrevMusicSong = playPrevMusicSong;
-playPrevMusicSong = function() {
-    _originalPlayPrevMusicSong();
-    if (window.currentListenTogetherCharId) {
-        addMusicSystemMessage(`我 切到了上一首`);
-    }
-};
-
-// 拦截 AI 控制，写入系统消息
-const _originalHandleAiMusicControl = window.handleAiMusicControl;
-window.handleAiMusicControl = async function(controlObj) {
-    await _originalHandleAiMusicControl(controlObj);
-    if (window.currentListenTogetherCharId) {
-        let actionText = '';
-        switch (controlObj.action) {
-            case 'play': actionText = '继续了播放'; break;
-            case 'pause': actionText = '暂停了播放'; break;
-            case 'next': actionText = '切到了下一首'; break;
-            case 'prev': actionText = '切到了上一首'; break;
-            case 'play_song': actionText = `点播了歌曲: ${controlObj.target}`; break;
-        }
-        if (actionText) addMusicSystemMessage(`对方 ${actionText}`);
-    }
-};
 
 // 2. 音乐全屏聊天面板
 function openMusicChatPanel() {
