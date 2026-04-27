@@ -532,6 +532,10 @@ window.addEventListener('ChatDBReady', () => {
     } else {
         if (iphoneContainer) iphoneContainer.classList.remove('hide-status-bar');
     }
+    
+    // 恢复桌面布局顺序并绑定拖拽事件
+    restoreDesktopOrder();
+    bindDesktopLongPress();
 });
 
 // ==========================================
@@ -2086,7 +2090,7 @@ function fillDesktopPlaceholders() {
 
 // 恢复保存的桌面布局顺序（完美恢复小组件和APP）
 function restoreDesktopOrder() {
-    const orderStr = localStorage.getItem('desktop_order');
+    const orderStr = ChatDB.getItem('desktop_order') || localStorage.getItem('desktop_order');
     if (!orderStr) return;
     const order = JSON.parse(orderStr);
     const homeScreen = document.getElementById('homeScreen');
@@ -2335,7 +2339,7 @@ function saveDesktopEdit() {
             order.push({ type: 'placeholder' });
         }
     });
-    localStorage.setItem('desktop_order', JSON.stringify(order));
+    ChatDB.setItem('desktop_order', JSON.stringify(order));
     
     triggerAutoSave();
     alert('桌面布局已保存！');
@@ -2349,7 +2353,6 @@ function deleteDesktopWidget(btn) {
     }
 }
 
-bindDesktopLongPress();
 // ==========================================
 // 导入小组件弹窗逻辑 (支持预览、删除与持久化)
 // ==========================================
@@ -2522,6 +2525,4 @@ function addWidgetToDesktop(type) {
 // 页面加载时初始化渲染
 window.addEventListener('DOMContentLoaded', () => {
     renderImportedWidgets();
-    restoreDesktopOrder();
-    bindDesktopLongPress(); // 新增：恢复桌面后重新绑定拖拽事件
 });
