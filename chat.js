@@ -1347,9 +1347,11 @@ function renderChatList() {
                             let lastMsg = history[history.length - 1];
                             if (lastMsg.timestamp > linkedClearTime && lastMsg.timestamp > linkedSessionData.timestamp) {
                                 linkedSessionData.timestamp = lastMsg.timestamp;
-                                let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
-                                if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                                let safeContent = lastMsg.content || '';
+                                let contentText = safeContent.replace(/<[^>]+>/g, '');
+                                if (lastMsg.type === 'image' || safeContent.includes('<img')) contentText = '[图片]';
                                 else if (lastMsg.type === 'voice') contentText = '[语音]';
+                                else if (lastMsg.type === 'forward_record') contentText = '[聊天记录]';
                                 
                                 const targetEntity = allChars.find(e => e.id === targetId);
                                 const targetName = targetEntity ? (targetEntity.netName || targetEntity.name) : '未知';
@@ -1443,11 +1445,12 @@ function renderChatList() {
         
         if (history.length > 0) {
             const lastMsg = history[history.length - 1];
+            const safeContent = lastMsg.content || '';
             if (lastMsg.type === 'image') lastMsgText = '[图片]';
             else if (lastMsg.type === 'voice') lastMsgText = '[语音]';
             else if (lastMsg.type === 'forward_record') lastMsgText = '[聊天记录]';
-            else if (lastMsg.content.includes('<img')) lastMsgText = '[表情包]';
-            else lastMsgText = lastMsg.content.replace(/<[^>]+>/g, '');
+            else if (safeContent.includes('<img')) lastMsgText = '[表情包]';
+            else lastMsgText = safeContent.replace(/<[^>]+>/g, '');
             
             const date = new Date(lastMsg.timestamp);
             const now = new Date();
@@ -2862,20 +2865,21 @@ function renderChatHistory(charId, keepScroll = false) {
             </div>
         `;
 
-        const isImageMsg = msg.content.includes('chat-img-120') || msg.content.includes('chat-desc-img-120') || (msg.content.trim().startsWith('<img') && msg.content.trim().endsWith('>'));
+        const safeContent = msg.content || '';
+        const isImageMsg = safeContent.includes('chat-img-120') || safeContent.includes('chat-desc-img-120') || (safeContent.trim().startsWith('<img') && safeContent.trim().endsWith('>'));
         const isForwardRecord = msg.type === 'forward_record';
         const isVoiceMsg = msg.type === 'voice';
         const isTransferMsg = msg.type === 'transfer'; 
         const isFamilyCardMsg = msg.type === 'family_card'; 
         const isMusicInviteMsg = msg.type === 'music_invite';
-        const isMusicShareMsg = msg.content.includes('music-share-card'); // 识别分享卡片
+        const isMusicShareMsg = safeContent.includes('music-share-card'); // 识别分享卡片
         const isSystemMsg = msg.type === 'system'; // 识别系统提示
 
         // 如果是系统消息，直接渲染居中灰色小字
         if (isSystemMsg) {
             const sysEl = document.createElement('div');
             sysEl.style.cssText = 'text-align: center; font-size: 11px; color: #aaa; margin: 10px 0; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 10px; align-self: center; max-width: 80%;';
-            sysEl.innerText = msg.content;
+            sysEl.innerText = safeContent;
             fragment.appendChild(sysEl);
             return; // 跳过后续普通气泡渲染
         }
@@ -2887,7 +2891,7 @@ function renderChatHistory(charId, keepScroll = false) {
 
         const checkboxHtml = `<input type="checkbox" class="cr-msg-checkbox" value="${index}">`;
 
-        let bubbleInnerHtml = msg.content;
+        let bubbleInnerHtml = safeContent;
         
         if (isImageMsg && bubbleInnerHtml.includes('<div class="img-icon">🖼️</div>')) {
             bubbleInnerHtml = bubbleInnerHtml.replace(/<div class="img-icon">🖼️<\/div>/g, '');
@@ -3965,11 +3969,23 @@ function openChatSettingsPanel() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
     const me = accounts.find(a => a.id === currentLoginId);
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === currentChatRoomCharId);
+    let allEntities = getAllEntities();
+    const char = allEntities.find(c => c.id === currentChatRoomCharId);
 
     document.getElementById('csUserAvatar').style.backgroundImage = "url('" + (me ? me.avatarUrl : '') + "')";
     document.getElementById('csCharAvatar').style.backgroundImage = "url('" + (char ? char.avatarUrl : '') + "')";
+
+    const charAvatarWrap = document.getElementById('csCharAvatarWrap') || document.getElementById('csCharAvatar').parentElement;
+    charAvatarWrap.onclick = () => {
+        if (char && char.isAccount) {
+            const targetAccount = accounts.find(a => a.id === char.id);
+            if (targetAccount && targetAccount.personaId) {
+                editPersonaById(targetAccount.personaId);
+            }
+        } else {
+            openCharEditPanel(currentChatRoomCharId);
+        }
+    };
 
     // 渲染头像间的互动标识：显示当前佩戴的标识，若无则显示默认火花
     const badgeContainer = document.getElementById('csInteractionBadge');
@@ -4484,9 +4500,11 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                     let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
                     if (history.length > 0) {
                         let lastMsg = history[history.length - 1];
-                        let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
-                        if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                        let safeContent = lastMsg.content || '';
+                        let contentText = safeContent.replace(/<[^>]+>/g, '');
+                        if (lastMsg.type === 'image' || safeContent.includes('<img')) contentText = '[图片]';
                         else if (lastMsg.type === 'voice') contentText = '[语音]';
+                        else if (lastMsg.type === 'forward_record') contentText = '[聊天记录]';
                         
                         const targetEntity = allEntities.find(e => e.id === targetId);
                         const targetName = targetEntity ? (targetEntity.netName || targetEntity.name) : '未知';
@@ -4950,7 +4968,8 @@ function actionEditMessage() {
     const msg = history[currentActionMsgIndex];
     
     if (msg) {
-        let initialText = msg.content || '';
+        let safeContent = msg.content || '';
+        let initialText = safeContent;
         currentEditMsgType = msg.type || 'text';
 
         // 1. 反向解析：把各种花里胡哨的卡片还原成纯文本，方便你手动编辑
@@ -4959,29 +4978,29 @@ function actionEditMessage() {
             initialText = `${msg.amount || 0} ${msg.note || "转账"}`; 
         } else if (msg.type === 'voice') {
             currentEditMsgType = 'voice';
-        } else if (msg.content.includes('music-share-card') || msg.type === 'music_invite' || msg.type === 'family_card') {
+        } else if (safeContent.includes('music-share-card') || msg.type === 'music_invite' || msg.type === 'family_card') {
             // 拦截音乐分享卡片、音乐邀请卡片、亲属卡，将其作为特殊文本处理，防止被误判为表情包
             currentEditMsgType = 'text';
-            initialText = msg.content;
-        } else if (msg.type === 'sticker' || (msg.content.includes('<img') && !msg.content.includes('chat-img-120'))) {
+            initialText = safeContent;
+        } else if (msg.type === 'sticker' || (safeContent.includes('<img') && !safeContent.includes('chat-img-120'))) {
             currentEditMsgType = 'sticker';
-            const match = msg.content.match(/src="([^"]+)"/);
-            initialText = match ? match[1] : msg.content;
-        } else if (msg.content.includes('chat-desc-img-120')) {
+            const match = safeContent.match(/src="([^"]+)"/);
+            initialText = match ? match[1] : safeContent;
+        } else if (safeContent.includes('chat-desc-img-120')) {
             currentEditMsgType = 'image';
-            const match = msg.content.match(/<div class="img-text">([\s\S]*?)<\/div>/);
+            const match = safeContent.match(/<div class="img-text">([\s\S]*?)<\/div>/);
             if (match) initialText = match[1];
-        } else if (msg.type === 'receipt' && msg.content.includes('wc-bubble-location-card')) {
+        } else if (msg.type === 'receipt' && safeContent.includes('wc-bubble-location-card')) {
             currentEditMsgType = 'location';
-            const titleMatch = msg.content.match(/<div class="wc-bubble-location-title">(.*?)<\/div>/);
+            const titleMatch = safeContent.match(/<div class="wc-bubble-location-title">(.*?)<\/div>/);
             initialText = titleMatch ? titleMatch[1] : "未知地点";
         } else {
             // 检测是否为双语翻译格式
-            const hasTranslation = /<span[^>]*>([\s\S]*?)<\/span>/i.test(msg.content);
+            const hasTranslation = /<span[^>]*>([\s\S]*?)<\/span>/i.test(safeContent);
             if (hasTranslation) {
                 currentEditMsgType = 'translate';
-                const originalText = msg.content.replace(/(?:<br\s*\/?>|\n)*\s*<span[^>]*>[\s\S]*?<\/span>\s*/gi, '').replace(/^(<br\s*\/?>|\s)+|(<br\s*\/?>|\s)+$/gi, '');
-                const translatedText = Array.from(msg.content.matchAll(/<span[^>]*>([\s\S]*?)<\/span>/gi)).map(m => m[1]).join('\n');
+                const originalText = safeContent.replace(/(?:<br\s*\/?>|\n)*\s*<span[^>]*>[\s\S]*?<\/span>\s*/gi, '').replace(/^(<br\s*\/?>|\s)+|(<br\s*\/?>|\s)+$/gi, '');
+                const translatedText = Array.from(safeContent.matchAll(/<span[^>]*>([\s\S]*?)<\/span>/gi)).map(m => m[1]).join('\n');
                 initialText = `${originalText}\n${translatedText}`; 
             }
         }
@@ -5201,24 +5220,25 @@ function batchForwardMessages() {
     
     const currentLoginId = ChatDB.getItem('current_login_account');
     let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
-    let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    let allEntities = getAllEntities(); // 核心修复：使用 getAllEntities 包含用户账号
     let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
     
     const listEl = document.getElementById('forwardContactList');
     listEl.innerHTML = '';
     
-    const friends = contacts.map(id => allChars.find(c => c.id === id)).filter(c => c && c.id !== currentChatRoomCharId);
+    const friends = contacts.map(id => allEntities.find(c => c.id === id)).filter(c => c && c.id !== currentChatRoomCharId);
     
     if (friends.length === 0) {
         listEl.innerHTML = '<div style="text-align:center; color:#aaa; font-size:12px;">暂无其他好友可转发</div>';
     } else {
         friends.forEach(f => {
             const displayName = remarks[f.id] || f.netName || f.name;
+            const typeTag = f.isAccount ? '<span style="font-size:10px; background:#eee; color:#888; padding:2px 4px; border-radius:4px; margin-left:4px;">用户</span>' : '';
             const item = document.createElement('div');
             item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px; background: #f9f9f9; border-radius: 10px; cursor: pointer;';
             item.innerHTML = `
                 <div style="width: 36px; height: 36px; border-radius: 8px; background-image: url('${f.avatarUrl || ''}'); background-size: cover; background-color: #eee;"></div>
-                <div style="font-size: 14px; font-weight: bold; color: #333;">${displayName}</div>
+                <div style="font-size: 14px; font-weight: bold; color: #333;">${displayName}${typeTag}</div>
             `;
             item.onclick = () => confirmForward(f.id);
             listEl.appendChild(item);
@@ -5237,23 +5257,22 @@ function confirmForward(targetCharId) {
     let sourceHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
     let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${targetCharId}`) || '[]');
     
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const sourceChar = chars.find(c => c.id === currentChatRoomCharId);
+    let allEntities = getAllEntities(); // 核心修复：使用 getAllEntities
+    const sourceChar = allEntities.find(c => c.id === currentChatRoomCharId);
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
     const me = accounts.find(a => a.id === currentLoginId);
     
     const myName = me ? me.netName : '我';
     const charName = sourceChar ? (sourceChar.netName || sourceChar.name) : '对方';
 
-    // 提取选中的消息
-    let selectedMsgs = selectedMsgIndices.sort((a, b) => a - b).map(idx => sourceHistory[idx]);
+    // 提取选中的消息，过滤掉 undefined 防止报错
+    let selectedMsgs = selectedMsgIndices.sort((a, b) => a - b).map(idx => sourceHistory[idx]).filter(m => m);
     
     // 生成预览行 (前3条)
     let previewLines = selectedMsgs.slice(0, 3).map(msg => {
         const name = msg.role === 'user' ? myName : charName;
-        // 核心修复：确保 msg.content 存在再调用 includes
         let content = msg.content || "";
-        let text = content.includes('<img') ? '[动画表情]' : content;
+        let text = content.includes('<img') ? '[图片/表情]' : content.replace(/<[^>]+>/g, ''); // 简单过滤HTML
         return `${name}: ${text}`;
     });
 
@@ -5261,6 +5280,7 @@ function confirmForward(targetCharId) {
     const forwardMsg = {
         role: 'user',
         type: 'forward_record',
+        content: '[聊天记录]', // 核心修复：增加 content 字段防止 undefined
         forwardTitle: `${myName}和${charName}的聊天记录`,
         forwardPreview: previewLines,
         sourceUserAvatar: me ? me.avatarUrl : '',
@@ -5273,8 +5293,35 @@ function confirmForward(targetCharId) {
         timestamp: Date.now()
     };
     
+    // 1. 存入自己的历史记录
     targetHistory.push(forwardMsg);
     ChatDB.setItem(`chat_history_${currentLoginId}_${targetCharId}`, JSON.stringify(targetHistory));
+    
+    // 更新自己的会话列表
+    let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
+    sessions = sessions.filter(id => id !== targetCharId);
+    sessions.unshift(targetCharId);
+    ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
+
+    // 2. 双向同步：存入对方的历史记录 (如果对方是用户账号，这点至关重要)
+    const targetEntity = allEntities.find(e => e.id === targetCharId);
+    if (targetEntity) {
+        let targetOtherHistory = JSON.parse(ChatDB.getItem(`chat_history_${targetCharId}_${currentLoginId}`) || '[]');
+        let targetOtherMsg = { ...forwardMsg, role: 'char' }; // 在对方视角，是我发给他的
+        targetOtherHistory.push(targetOtherMsg);
+        ChatDB.setItem(`chat_history_${targetCharId}_${currentLoginId}`, JSON.stringify(targetOtherHistory));
+
+        let targetOtherSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${targetCharId}`) || '[]');
+        targetOtherSessions = targetOtherSessions.filter(id => id !== currentLoginId);
+        targetOtherSessions.unshift(currentLoginId);
+        ChatDB.setItem(`chat_sessions_${targetCharId}`, JSON.stringify(targetOtherSessions));
+
+        // 增加对方视角的未读数
+        let unreadCount = parseInt(ChatDB.getItem(`unread_${targetCharId}_${currentLoginId}`) || '0');
+        ChatDB.setItem(`unread_${targetCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+    }
+
+    if (typeof renderChatList === 'function') renderChatList();
     
     alert('转发成功！');
     closeForwardModal();
@@ -5949,14 +5996,17 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
             if (sysMsg) {
                 // 注入亲属卡规则
                 sysMsg.content += `\n【亲属卡互动规则】\n`;
-                sysMsg.content += `1. 赠送亲属卡: {"type":"family_card_gift", "limit":"额度(纯数字)"}\n`;
-                sysMsg.content += `2. 索要亲属卡: {"type":"family_card_request"}\n`;
-                sysMsg.content += `3. 领取亲属卡: {"type":"family_card_action", "action":"received", "content":"感谢的话"}\n`;
+                sysMsg.content += `1. 主动赠送亲属卡: {"type":"family_card_gift", "limit":"额度(纯数字)"}\n`;
+                sysMsg.content += `2. 主动索要亲属卡: {"type":"family_card_request"}\n`;
+                sysMsg.content += `3. 领取对方赠送的亲属卡: {"type":"family_card_action", "action":"received", "content":"感谢的话"}\n`;
+                sysMsg.content += `4. 拒绝对方赠送的亲属卡: {"type":"family_card_action", "action":"rejected", "content":"拒绝的话"}\n`;
+                sysMsg.content += `5. 同意对方索要亲属卡: {"type":"family_card_gift", "limit":"额度(纯数字)"}\n`;
+                sysMsg.content += `6. 拒绝对方索要亲属卡: {"type":"family_card_action", "action":"rejected", "content":"拒绝的话"}\n`;
                 if (hasPendingGift) {
-                    sysMsg.content += `- 对方送了你一张亲属卡，请务必输出 {"type":"family_card_action", "action":"received"} 来领取，并表达符合人设的反应！\n`;
+                    sysMsg.content += `- 对方送了你一张亲属卡，你可以根据人设选择领取(输出 {"type":"family_card_action", "action":"received"}) 或 拒绝(输出 {"type":"family_card_action", "action":"rejected"})！\n`;
                 }
                 if (hasPendingRequest) {
-                    sysMsg.content += `- 对方正在向你索要亲属卡，你可以根据人设选择赠送(输出 family_card_gift) 或 拒绝(直接输出普通文本骂他/拒绝)。\n`;
+                    sysMsg.content += `- 对方正在向你索要亲属卡，你可以根据人设选择同意赠送(输出 {"type":"family_card_gift", "limit":"额度"}) 或 拒绝(输出 {"type":"family_card_action", "action":"rejected"})。\n`;
                 }
 
                 // 注入一起听歌规则
@@ -6132,9 +6182,11 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
             try {
                 let parsed = JSON.parse(msg.content);
                 for (let j = newHistory.length - 1; j >= 0; j--) {
-                    if (newHistory[j].role === 'user' && newHistory[j].type === 'family_card' && newHistory[j].subType === 'gift' && newHistory[j].status === 'pending') {
-                        newHistory[j].status = 'received';
-                        ChatDB.setItem(`family_card_gifted_${currentLoginId}_${targetCharId}`, JSON.stringify({ limit: parseFloat(newHistory[j].limit) }));
+                    if (newHistory[j].role === 'user' && newHistory[j].type === 'family_card' && newHistory[j].status === 'pending') {
+                        newHistory[j].status = parsed.action === 'rejected' ? 'rejected' : 'received';
+                        if (newHistory[j].subType === 'gift' && newHistory[j].status === 'received') {
+                            ChatDB.setItem(`family_card_gifted_${currentLoginId}_${targetCharId}`, JSON.stringify({ limit: parseFloat(newHistory[j].limit) }));
+                        }
                         modified = true; break;
                     }
                 }
@@ -7818,9 +7870,11 @@ function renderLinkedAccounts() {
                     let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
                     if (history.length > 0) {
                         let lastMsg = history[history.length - 1];
-                        let contentText = lastMsg.content.replace(/<[^>]+>/g, '');
-                        if (lastMsg.type === 'image' || lastMsg.content.includes('<img')) contentText = '[图片]';
+                        let safeContent = lastMsg.content || '';
+                        let contentText = safeContent.replace(/<[^>]+>/g, '');
+                        if (lastMsg.type === 'image' || safeContent.includes('<img')) contentText = '[图片]';
                         else if (lastMsg.type === 'voice') contentText = '[语音]';
+                        else if (lastMsg.type === 'forward_record') contentText = '[聊天记录]';
                         
                         const targetEntity = allEntities.find(e => e.id === targetId);
                         
