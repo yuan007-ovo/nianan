@@ -200,8 +200,42 @@ function openIconModal() {
         grid.appendChild(item);
     });
 
+    // 新增：恢复默认图标按键
+    const resetItem = document.createElement('div');
+    resetItem.className = 'icon-modal-item';
+    resetItem.innerHTML = `
+        <div class="icon-modal-preview" style="background: #ffffff; border: none;">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+        </div>
+        <div class="icon-modal-name" style="color: #000000; font-weight: bold;">恢复默认</div>
+    `;
+    resetItem.onclick = () => {
+        if(confirm('确定要恢复所有图标为默认样式吗？')) {
+            resetDefaultIcons();
+        }
+    };
+    grid.appendChild(resetItem);
+
     document.getElementById('iconModalOverlay').classList.add('show');
     document.getElementById('charSidebar').classList.remove('open'); // 收起侧边栏
+}
+
+// 新增：恢复默认图标逻辑
+function resetDefaultIcons() {
+    if (typeof currentChatRoomCharId !== 'undefined' && currentChatRoomCharId) {
+        // 清除数据库中的自定义图标记录
+        ChatDB.removeItem(`phone_check_icons_${currentChatRoomCharId}`);
+        
+        // 恢复桌面和 Dock 上的图标
+        const apps = document.querySelectorAll('.desktop-app .app-icon, .phone-dock .app-icon');
+        apps.forEach(iconEl => {
+            iconEl.style.backgroundImage = '';
+            if (iconEl.hasAttribute('data-default-svg')) {
+                iconEl.innerHTML = iconEl.getAttribute('data-default-svg');
+            }
+        });
+    }
+    closeIconModal();
 }
 
 function closeIconModal() {
@@ -390,6 +424,7 @@ async function generatePwaChatListAPI() {
     prompt += `3. 【最重要：独立社交指令】：你和 NPC 的聊天内容必须是真实的社交日常！例如：吐槽奇葩老板、聊游戏开黑、拼单点外卖、借钱、分享搞笑视频等。**绝对不要在每个群里都聊 ${userName}！你的世界不是只有 ${userName}！**同时要确保 ${userName} 可以隐秘体现在你的社交圈和你的生活里面！\n`;
     prompt += `4. 每个会话的聊天记录**必须不少于 20 条消息**！请充分展开对话细节，展现人物性格和关系，不要敷衍。\n`;
     prompt += `5. 如果是群聊，"other" 角色的消息内容中可以适当带上群成员的名字，例如 "张三: 吃饭了吗？"。\n`;
+    prompt += `6. **极其重要：聊天记录 history 中的 role 字段，只能是 "me"（代表你发出的消息）或 "other"（代表对方发出的消息），绝对不能是其他值！**\n`;
     
     prompt += `\n必须返回合法的 JSON 格式，结构如下：\n`;
     prompt += `[\n`;
@@ -504,8 +539,6 @@ function openPwaChatRoom(index) {
 
 function closePwaChatRoom() {
     document.getElementById('pwaChatRoom').classList.remove('show');
-    document.getElementById('pwaMorePanel').classList.remove('show');
-    pwaExitMultiSelectMode();
 }
 
 function renderPwaChatRoomHistory() {
@@ -519,11 +552,10 @@ function renderPwaChatRoomHistory() {
     chatData.history.forEach((msg, idx) => {
         const wrap = document.createElement('div');
         wrap.className = 'pwa-chat-bubble-wrap';
-        wrap.onclick = () => {
-            if (isPwaMultiSelecting) togglePwaMsgSelection(idx, wrap);
-        };
-
-        const checkboxHtml = `<input type="checkbox" class="pwa-msg-checkbox" value="${idx}">`;
+        
+        wrap.style.display = 'flex';
+        wrap.style.width = '100%';
+        wrap.style.alignItems = 'center';
         
         const bubble = document.createElement('div');
         bubble.className = `pwa-chat-bubble ${msg.role === 'me' ? 'pwa-chat-right' : 'pwa-chat-left'}`;
@@ -531,213 +563,15 @@ function renderPwaChatRoomHistory() {
         
         if (msg.role === 'me') {
             wrap.style.justifyContent = 'flex-end';
-            wrap.innerHTML = checkboxHtml + bubble.outerHTML;
         } else {
             wrap.style.justifyContent = 'flex-start';
-            wrap.innerHTML = checkboxHtml + bubble.outerHTML;
         }
-
+        
+        wrap.appendChild(bubble);
         historyEl.appendChild(wrap);
     });
 
     setTimeout(() => { historyEl.scrollTop = historyEl.scrollHeight; }, 100);
-}
-
-// 发送消息
-function sendPwaChatMessage() {
-    const inputEl = document.getElementById('pwaChatRoomInput');
-    const content = inputEl.value.trim();
-    if (!content || currentPwaChatIndex === null) return;
-
-    let data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || '[]');
-    let chatData = data[currentPwaChatIndex];
-    
-    chatData.history.push({ role: 'me', content: content });
-    chatData.lastMsg = content;
-    
-    // 移到最前面
-    data.splice(currentPwaChatIndex, 1);
-    data.unshift(chatData);
-    currentPwaChatIndex = 0;
-
-    ChatDB.setItem(`pwa_chat_list_${currentChatRoomCharId}`, JSON.stringify(data));
-    
-    // 👇 修改：同步感知逻辑 (明确 User 和 Char 的名字) 👇
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    if (currentLoginId && currentChatRoomCharId) {
-        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-        const account = accounts.find(a => a.id === currentLoginId);
-        const userName = account ? (account.netName || 'User') : 'User';
-
-        let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-        const char = chars.find(c => c.id === currentChatRoomCharId);
-        const charName = char ? char.name : 'Ta';
-
-        let mainHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-        mainHistory.push({
-            role: 'system',
-            type: 'system',
-            content: `[系统内部信息(仅AI可见)：${userName}(User) 偷偷拿到了 ${charName} 的手机，并以 ${charName} 的名义，给联系人 "${chatData.name}" 发送了消息：“${content}”]`,
-            timestamp: Date.now(),
-            hidden: true // 设为隐藏，只有 AI 能看到，保持沉浸感
-        });
-        ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(mainHistory));
-        if (typeof renderChatHistory === 'function') renderChatHistory(currentChatRoomCharId);
-    }
-    // 👆 修改结束 👆
-
-    inputEl.value = '';
-    document.getElementById('pwaMorePanel').classList.remove('show');
-    renderPwaChatRoomHistory();
-    renderPwaChatList();
-}
-
-// API 回复
-async function generatePwaApiReply() {
-    if (currentPwaChatIndex === null) return;
-    
-    const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
-    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) return alert('请先配置 API！');
-
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === currentChatRoomCharId);
-    if (!char) return;
-
-    let data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || '[]');
-    let chatData = data[currentPwaChatIndex];
-    
-    // 构建 Prompt
-    let prompt = `你现在正在扮演角色：${char.name}。\n`;
-    prompt += `你正在使用你的手机微信，和你的联系人 "${chatData.name}" 聊天。\n`;
-    prompt += `以下是你们最近的聊天记录：\n`;
-    
-    const recentHistory = chatData.history.slice(-20).map(m => `${m.role === 'me' ? char.name : chatData.name}: ${m.content}`).join('\n');
-    prompt += recentHistory + '\n\n';
-    
-    prompt += `请以 ${char.name} 的身份，回复 ${chatData.name}。只输出回复的文本内容，不要包含任何其他格式或角色名字前缀。`;
-
-    showToast('正在生成回复...', 'loading');
-
-    try {
-        const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
-            body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.8 })
-        });
-
-        if (response.ok) {
-            const resData = await response.json();
-            let replyRaw = resData.choices[0].message.content.trim();
-            
-            chatData.history.push({ role: 'me', content: replyRaw });
-            chatData.lastMsg = replyRaw;
-            
-            data.splice(currentPwaChatIndex, 1);
-            data.unshift(chatData);
-            currentPwaChatIndex = 0;
-
-            ChatDB.setItem(`pwa_chat_list_${currentChatRoomCharId}`, JSON.stringify(data));
-            renderPwaChatRoomHistory();
-            renderPwaChatList();
-            hideToast();
-        } else {
-            throw new Error('API 请求失败');
-        }
-    } catch (e) {
-        hideToast();
-        alert('生成失败，请检查 API 配置或重试。');
-    }
-}
-
-// 更多面板
-function togglePwaMorePanel() {
-    document.getElementById('pwaMorePanel').classList.toggle('show');
-}
-
-// 重回
-function pwaActionRoll() {
-    document.getElementById('pwaMorePanel').classList.remove('show');
-    if (currentPwaChatIndex === null) return;
-    
-    let data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || '[]');
-    let chatData = data[currentPwaChatIndex];
-    
-    // 找到最后一条 other 的消息
-    let lastOtherIndex = -1;
-    for (let i = chatData.history.length - 1; i >= 0; i--) {
-        if (chatData.history[i].role === 'other') {
-            lastOtherIndex = i;
-            break;
-        }
-    }
-    
-    if (lastOtherIndex !== -1) {
-        chatData.history = chatData.history.slice(0, lastOtherIndex + 1);
-        ChatDB.setItem(`pwa_chat_list_${currentChatRoomCharId}`, JSON.stringify(data));
-        renderPwaChatRoomHistory();
-        generatePwaApiReply();
-    } else {
-        alert('没有找到对方的消息，无法重回！');
-    }
-}
-
-// 多选
-let isPwaMultiSelecting = false;
-let pwaSelectedMsgIndices = [];
-
-function pwaActionMultiSelect() {
-    document.getElementById('pwaMorePanel').classList.remove('show');
-    isPwaMultiSelecting = true;
-    pwaSelectedMsgIndices = [];
-    
-    document.getElementById('pwaChatRoomHistory').classList.add('is-pwa-multi-selecting');
-    document.getElementById('pwaChatRoomBottomBar').style.display = 'none';
-    document.getElementById('pwaMultiActionBar').classList.add('show');
-}
-
-function pwaExitMultiSelectMode() {
-    isPwaMultiSelecting = false;
-    pwaSelectedMsgIndices = [];
-    
-    document.getElementById('pwaChatRoomHistory').classList.remove('is-pwa-multi-selecting');
-    document.getElementById('pwaChatRoomBottomBar').style.display = 'flex';
-    document.getElementById('pwaMultiActionBar').classList.remove('show');
-    
-    document.querySelectorAll('.pwa-msg-checkbox').forEach(cb => cb.checked = false);
-}
-
-function togglePwaMsgSelection(index, wrapEl) {
-    const cb = wrapEl.querySelector('.pwa-msg-checkbox');
-    if (pwaSelectedMsgIndices.includes(index)) {
-        pwaSelectedMsgIndices = pwaSelectedMsgIndices.filter(i => i !== index);
-        cb.checked = false;
-    } else {
-        pwaSelectedMsgIndices.push(index);
-        cb.checked = true;
-    }
-}
-
-function pwaBatchDeleteMessages() {
-    if (pwaSelectedMsgIndices.length === 0) return alert('请先选择消息！');
-    if (confirm(`确定删除选中的 ${pwaSelectedMsgIndices.length} 条消息吗？`)) {
-        let data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || '[]');
-        let chatData = data[currentPwaChatIndex];
-        
-        pwaSelectedMsgIndices.sort((a, b) => b - a).forEach(idx => {
-            chatData.history.splice(idx, 1);
-        });
-        
-        if (chatData.history.length > 0) {
-            chatData.lastMsg = chatData.history[chatData.history.length - 1].content;
-        } else {
-            chatData.lastMsg = '点击开始聊天...';
-        }
-        
-        ChatDB.setItem(`pwa_chat_list_${currentChatRoomCharId}`, JSON.stringify(data));
-        pwaExitMultiSelectMode();
-        renderPwaChatRoomHistory();
-        renderPwaChatList();
-    }
 }
 
 // ==========================================
@@ -754,14 +588,14 @@ function openPhoneTiktok() {
         const avatarUrl = char.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100&auto=format&fit=crop';
         const charName = char.netName || char.name || 'User';
         
-        // 替换头像
-        document.querySelectorAll('.tk-avatar-wrapper, .tk-record-disc-inner, .tk-profile-avatar-large').forEach(el => {
+        // 替换头像 (仅限个人主页，不影响推荐流的路人)
+        document.querySelectorAll('.tk-profile-avatar-large').forEach(el => {
             el.style.backgroundImage = `url('${avatarUrl}')`;
         });
         
-        // 替换名字
-        document.querySelectorAll('.tk-username, .tk-profile-title, .tk-profile-handle').forEach(el => {
-            if (el.classList.contains('tk-profile-handle') || el.classList.contains('tk-username')) {
+        // 替换名字 (仅限个人主页)
+        document.querySelectorAll('.tk-profile-title, .tk-profile-handle').forEach(el => {
+            if (el.classList.contains('tk-profile-handle')) {
                 el.innerText = '@' + charName;
             } else {
                 el.innerText = charName;
@@ -771,6 +605,13 @@ function openPhoneTiktok() {
 
     document.getElementById('phoneTiktokApp').classList.add('show');
     switchTiktokTab('home'); // 默认打开首页
+    
+    // 尝试渲染已有数据
+    renderTkHomeFeed();
+    renderTkSearch();
+    renderTkProfileFeed();
+    renderTkInbox();
+    renderTkDrafts();
 }
 
 function closePhoneTiktok() {
@@ -802,47 +643,88 @@ async function generateTiktokDataAPI() {
     const char = chars.find(c => c.id === currentChatRoomCharId);
     if (!char) return;
 
-    const prompt = `你现在正在扮演角色：${char.name}。
-请生成该角色手机里 TikTok (海外版抖音) 的相关数据。
+    // 1. 获取当前登录用户的面具 (Persona)
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    const account = accounts.find(a => a.id === currentLoginId);
+    let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
+    const persona = personas.find(p => p.id === (account ? account.personaId : null));
+    const userDesc = persona ? persona.persona : '普通用户';
+    const userName = account ? (account.netName || 'User') : 'User';
+
+    // 2. 获取世界书
+    let activeWbs = [];
+    let wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || { entries: [] };
+    let entries = wbData.entries.filter(e => (char.wbEntries && char.wbEntries.includes(e.id)) || e.constant);
+    entries.forEach(entry => {
+        activeWbs.push(entry.content);
+    });
+
+    // 3. 获取最近 30 条聊天记录
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    let recentHistory = history.slice(-30).map(m => `${m.role === 'user' ? userName : char.name}: ${m.content}`).join('\n');
+
+    // 4. 构建 Prompt
+    let prompt = `你现在正在扮演角色：${char.name}。\n`;
+    prompt += `【你的设定】：${char.description || '无'}\n`;
+    prompt += `【用户身份】：用户(${userName})在你的生活中的角色/人设是：${userDesc}。\n`;
+    
+    if (activeWbs.length > 0) {
+        prompt += `【世界书背景】：\n${activeWbs.join('\n')}\n`;
+    }
+    
+    if (recentHistory) {
+        prompt += `【最近的聊天记录参考】：\n${recentHistory}\n`;
+    }
+
+    prompt += `\n请基于你的人设、当前生活状态，以及我们最近的聊天上下文，生成该角色手机里 TikTok (抖音) 的相关数据。
+【核心生成要求】：
+1. 首页推荐 (foryou)：生成 3-5 个视频。必须是其他NPC/路人发布的视频（绝对不能是你自己）。内容必须和最近聊天的话题相关，或者是你潜意识里关注的事物。必须生成 5 条具体的网友评论。
+2. 个人主页 (profile)：生成你自己发布的 4 个视频。这些视频的文案(desc)和画面(videoContent)都必须和 User(${userName}) 有关，表达对 User 的真实情绪，或者是记录 User 相关的事情！必须生成 5 条具体的网友评论。
+3. 抖音热搜 (trending)：生成 4-6 个热搜标题。符合当前世界观或你的兴趣。
+4. 私信消息 (inbox)：生成 2-4 条私信。【重点】：私信内容必须是路人或熟人对你在个人主页 (profile) 发布的视频的反应或搭讪！
+
 必须返回合法的 JSON，结构如下：
 {
-  "foryou": [ // 3-5条推荐视频
+  "foryou": [
     {
-      "author": "作者名",
+      "author": "路人作者名",
+      "videoContent": "视频画面内容的详细描述",
       "desc": "视频文案",
       "likes": "1.2M",
       "commentsCount": "45K",
       "music": "音乐名",
-      "comments": [ // 5条评论
-        {"user": "评论者", "content": "评论内容"}
+      "comments": [
+        {"user": "网友A", "content": "评论内容"}
       ]
     }
   ],
-  "trending": [ // 4-5条抖音热搜
+  "trending": [
     {"title": "热搜标题", "hot": "123W"}
   ],
-  "profile": [ // 3-5条角色自己发布的作品
+  "profile": [
     {
-      "desc": "视频文案",
+      "videoContent": "视频画面内容的详细描述(必须与${userName}有关)",
+      "desc": "视频文案(必须与${userName}有关)",
       "likes": "10K",
       "commentsCount": "120",
-      "comments": [ // 5条评论
-        {"user": "评论者", "content": "评论内容"}
+      "comments": [
+        {"user": "网友B", "content": "评论内容"}
       ]
     }
   ],
-  "inbox": [ // 3-8条私信
+  "inbox": [
     {
-      "name": "发件人",
+      "name": "发件人(路人/熟人)",
       "lastMsg": "最后一条消息",
       "time": "1h",
-      "history": [ // 聊天记录
-        {"role": "other", "content": "消息"},
-        {"role": "me", "content": "回复"}
+      "history": [
+        {"role": "other", "content": "针对你发布的某个视频的搭讪或反应"},
+        {"role": "me", "content": "你的回复"}
       ]
     }
   ],
-  "drafts": [ // 1-3条未发布作品/特效自拍
+  "drafts": [
     {"desc": "草稿描述，例如：尝试了新的猫咪特效，太搞笑了"}
   ]
 }`;
@@ -921,7 +803,12 @@ function renderTkHomeFeed() {
         const item = document.createElement('div');
         item.className = 'tk-video-item';
         item.innerHTML = `
-            <div class="tk-right-actions">
+            <div class="tk-video-content-display" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 20px; z-index: 1; pointer-events: none;">
+                <div style="width: 250px; text-align: center; color: rgba(255,255,255,0.8); font-size: 16px; word-wrap: break-word; white-space: normal;">
+                    [视频画面]<br>${video.videoContent || '无画面描述'}
+                </div>
+            </div>
+            <div class="tk-right-actions" style="z-index: 2;">
                 <div class="tk-avatar-wrapper"><div class="tk-avatar-plus">+</div></div>
                 <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="tk-action-text">${video.likes}</span></div>
                 <div class="tk-action-item" onclick="openTkComments('foryou', ${index})"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg><span class="tk-action-text">${video.commentsCount}</span></div>
@@ -955,10 +842,61 @@ function renderTkProfileFeed() {
     data.profile.forEach((video, index) => {
         const item = document.createElement('div');
         item.className = 'tk-grid-item';
-        item.innerText = video.desc; // 简单显示文案作为封面
-        item.onclick = () => openTkComments('profile', index); // 点击直接看评论
+        item.innerHTML = `<div style="padding: 5px; font-size: 10px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">[画面] ${video.videoContent || video.desc}</div>`;
+        item.onclick = () => openTkProfileVideo(index); // 点击进入视频详情
         grid.appendChild(item);
     });
+}
+
+// 新增：打开个人作品视频详情
+function openTkProfileVideo(index) {
+    const dataStr = ChatDB.getItem(`tiktok_data_${currentChatRoomCharId}`);
+    if (!dataStr) return;
+    const data = JSON.parse(dataStr);
+    const video = data.profile[index];
+    if (!video) return;
+
+    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    const char = chars.find(c => c.id === currentChatRoomCharId);
+    const authorName = char ? (char.netName || char.name) : 'User';
+
+    const container = document.getElementById('tkProfileVideoContainer');
+    container.innerHTML = `
+        <div class="tk-video-item" style="height: 100%; width: 100%;">
+            <div class="tk-video-content-display" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 20px; z-index: 1; pointer-events: none;">
+                <div style="width: 250px; text-align: center; color: rgba(255,255,255,0.8); font-size: 16px; word-wrap: break-word; white-space: normal;">
+                    [视频画面]<br>${video.videoContent || '无画面描述'}
+                </div>
+            </div>
+            <div class="tk-right-actions" style="z-index: 2;">
+                <div class="tk-avatar-wrapper"><div class="tk-avatar-plus">+</div></div>
+                <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="tk-action-text">${video.likes}</span></div>
+                <div class="tk-action-item" onclick="openTkComments('profile', ${index})"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg><span class="tk-action-text">${video.commentsCount}</span></div>
+                <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg><span class="tk-action-text">Save</span></div>
+                <div class="tk-action-item"><svg viewBox="0 0 24 24"><path d="M14 5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11V5z"/></svg><span class="tk-action-text">Share</span></div>
+                <div class="tk-record-disc"><div class="tk-record-disc-inner"></div></div>
+            </div>
+            <div class="tk-bottom-info" style="z-index: 2;">
+                <div class="tk-username">@${authorName}</div>
+                <div class="tk-description">${video.desc}</div>
+                <div class="tk-music-ticker">
+                    <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                    <div class="tk-marquee"><span>Original Sound - ${authorName}</span></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 恢复头像
+    const avatarUrl = char && char.avatarUrl ? char.avatarUrl : 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100&auto=format&fit=crop';
+    const avatarEls = container.querySelectorAll('.tk-avatar-wrapper, .tk-record-disc-inner');
+    avatarEls.forEach(el => el.style.backgroundImage = `url('${avatarUrl}')`);
+
+    document.getElementById('tkProfileVideoModal').classList.add('show');
+}
+
+function closeTkProfileVideo() {
+    document.getElementById('tkProfileVideoModal').classList.remove('show');
 }
 
 // 渲染 Inbox 私信列表
@@ -2460,7 +2398,10 @@ async function generateAllPhoneDataAPI() {
     prompt += `\n请基于你的人设、当前生活状态，以及我们最近的聊天上下文，一次性生成你手机里所有 APP 的数据。
 为了防止数据过大，请严格控制生成数量：
 1. WeChat: 3个会话，每个会话3-5条消息。
-2. TikTok: 2条推荐视频，2条私信。
+2. TikTok: 
+   - foryou(推荐): 2条路人发布的视频(包含videoContent画面描述)。
+   - profile(个人主页): 2条你自己发布的视频，画面(videoContent)和文案必须与 User(${userName}) 相关，表达你的真实情绪。
+   - inbox(私信): 2条私信，内容必须是别人对你主页视频的搭讪或反应。
 3. Notes(备忘录): 2篇日记/备忘。
 4. Shop(商城): 2个首页推荐，1个购物车商品。
 5. Gallery(相册): 2个相册，1条录音。
@@ -2473,8 +2414,9 @@ async function generateAllPhoneDataAPI() {
     { "name": "联系人名", "isUser": false, "type": "friend", "lastMsg": "最后消息", "history": [{"role": "other", "content": "消息"}, {"role": "me", "content": "回复"}] }
   ],
   "tiktok": {
-    "foryou": [{"author": "作者", "desc": "文案", "likes": "10K", "commentsCount": "100", "music": "音乐", "comments": [{"user": "A", "content": "评论"}]}],
-    "inbox": [{"name": "发件人", "lastMsg": "消息", "time": "1h", "history": [{"role": "other", "content": "消息"}]}]
+    "foryou": [{"author": "路人", "videoContent": "画面描述", "desc": "文案", "likes": "10K", "commentsCount": "100", "music": "音乐", "comments": [{"user": "A", "content": "评论"}]}],
+    "profile": [{"videoContent": "画面描述(与User相关)", "desc": "文案", "likes": "10K", "commentsCount": "100", "comments": [{"user": "A", "content": "评论"}]}],
+    "inbox": [{"name": "发件人", "lastMsg": "消息", "time": "1h", "history": [{"role": "other", "content": "搭讪"}]}]
   },
   "notes": [
     { "title": "标题", "count": "1 个备忘录", "detailTitle": "详细标题", "detailTime": "时间", "detailContent": "内容" }
