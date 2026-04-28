@@ -2097,7 +2097,7 @@
             <!-- 头像区域 (双头像圆角) -->
             <div class="cs-journal-header">
                 <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
-                    <div class="cs-journal-avatar-wrap" onclick="openCharEditPanel(currentChatRoomCharId)">
+                    <div class="cs-journal-avatar-wrap" id="csCharAvatarWrap">
                         <div id="csCharAvatar" class="cs-journal-avatar-rounded"></div>
                         <div class="cs-journal-name">(★)<span id="csCharNameLabel">角色名</span></div>
                     </div>
@@ -3656,7 +3656,6 @@
                         <!-- 顶部导航 -->
                         <div class="pwa-header">
                             <div class="pwa-back" onclick="closePhoneWechatApp()" style="font-size: 15px;">
-                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
                                 BACK
                             </div>
                             <div class="pwa-title-box">
@@ -3740,86 +3739,7 @@
                         <div class="pwa-content" style="background: #f5f5f5; padding: 15px; overflow-y: auto; display: flex; flex-direction: column;" id="pwaChatRoomHistory">
                             <!-- 聊天记录 -->
                         </div>
-                        
-                        <!-- 新增底部输入框 -->
-                        <div class="pwa-bottom-bar" id="pwaChatRoomBottomBar">
-                            <div class="pwa-icon-btn" onclick="togglePwaMorePanel()">
-                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                            </div>
-                            <div class="pwa-input-container">
-                                <input type="text" id="pwaChatRoomInput" placeholder="iMessages..." onkeypress="if(event.key==='Enter') sendPwaChatMessage()">
-                            </div>
-                            <div class="pwa-icon-btn" onclick="generatePwaApiReply()">
-                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                            </div>
-                            <div class="pwa-send-btn" onclick="sendPwaChatMessage()">
-                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                            </div>
-                        </div>
-                        
-                        <!-- PWA 更多面板 -->
-                        <div class="pwa-more-panel" id="pwaMorePanel">
-                            <div class="pwa-more-item" onclick="pwaActionRoll()">
-                                <div class="pwa-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></div>
-                                <span>重回</span>
-                            </div>
-                            <div class="pwa-more-item" onclick="pwaActionMultiSelect()">
-                                <div class="pwa-more-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></div>
-                                <span>多选删除</span>
-                            </div>
-                        </div>
-                        
-                        <!-- PWA 多选操作栏 -->
-                        <div class="pwa-multi-action-bar" id="pwaMultiActionBar">
-                            <div class="pwa-multi-btn" onclick="pwaBatchDeleteMessages()">
-                                <svg viewBox="0 0 24 24" stroke="#ff3b30" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                <span style="color: #ff3b30;">删除</span>
-                            </div>
-                            <div class="pwa-multi-btn" onclick="pwaExitMultiSelectMode()">
-                                <svg viewBox="0 0 24 24" stroke="#333" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                <span>取消</span>
-                            </div>
-                        </div>
                     </div>
-
-                    <!-- 生成通讯录设置弹窗 (覆盖在手机屏幕内) -->
-                    <div class="icon-modal-overlay" id="pwaContactGenModal">
-                        <div class="icon-modal" style="width: 260px;">
-                            <div class="icon-modal-title">生成通讯录</div>
-                            <div style="width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 13px; color: #666;">最小生成数量</span>
-                                    <input type="number" id="pwaContactMin" value="5" style="width: 60px; text-align: center; border: 1px solid #eee; border-radius: 8px; padding: 6px; outline: none;">
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 13px; color: #666;">最大生成数量</span>
-                                    <input type="number" id="pwaContactMax" value="15" style="width: 60px; text-align: center; border: 1px solid #eee; border-radius: 8px; padding: 6px; outline: none;">
-                                </div>
-                            </div>
-                            <div style="display: flex; width: 100%; gap: 10px;">
-                                <div class="icon-modal-close" style="flex: 1; margin-top: 0; text-align: center;" onclick="document.getElementById('pwaContactGenModal').classList.remove('show')">取消</div>
-                                <div class="icon-modal-close" style="flex: 1; margin-top: 0; text-align: center; background: #111; color: #fff;" onclick="confirmGenerateContacts()">生成</div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 新增：通讯录点击操作弹窗 -->
-                    <div class="icon-modal-overlay" id="pwaContactActionModal">
-                        <div class="icon-modal" style="width: 280px; padding: 0; overflow: hidden;">
-                            <div style="padding: 25px 20px; display: flex; flex-direction: column; align-items: center; background: #f9f9f9; border-bottom: 1px solid #eee;">
-                                <div id="pcaAvatar" class="ios-msg-avatar" style="width: 64px; height: 64px; font-size: 28px; margin-bottom: 12px;"></div>
-                                <div id="pcaName" style="font-size: 18px; font-weight: bold; color: #111;">Name</div>
-                                <div id="pcaDesc" style="font-size: 12px; color: #888; margin-top: 6px; text-align: center; line-height: 1.4;">Desc</div>
-                            </div>
-                            <div style="display: flex; flex-direction: column; width: 100%;">
-                                <div class="pca-action-btn" onclick="chatWithContact()">发消息</div>
-                                <div class="pca-action-btn" onclick="editContactDesc()">编辑简介</div>
-                                <div class="pca-action-btn" onclick="shareContact()">分享名片</div>
-                                <div class="pca-action-btn" style="color: #ff3b30;" onclick="deleteContact()">删除联系人</div>
-                                <div class="pca-action-btn" style="background: #f4f4f4; border-top: 6px solid #eee; color: #888;" onclick="closeContactActionModal()">取消</div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- 新增：TikTok 主界面 -->
                     <div class="phone-tiktok-app" id="phoneTiktokApp">
                         <div class="tk-pages-container">
@@ -3920,6 +3840,18 @@
                                 <div style="width: 24px;"></div>
                             </div>
                             <div class="tk-chat-history" id="tkChatHistory"></div>
+                        </div>
+
+                        <!-- 新增：个人作品详情弹窗 -->
+                        <div class="tk-profile-video-modal" id="tkProfileVideoModal">
+                            <div class="tk-pvm-header">
+                                <div class="tk-pvm-back" onclick="closeTkProfileVideo()">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="#fff" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                </div>
+                            </div>
+                            <div class="tk-pvm-content" id="tkProfileVideoContainer">
+                                <!-- 动态渲染单个视频 -->
+                            </div>
                         </div>
 
                          <!-- 5. Camera 页面 (全屏覆盖) -->
