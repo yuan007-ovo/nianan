@@ -7707,6 +7707,43 @@ function copyApiErrorText() {
     }
 }
 
+// 通用文本复制函数
+function copyTextToClipboard(text) {
+    if (!text || text === '未生成') {
+        return alert('暂无内容可复制');
+    }
+    
+    // 优先使用现代 Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('复制成功', 'success', 1500);
+        }).catch(err => {
+            fallbackCopyTextToClipboard(text);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
+
+// 兼容旧版浏览器的复制方案
+function fallbackCopyTextToClipboard(text) {
+    let textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showToast('复制成功', 'success', 1500);
+    } catch (err) {
+        alert('复制失败，请手动长按复制');
+    }
+    textArea.remove();
+}
+
 // ==========================================
 // 心声历史记录逻辑
 // ==========================================
