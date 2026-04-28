@@ -648,6 +648,87 @@ if (sbToggle) {
 }
 
 // ==========================================
+// 后台保活逻辑 (无声音频 + WakeLock)
+// ==========================================
+let keepAliveAudio = null;
+let wakeLock = null;
+
+function initKeepAlive() {
+    if (!keepAliveAudio) {
+        // 极短的无声 WAV 音频 Base64
+        keepAliveAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+        keepAliveAudio.loop = true;
+        keepAliveAudio.volume = 0.01;
+        // 允许在后台和静音模式下播放
+        keepAliveAudio.setAttribute('playsinline', '');
+        keepAliveAudio.setAttribute('webkit-playsinline', '');
+    }
+}
+
+async function toggleKeepAlive(enable) {
+    initKeepAlive();
+    if (enable) {
+        try {
+            await keepAliveAudio.play();
+            console.log("✅ 后台保活音频已启动");
+        } catch (e) {
+            console.log("⚠️ 保活音频播放失败，等待用户交互后启动", e);
+        }
+        
+        // 尝试请求 WakeLock (保持屏幕常亮，防止休眠杀后台)
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log("✅ WakeLock 已激活");
+            } catch (err) {
+                console.log("⚠️ WakeLock 请求失败:", err);
+            }
+        }
+        ChatDB.setItem('app_keep_alive', 'true');
+    } else {
+        keepAliveAudio.pause();
+        if (wakeLock !== null) {
+            wakeLock.release().then(() => { wakeLock = null; });
+        }
+        ChatDB.setItem('app_keep_alive', 'false');
+        console.log("❌ 后台保活已关闭");
+    }
+}
+
+// 监听可见性变化，如果开启了保活，在重新可见时重新请求 WakeLock
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    }
+});
+
+// 页面加载时初始化开关状态
+window.addEventListener('ChatDBReady', () => {
+    const keepAliveToggle = document.getElementById('keepAliveToggle');
+    const isKeepAlive = ChatDB.getItem('app_keep_alive') === 'true';
+    
+    if (keepAliveToggle) {
+        keepAliveToggle.checked = isKeepAlive;
+        keepAliveToggle.addEventListener('change', (e) => {
+            toggleKeepAlive(e.target.checked);
+        });
+    }
+
+    // 如果开启了保活，由于浏览器限制自动播放，需要在第一次用户点击屏幕时启动
+    if (isKeepAlive) {
+        const startKeepAlive = () => {
+            toggleKeepAlive(true);
+            document.removeEventListener('click', startKeepAlive);
+            document.removeEventListener('touchstart', startKeepAlive);
+        };
+        document.addEventListener('click', startKeepAlive);
+        document.addEventListener('touchstart', startKeepAlive);
+    }
+});
+
+// ==========================================
 // API 面板与数据持久化逻辑
 // ==========================================
 const apiPanel = document.getElementById('apiPanel');

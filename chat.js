@@ -2,11 +2,13 @@
 // Chat 模块专属逻辑 (chat.js)
 // ==========================================
 
-// 获取所有实体 (包含角色和用户账号)
+// 获取所有实体 (包含角色、用户账号和NPC)
 function getAllEntities() {
     let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    let npcs = JSON.parse(ChatDB.getItem('chat_npcs') || '[]'); // 核心修改：引入独立的 NPC 库
     let mappedAccounts = accounts.map(a => ({
+        ...a, // 核心修复：保留账号的所有原始属性（包含 password, payPassword, personaId 等）
         id: a.id,
         name: a.netName || '未命名',
         netName: a.netName || '未命名',
@@ -16,7 +18,7 @@ function getAllEntities() {
         contactGroup: '默认分组',
         isAccount: true
     }));
-    return chars.concat(mappedAccounts);
+    return chars.concat(mappedAccounts).concat(npcs);
 }
 
 // --- 面板开关逻辑 ---
@@ -30,9 +32,9 @@ function openChatPanel() {
     let isValidLogin = false;
 
     if (currentLoginId) {
-        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-        // 严格校验：不仅要有登录状态，该账号还必须真实存在于数据库中
-        if (accounts.some(a => a.id === currentLoginId)) {
+        let allEntities = getAllEntities();
+        // 严格校验：不仅要有登录状态，该账号/角色还必须真实存在于数据库中
+        if (allEntities.some(a => a.id === currentLoginId)) {
             isValidLogin = true;
         } else {
             // 账号已被删除，清理无效的幽灵登录状态
@@ -92,9 +94,15 @@ function editCurrentPersona() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
     
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === currentLoginId);
     if (!account) return;
+
+    // 核心修改：如果是 Char 登录，直接打开角色编辑面板
+    if (!account.isAccount) {
+        openCharEditPanel(currentLoginId);
+        return;
+    }
 
     let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
     const persona = personas.find(p => p.id === account.personaId);
@@ -214,6 +222,61 @@ function switchChatMode(mode) {
         chatRegisterContainer.style.display = 'flex';
         chatHeaderTitle.innerHTML = 'Sign Up';
     }
+}
+// ==========================================
+// Char 感知系统：记录 User 操作 Char 手机的行为
+// ==========================================
+function injectCharPerception(actionType, detail, targetId = null) {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let allEntities = getAllEntities();
+    const currentEntity = allEntities.find(e => e.id === currentLoginId);
+    
+    // 只有当当前登录的是 Char 时才触发感知 (说明是 User 在代打)
+    if (!currentEntity || currentEntity.isAccount) return;
+
+    // 找到主 User 账号 (假设系统里至少有一个真实用户账号)
+    const mainUser = allEntities.find(e => e.isAccount);
+    if (!mainUser) return;
+
+    let targetName = '';
+    if (targetId) {
+        const targetEntity = allEntities.find(e => e.id === targetId);
+        targetName = targetEntity ? (targetEntity.netName || targetEntity.name) : '未知';
+    }
+
+    let actionDesc = '';
+    if (actionType === 'send_msg') actionDesc = `给 ${targetName} 发送了消息：“${detail}”`;
+    else if (actionType === 'send_img') actionDesc = `给 ${targetName} 发送了一张图片`;
+    else if (actionType === 'send_voice') actionDesc = `给 ${targetName} 发送了一条语音：“${detail}”`;
+    else if (actionType === 'send_emoji') actionDesc = `给 ${targetName} 发送了一个表情包：[${detail}]`;
+    else if (actionType === 'send_family_card') actionDesc = `给 ${targetName} 发送/索要了亲属卡`;
+    else if (actionType === 'send_transfer') actionDesc = `给 ${targetName} 转账了 ¥${detail}`;
+    else if (actionType === 'delete_friend') actionDesc = `在通讯录中删除了好友 ${targetName}`;
+    else if (actionType === 'post_moment') actionDesc = `发布了一条朋友圈动态：“${detail}”`;
+    else if (actionType === 'delete_moment') actionDesc = `删除了一条朋友圈动态`;
+    else if (actionType === 'comment_moment') actionDesc = `在朋友圈发表了评论：“${detail}”`;
+    else if (actionType === 'change_name') actionDesc = `修改了自己的网名为：“${detail}”`;
+    else if (actionType === 'change_sign') actionDesc = `修改了自己的个性签名为：“${detail}”`;
+
+    // 注入到 Char 和 主 User 的聊天记录中 (作为隐藏系统消息)
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${mainUser.id}`) || '[]');
+    history.push({
+        role: 'user', type: 'hidden_system',
+        content: `[系统感知/上帝视角：${mainUser.netName || 'User'} 刚刚拿你的手机进行了操作：${actionDesc}。请在接下来的聊天中，根据你的人设对此做出反应。]`,
+        timestamp: Date.now()
+    });
+    ChatDB.setItem(`chat_history_${currentLoginId}_${mainUser.id}`, JSON.stringify(history));
+    
+    // 双向同步给 User (让 User 也能在后台数据里看到)
+    let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${mainUser.id}_${currentLoginId}`) || '[]');
+    targetHistory.push({
+        role: 'char', type: 'hidden_system',
+        content: `[系统感知/上帝视角：你刚刚操作了 ${currentEntity.name} 的手机，执行了：${actionDesc}。对方可能已经察觉到了。]`,
+        timestamp: Date.now()
+    });
+    ChatDB.setItem(`chat_history_${mainUser.id}_${currentLoginId}`, JSON.stringify(targetHistory));
 }
 
 // ==========================================
@@ -407,12 +470,13 @@ function renderMePage() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
     
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
+    // 核心修改：从所有实体中获取当前登录人信息（兼容 Char 登录）
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === currentLoginId);
     if (!account) return;
 
     // 填充网名
-    document.getElementById('meName').innerText = account.netName || '未命名';
+    document.getElementById('meName').innerText = account.netName || account.name || '未命名';
     const meNameTop = document.getElementById('meNameTop');
     if(meNameTop) meNameTop.innerText = account.netName || '未命名';
     
@@ -508,6 +572,10 @@ function editMeName() {
         document.getElementById('meName').innerText = newName.trim();
         const meNameTop = document.getElementById('meNameTop');
         if(meNameTop) meNameTop.innerText = newName.trim();
+
+        // --- 新增：触发 Char 感知系统 ---
+        injectCharPerception('change_name', newName.trim());
+        // -------------------------------
     }
 }
 
@@ -528,6 +596,10 @@ function editMeSign() {
         ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
         const signEl = document.getElementById('meSign');
         if(signEl) signEl.innerText = newSign.trim() || '这个人很懒，什么都没写~';
+
+        // --- 新增：触发 Char 感知系统 ---
+        injectCharPerception('change_sign', newSign.trim());
+        // -------------------------------
     }
 }
 
@@ -591,8 +663,9 @@ if (doLoginBtn) {
         
         if (!account || !password) return alert('请输入账号和密码！');
         
-        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-        const validAccount = accounts.find(a => a.account === account && a.password === password);
+        // 核心修改：在所有实体（User 和 Char）中查找匹配的账号密码
+        let allEntities = getAllEntities();
+        const validAccount = allEntities.find(a => a.account === account && a.password === password);
         
         if (validAccount) {
             enterWechat(validAccount.id);
@@ -633,47 +706,92 @@ function renderAccountCards() {
     const listEl = document.getElementById('accountCardList');
     listEl.innerHTML = '';
     
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
     const currentLoginId = ChatDB.getItem('current_login_account');
+    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+    let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+    
+    // 核心修改：收集需要显示的账号 ID（所有真实用户 + 当前登录账号 + 关联账号）
+    let displayIds = new Set();
+    accounts.forEach(a => displayIds.add(a.id));
+    if (currentLoginId) displayIds.add(currentLoginId);
+    linkedAccounts.forEach(id => displayIds.add(id));
 
-    if (accounts.length === 0) {
+    let allEntities = getAllEntities();
+    let displayEntities = [];
+    displayIds.forEach(id => {
+        const entity = allEntities.find(e => e.id === id);
+        if (entity) displayEntities.push(entity);
+    });
+
+    if (displayEntities.length === 0) {
         listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 20px;">暂无绑定的账号</div>';
         return;
     }
 
-    accounts.forEach(acc => {
+    // 排序：当前登录的账号永远排在第一个
+    displayEntities.sort((a, b) => {
+        if (a.id === currentLoginId) return -1;
+        if (b.id === currentLoginId) return 1;
+        return 0;
+    });
+
+    displayEntities.forEach(acc => {
         const isCurrent = acc.id === currentLoginId;
+        const isLinked = linkedAccounts.includes(acc.id) && !isCurrent;
+        const isUser = acc.isAccount;
         
         // 将账号的 id (时间戳) 转换为可读的日期格式
-        const createDate = new Date(parseInt(acc.id));
-        const dateString = createDate.getFullYear() + '-' + 
+        let dateString = '未知时间';
+        if (!isNaN(parseInt(acc.id))) {
+            const createDate = new Date(parseInt(acc.id));
+            dateString = createDate.getFullYear() + '-' + 
                            String(createDate.getMonth() + 1).padStart(2, '0') + '-' + 
                            String(createDate.getDate()).padStart(2, '0') + ' ' + 
                            String(createDate.getHours()).padStart(2, '0') + ':' + 
                            String(createDate.getMinutes()).padStart(2, '0');
+        }
 
         const card = document.createElement('div');
-        card.className = `student-card-wrapper ${isCurrent ? 'is-current' : ''}`;
+        // 移除 CSS 中自带的 is-current 类，防止自带的 ::after 伪元素干扰，我们用 JS 动态生成标签
+        card.className = `student-card-wrapper`;
+        if (isCurrent) {
+            card.style.borderColor = '#111';
+            card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        }
         
-        // 点击卡片切换账号
+        // 点击卡片快捷切换账号
         card.onclick = () => {
             if (!isCurrent) {
                 ChatDB.setItem('current_login_account', acc.id);
-                renderMePage(); // 刷新个人主页数据
+                // 核心修改：切换账号后，全局刷新所有数据面板
+                renderMePage(); 
+                if (typeof renderChatList === 'function') renderChatList();
+                if (typeof renderContactList === 'function') renderContactList();
+                if (typeof renderMoments === 'function') renderMoments();
                 closeSwitchAccountPanel();
-                alert(`已切换至账号: ${acc.netName}`);
+                alert(`已快捷切换至账号: ${acc.netName || acc.name}`);
             }
         };
 
+        // 动态生成右上角身份标签
+        let tagHtml = '';
+        if (isCurrent) {
+            tagHtml = `<div style="position: absolute; top: -10px; right: 10px; background: #111; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; z-index: 10;">当前登录</div>`;
+        } else if (isLinked) {
+            tagHtml = `<div style="position: absolute; top: -10px; right: 10px; background: #007AFF; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; z-index: 10;">关联账号</div>`;
+        } else if (!isUser) {
+            tagHtml = `<div style="position: absolute; top: -10px; right: 10px; background: #ff9500; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; z-index: 10;">角色账号</div>`;
+        }
+
         card.innerHTML = `
+            ${tagHtml}
             <div class="student-card-inner">
                 <div class="sc-avatar" style="background-image: url('${acc.avatarUrl || ''}');"></div>
                 <div class="sc-info">
                     <div class="sc-row">
                         <!-- 用户图标 -->
                         <svg class="sc-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                        <span class="sc-text">@${acc.netName}</span>
+                        <span class="sc-text">@${acc.netName || acc.name}</span>
                     </div>
                     <div class="sc-row">
                         <!-- 时钟图标 -->
@@ -683,7 +801,7 @@ function renderAccountCards() {
                     <div class="sc-row">
                         <!-- 账号/ID卡图标 -->
                         <svg class="sc-icon" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-9-2h8v-2h-8v2zm0-4h8v-2h-8v2zm0-4h8V7h-8v2zM5 15h4v-2H5v2zm0-4h4V9H5v2zm0-4h4V5H5v2z"/></svg>
-                        <span class="sc-text">Account: ${acc.account}</span>
+                        <span class="sc-text">Account: ${acc.account || '未生成'}</span>
                     </div>
                 </div>
             </div>
@@ -766,12 +884,26 @@ function switchWechatTab(tabName) {
     // 根据 Tab 切换右上角按钮
     const rightBtn = document.getElementById('wechatHeaderRightBtn');
     const searchBtn = document.getElementById('wechatSearchBtn'); // 获取搜索按钮
+    const charGenBtn = document.getElementById('charSocialGenBtn'); // 获取新的生成按钮
     
     if (tabName === 'chat') {
         rightBtn.innerHTML = '';
         rightBtn.onclick = null;
         rightBtn.style.visibility = 'hidden';
         if (searchBtn) searchBtn.style.display = 'flex'; // Chat 页面显示搜索按钮
+        
+        // 控制专属生成按钮的显示
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        let allEntities = getAllEntities();
+        const me = allEntities.find(a => a.id === currentLoginId);
+        if (charGenBtn) {
+            charGenBtn.style.display = (me && !me.isAccount) ? 'flex' : 'none';
+        }
+    } else if (tabName === 'contacts') {
+        rightBtn.innerHTML = '';
+        rightBtn.onclick = null;
+        rightBtn.style.visibility = 'hidden';
+        if (searchBtn) searchBtn.style.display = 'none';
     } else if (tabName === 'me') {
         rightBtn.innerHTML = 'EDIT';
         rightBtn.style.fontSize = '15px';
@@ -1063,23 +1195,29 @@ function updateMusicInteractionStats(charId) {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
-    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
-    if (!stats[charId]) {
-        stats[charId] = { streak: 0, lastDate: '', count: 0, pinned: false, special: false, userLastMsg: false, charLastMsg: false, addedDate: new Date().toISOString().split('T')[0], littleLuck: false, wornBadge: null, musicStreak: 0, musicLastDate: '' };
+    // 内部辅助函数：双向更新
+    function _updateSingleMusic(ownerId, targetId) {
+        let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${ownerId}`) || '{}');
+        if (!stats[targetId]) {
+            stats[targetId] = { streak: 0, lastDate: '', count: 0, pinned: false, special: false, userLastMsg: false, charLastMsg: false, addedDate: new Date().toISOString().split('T')[0], littleLuck: false, wornBadge: null, musicStreak: 0, musicLastDate: '' };
+        }
+
+        const data = stats[targetId];
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+        if (data.musicLastDate === yesterday) {
+            data.musicStreak = (data.musicStreak || 0) + 1;
+        } else if (data.musicLastDate !== today) {
+            data.musicStreak = 1;
+        }
+        data.musicLastDate = today;
+
+        ChatDB.setItem(`interaction_stats_${ownerId}`, JSON.stringify(stats));
     }
 
-    const data = stats[charId];
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-    if (data.musicLastDate === yesterday) {
-        data.musicStreak = (data.musicStreak || 0) + 1;
-    } else if (data.musicLastDate !== today) {
-        data.musicStreak = 1;
-    }
-    data.musicLastDate = today;
-
-    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+    _updateSingleMusic(currentLoginId, charId);
+    _updateSingleMusic(charId, currentLoginId);
 }
 
 // 1. 更新互动数据 (包含小幸运逻辑)
@@ -1087,40 +1225,48 @@ function updateInteractionStats(charId, isUserSend = true) {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
-    let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
-    if (!stats[charId]) {
-        stats[charId] = { streak: 0, lastDate: '', count: 0, pinned: false, special: false, userLastMsg: false, charLastMsg: false, addedDate: new Date().toISOString().split('T')[0], littleLuck: false, wornBadge: null };
-    }
-
-    const data = stats[charId];
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-    data.count++;
-    if (isUserSend) data.userLastMsg = today;
-    else data.charLastMsg = today;
-
-    // 判定连续互动
-    if (data.userLastMsg === today && data.charLastMsg === today) {
-        if (data.lastDate === yesterday) {
-            data.streak++;
-        } else if (data.lastDate !== today) {
-            data.streak = 1;
+    // 内部辅助函数：更新单边数据
+    function _updateSingle(ownerId, targetId, isSelfSend) {
+        let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${ownerId}`) || '{}');
+        if (!stats[targetId]) {
+            stats[targetId] = { streak: 0, lastDate: '', count: 0, pinned: false, special: false, userLastMsg: false, charLastMsg: false, addedDate: new Date().toISOString().split('T')[0], littleLuck: false, wornBadge: null };
         }
-        data.lastDate = today;
 
-        // 小幸运逻辑：如果是成为好友当天互发消息
-        if (data.addedDate === today) {
-            data.littleLuck = true;
+        const data = stats[targetId];
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+        data.count++;
+        if (isSelfSend) data.userLastMsg = today;
+        else data.charLastMsg = today;
+
+        // 判定连续互动
+        if (data.userLastMsg === today && data.charLastMsg === today) {
+            if (data.lastDate === yesterday) {
+                data.streak++;
+            } else if (data.lastDate !== today) {
+                data.streak = 1;
+            }
+            data.lastDate = today;
+
+            // 小幸运逻辑：如果是成为好友当天互发消息
+            if (data.addedDate === today) {
+                data.littleLuck = true;
+            }
         }
+
+        // 断聊逻辑：如果今天还没聊，且最后聊天日期早于昨天，小幸运消失
+        if (data.lastDate && data.lastDate !== today && data.lastDate !== yesterday) {
+            data.littleLuck = false;
+        }
+
+        ChatDB.setItem(`interaction_stats_${ownerId}`, JSON.stringify(stats));
     }
 
-    // 断聊逻辑：如果今天还没聊，且最后聊天日期早于昨天，小幸运消失
-    if (data.lastDate && data.lastDate !== today && data.lastDate !== yesterday) {
-        data.littleLuck = false;
-    }
-
-    ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+    // 双向更新：更新自己的视角
+    _updateSingle(currentLoginId, charId, isUserSend);
+    // 双向更新：更新对方的视角
+    _updateSingle(charId, currentLoginId, !isUserSend);
 }
 
 // 2. 获取佩戴的互动标识 HTML
@@ -1471,9 +1617,19 @@ function renderChatList() {
         item.onmouseup = handleSessionPressEnd;
         item.onclick = () => openChatRoom(charId);
 
+        // 动态渲染头像：如果有图片则显示图片，否则根据是否为群聊显示默认渐变头像
+        let avatarHtml = '';
+        if (char.avatarUrl) {
+            avatarHtml = `<div class="wechat-avatar" style="background-image: url('${char.avatarUrl}')"></div>`;
+        } else {
+            const initial = displayName.charAt(0).toUpperCase();
+            const avatarClass = char.isGroup ? 'group' : 'friend';
+            avatarHtml = `<div class="ios-msg-avatar ${avatarClass}" style="width: 38px; height: 38px; font-size: 16px; margin-right: 10px;">${initial}</div>`;
+        }
+
         item.innerHTML = `
             <div style="position: relative;">
-                <div class="wechat-avatar" style="background-image: url('${char.avatarUrl || ''}')"></div>
+                ${avatarHtml}
                 ${unreadBadgeHtml}
             </div>
             <div class="wechat-info">
@@ -1615,7 +1771,30 @@ function renderLinkedAccounts() {
 
                 const msgItem = document.createElement('div');
                 msgItem.className = 'linked-msg-item';
-                msgItem.onclick = () => showToast('仅代收消息，如需回复请在设置中切换账号', 'text', 2000);
+                
+                // 核心修改：点击消息直接切换账号并打开聊天室
+                msgItem.onclick = () => {
+                    // 1. 切换当前登录账号为该关联账号
+                    ChatDB.setItem('current_login_account', item.accId);
+                    
+                    // 2. 关闭关联账号管理面板
+                    closeLinkedAccountManager();
+                    
+                    // 3. 全局刷新微信主界面数据
+                    renderMePage();
+                    if (typeof renderChatList === 'function') renderChatList();
+                    if (typeof renderContactList === 'function') renderContactList();
+                    if (typeof renderMoments === 'function') renderMoments();
+                    
+                    // 4. 切换到底部的“Chat(聊天列表)” Tab
+                    switchWechatTab('chat');
+                    
+                    // 5. 直接打开对应的聊天室
+                    openChatRoom(item.targetId);
+                    
+                    // 6. 提示切换成功
+                    showToast(`已切换至 ${item.accName}`, 'success', 1500);
+                };
                 
                 const msgUnreadBadge = `<div class="wechat-unread-badge" style="position: relative; top: 0; right: 0;">${item.unread > 99 ? '99+' : item.unread}</div>`;
 
@@ -1637,8 +1816,11 @@ function renderLinkedAccounts() {
 
     const availableEntities = allEntities.filter(e => e.id !== currentLoginId && !linkedAccounts.includes(e.id));
     
-    if (availableEntities.length === 0) {
-        otherListEl.innerHTML = '<div style="font-size: 12px; color: #ccc;">没有可关联的其他账号</div>';
+    // 核心修改：如果已经关联了 3 个，直接提示已达上限，不再渲染可添加的列表
+    if (linkedAccounts.length >= 3) {
+        otherListEl.innerHTML = '<div style="font-size: 12px; color: #ccc; padding: 10px 0;">关联账号数量已达上限 (3个)</div>';
+    } else if (availableEntities.length === 0) {
+        otherListEl.innerHTML = '<div style="font-size: 12px; color: #ccc; padding: 10px 0;">没有可关联的其他账号</div>';
     } else {
         availableEntities.forEach(entity => {
             const otherItem = document.createElement('div');
@@ -1743,15 +1925,6 @@ function actionMarkRead() {
     closeSessionMenu();
 }
 
-// 劫持 AI 回复，更新互动数据
-const _originalGenerateApiReply_interaction = generateApiReply;
-generateApiReply = async function() {
-    const charId = currentChatRoomCharId;
-    await _originalGenerateApiReply_interaction();
-    updateInteractionStats(charId, false);
-};
-
-
 // --- 通讯录子 Tab 切换逻辑 ---
 function switchContactSubTab(tabName) {
     const btns = document.querySelectorAll('.contact-nav-btn');
@@ -1770,6 +1943,7 @@ function switchContactSubTab(tabName) {
     } else if (tabName === 'groups') {
         btns[2].classList.add('active');
         wrapper.style.transform = 'translateX(-66.666%)';
+        renderContactGroups(); // 新增：渲染群聊
     }
 }
 
@@ -1785,9 +1959,47 @@ function renderContactCategories() {
     let userGroups = JSON.parse(ChatDB.getItem(`contact_groups_${currentLoginId}`) || '["默认分组"]');
     let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
     let allEntities = getAllEntities(); // 使用合并后的实体
+    
+    const currentUser = allEntities.find(e => e.id === currentLoginId);
+    const isChar = currentUser && !currentUser.isAccount;
+
+    // 【核心修复】：双向通讯录的动态补全与同分组 Char 自动添加
+    let dynamicContacts = new Set(contacts);
+
+    if (isChar) {
+        // 1. 补全 User：遍历所有 User，如果 User 的通讯录里有当前 Char，则把 User 加进来
+        let allUsers = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
+        allUsers.forEach(u => {
+            let uContacts = JSON.parse(ChatDB.getItem(`contacts_${u.id}`) || '[]');
+            if (uContacts.includes(currentLoginId)) {
+                dynamicContacts.add(u.id);
+            }
+        });
+
+        // 2. 补全同分组 Char：找到和当前 Char 同 group 且生成了账号密码的 Char
+        let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+        let myGroup = currentUser.group || '默认分组';
+        allChars.forEach(c => {
+            if (c.id !== currentLoginId && c.group === myGroup && c.account && c.password) {
+                dynamicContacts.add(c.id);
+            }
+        });
+    } else {
+        // 如果是 User 登录，也做一次反向检查，防止遗漏
+        let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+        allChars.forEach(c => {
+            let cContacts = JSON.parse(ChatDB.getItem(`contacts_${c.id}`) || '[]');
+            if (cContacts.includes(currentLoginId)) {
+                dynamicContacts.add(c.id);
+            }
+        });
+    }
+
+    // 将 Set 转回数组
+    let finalContacts = Array.from(dynamicContacts);
 
     userGroups.forEach(groupName => {
-        const groupFriends = contacts.map(id => allEntities.find(c => c.id === id)).filter(c => c && (c.contactGroup || '默认分组') === groupName);
+        const groupFriends = finalContacts.map(id => allEntities.find(c => c.id === id)).filter(c => c && (c.contactGroup || '默认分组') === groupName);
 
         const groupItem = document.createElement('div');
         groupItem.className = 'contact-group-item';
@@ -1891,6 +2103,63 @@ function renderContactSpecial() {
             <svg viewBox="0 0 24 24" width="20" height="20" fill="#111"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
         `;
         listEl.appendChild(friendEl);
+    });
+}
+
+// 3. 新增：渲染通讯录中的 Groups (群聊)
+function renderContactGroups() {
+    const listEl = document.getElementById('contactGroupsList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
+    let allEntities = getAllEntities();
+    
+    // 筛选出通讯录中 isGroup 为 true 的实体
+    const groupFriends = contacts.map(id => allEntities.find(c => c.id === id)).filter(c => c && c.isGroup);
+
+    if (groupFriends.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; color:#ccc; font-size:13px; margin-top: 40px;">暂无群聊</div>';
+        return;
+    }
+
+    groupFriends.forEach(group => {
+        const groupEl = document.createElement('div');
+        groupEl.style.display = 'flex';
+        groupEl.style.alignItems = 'center';
+        groupEl.style.gap = '15px';
+        groupEl.style.padding = '15px';
+        groupEl.style.background = '#fff';
+        groupEl.style.borderRadius = '16px';
+        groupEl.style.marginBottom = '10px';
+        groupEl.style.cursor = 'pointer';
+        
+        // 点击群聊直接打开聊天室
+        groupEl.onclick = () => {
+            switchWechatTab('chat');
+            openChatRoom(group.id);
+        };
+        
+        // 群聊默认头像 (蓝色渐变)
+        let avatarHtml = '';
+        if (group.avatarUrl) {
+            avatarHtml = `<div style="width: 48px; height: 48px; border-radius: 12px; background-image: url('${group.avatarUrl}'); background-size: cover; background-position: center;"></div>`;
+        } else {
+            const initial = (group.netName || group.name || '群').charAt(0).toUpperCase();
+            avatarHtml = `<div class="ios-msg-avatar group" style="width: 48px; height: 48px; font-size: 20px; border-radius: 12px;">${initial}</div>`;
+        }
+
+        groupEl.innerHTML = `
+            ${avatarHtml}
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                <div style="font-size: 16px; font-weight: bold; color: #333;">${group.netName || group.name}</div>
+                <div style="font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${group.signature || '群聊'}</div>
+            </div>
+        `;
+        listEl.appendChild(groupEl);
     });
 }
 
@@ -2561,9 +2830,33 @@ async function generateAccountInfoAPI(charId) {
     btn.style.pointerEvents = 'none';
 
     try {
-        // 优化 Prompt，强调随机性
-        const prompt = `你是一个角色设定助手。请根据以下角色设定，生成该角色的网名(netName)、11位完全随机的数字手机号作为账号(account，必须以1开头)、一段简短感性的个性签名(signature)、以及8-12位密码(password)。必须且只能返回JSON：{"netName":"xxx","account":"1xxxxxxxxxx","signature":"xxx","password":"xxx"}\n\n角色名称：${char.name}\n设定：${char.description}`;
-        
+        // 核心修改：要求生成 15-50 个通讯录好友（包含群聊），准备存入角色库
+        const prompt = `你是一个角色设定助手。请根据以下角色设定，生成该角色的私密账号数据。
+包含：
+1. 网名(netName)
+2. 11位完全随机的数字手机号作为账号(account，必须以1开头)
+3. 一段简短感性的个性签名(signature)
+4. 8-12位登录密码(password)
+5. 6位纯数字支付密码(payPassword)
+6. 微信钱包余额(walletBalance，纯数字，精确到小数点后两位，符合其经济水平)
+7. 通讯录好友及群聊(contacts，生成 15 至 50 个，包含家人、死党、同事、各种群聊等。注意：数量必须大于15个！)
+
+必须且只能返回JSON，格式如下：
+{
+  "netName": "xxx",
+  "account": "1xxxxxxxxxx",
+  "signature": "xxx",
+  "password": "xxx",
+  "payPassword": "6位纯数字",
+  "walletBalance": 520.50,
+  "contacts": [
+    {"name": "好友或群聊名字", "signature": "个性签名或群公告", "isGroup": false}
+  ]
+}
+
+角色名称：${char.name}
+设定：${char.description}`;
+            
         const temp = parseFloat(apiConfig.temperature);
         const finalTemp = isNaN(temp) ? 0.7 : temp;
 
@@ -2584,6 +2877,17 @@ async function generateAccountInfoAPI(charId) {
             const data = await response.json();
             let content = data.choices[0].message.content.trim();
             content = content.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+            
+            // 简单的 JSON 截断修复逻辑 (防止生成太多导致末尾括号丢失)
+            if (!content.endsWith('}')) {
+                const lastBracket = content.lastIndexOf('}');
+                if (lastBracket !== -1) {
+                    content = content.substring(0, lastBracket + 1);
+                } else {
+                    content += ']}'; // 暴力补全
+                }
+            }
+
             const parsed = JSON.parse(content);
             
             let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
@@ -2612,21 +2916,99 @@ async function generateAccountInfoAPI(charId) {
             char.account = finalAccount;
             if (parsed.password) char.password = parsed.password;
             if (parsed.signature) char.signature = parsed.signature;
+            if (parsed.payPassword && /^\d{6}$/.test(parsed.payPassword)) char.payPassword = parsed.payPassword;
             
-            chars[charIndex] = char;
-            ChatDB.setItem('chat_chars', JSON.stringify(chars));
+            // 更新当前角色信息
+            const updateIndex = allChars.findIndex(c => c.id === charId);
+            if (updateIndex !== -1) allChars[updateIndex] = char;
+            
+            // 核心修改：保存钱包余额
+            if (parsed.walletBalance !== undefined) {
+                ChatDB.setItem(`wallet_balance_${charId}`, parseFloat(parsed.walletBalance).toFixed(2));
+            }
+
+            // 核心修改：分离群聊与单人好友，并修复分组刷新逻辑
+            if (parsed.contacts && Array.isArray(parsed.contacts)) {
+                let currentContacts = JSON.parse(ChatDB.getItem(`contacts_${charId}`) || '[]');
+                let npcs = JSON.parse(ChatDB.getItem('chat_npcs') || '[]'); // 用于存群聊
+                
+                // 自动创建一个专属分组，避免角色库太乱
+                const newGroupName = `${char.name}的圈子`;
+                // 修复：必须同步更新全局变量 charGroups，否则 UI 不会刷新
+                if (typeof charGroups !== 'undefined') {
+                    if (!charGroups.includes(newGroupName)) {
+                        charGroups.push(newGroupName);
+                        ChatDB.setItem('chat_char_groups', JSON.stringify(charGroups));
+                    }
+                } else {
+                    let localGroups = JSON.parse(ChatDB.getItem('chat_char_groups') || '["默认分组"]');
+                    if (!localGroups.includes(newGroupName)) {
+                        localGroups.push(newGroupName);
+                        ChatDB.setItem('chat_char_groups', JSON.stringify(localGroups));
+                    }
+                }
+
+                parsed.contacts.forEach((contact, idx) => {
+                    // 使用时间戳+随机数+索引确保 ID 绝对唯一
+                    const newId = Date.now().toString() + Math.random().toString(36).substr(2, 5) + idx;
+                    
+                    if (contact.isGroup) {
+                        // 群聊存入 chat_npcs，不进角色库
+                        npcs.push({
+                            id: newId,
+                            name: contact.name || '未命名群聊',
+                            netName: contact.name || '未命名群聊',
+                            signature: contact.signature || '群聊',
+                            description: `这是 ${char.name} 的一个群聊。`,
+                            group: '群聊',
+                            isNPC: true,
+                            isGroup: true,
+                            avatarUrl: ''
+                        });
+                    } else {
+                        // 单人好友存入 chat_chars，进入角色库
+                        allChars.push({
+                            id: newId,
+                            name: contact.name || '未命名',
+                            netName: contact.name || '未命名',
+                            sex: '未知',
+                            description: `这是 ${char.name} 的通讯录好友。`,
+                            firstMessage: '你好！',
+                            scenario: '',
+                            avatarUrl: '',
+                            group: newGroupName, // 放入专属圈子
+                            wbEntries: [],
+                            account: '', 
+                            password: '',
+                            signature: contact.signature || '这个人很懒，什么都没写~',
+                            isGroup: false
+                        });
+                    }
+                    currentContacts.push(newId);
+                });
+                
+                ChatDB.setItem('chat_npcs', JSON.stringify(npcs));
+                ChatDB.setItem(`contacts_${charId}`, JSON.stringify(currentContacts));
+                
+                // 刷新角色库 UI
+                if (typeof renderCharGroups === 'function') renderCharGroups();
+                if (typeof renderCharLibrary === 'function') renderCharLibrary();
+            }
+            
+            // 统一保存所有角色数据
+            ChatDB.setItem('chat_chars', JSON.stringify(allChars));
             
             document.getElementById('secretNetName').innerText = char.netName;
             document.getElementById('secretAccount').innerText = char.account;
             document.getElementById('secretPassword').innerText = char.password;
             
-            alert('账号信息生成成功！');
+            alert(`账号及私密数据生成成功！\n已生成 ${parsed.contacts ? parsed.contacts.length : 0} 个通讯录好友/群聊。\n单人好友已存入角色库的 [${char.name}的圈子] 分组中，群聊已存入通讯录。`);
         } else {
             alert('API 调用失败，请检查配置。');
         }
     } catch (e) {
         console.error('API 请求出错:', e);
-        alert('API请求出错: ' + e.message);
+        alert('API请求出错: ' + e.message + '\n(可能是生成数量过多导致大模型输出截断，请重试)');
     } finally {
         btn.innerText = originalText;
         btn.style.pointerEvents = 'auto';
@@ -2714,6 +3096,13 @@ function addCharToContacts(charId) {
     contacts.push(charId);
     ChatDB.setItem(`contacts_${currentLoginId}`, JSON.stringify(contacts));
 
+    // 核心修改：双向添加，把当前登录人也加到对方的通讯录里
+    let targetContacts = JSON.parse(ChatDB.getItem(`contacts_${charId}`) || '[]');
+    if (!targetContacts.includes(currentLoginId)) {
+        targetContacts.push(currentLoginId);
+        ChatDB.setItem(`contacts_${charId}`, JSON.stringify(targetContacts));
+    }
+
     // 初始化互动统计，记录添加日期用于“小幸运”判定
     let stats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentLoginId}`) || '{}');
     if (!stats[charId]) {
@@ -2724,6 +3113,18 @@ function addCharToContacts(charId) {
             littleLuck: false 
         };
         ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
+    }
+    
+    // 核心修改：双向初始化对方的互动统计
+    let targetStats = JSON.parse(ChatDB.getItem(`interaction_stats_${charId}`) || '{}');
+    if (!targetStats[currentLoginId]) {
+        targetStats[currentLoginId] = { 
+            streak: 0, lastDate: '', count: 0, pinned: false, special: false, 
+            userLastMsg: false, charLastMsg: false, 
+            addedDate: new Date().toISOString().split('T')[0], 
+            littleLuck: false 
+        };
+        ChatDB.setItem(`interaction_stats_${charId}`, JSON.stringify(targetStats));
     }
     
     alert('添加成功！');
@@ -2767,10 +3168,9 @@ function renderChatHistory(charId, keepScroll = false) {
     let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
     
     // 【性能优化】：提取全局变量，避免在循环中重复查找
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === charId);
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const me = accounts.find(a => a.id === currentLoginId);
+    let allEntities = getAllEntities();
+    const char = allEntities.find(c => c.id === charId);
+    const me = allEntities.find(a => a.id === currentLoginId);
 
     historyEl.innerHTML = '';
 
@@ -2874,13 +3274,47 @@ function renderChatHistory(charId, keepScroll = false) {
         const isMusicInviteMsg = msg.type === 'music_invite';
         const isMusicShareMsg = safeContent.includes('music-share-card'); // 识别分享卡片
         const isSystemMsg = msg.type === 'system'; // 识别系统提示
+        const isHiddenSystemMsg = msg.type === 'hidden_system'; // 识别隐藏系统提示
+
+        if (isHiddenSystemMsg) return; // 跳过渲染，不在界面上显示
 
         // 如果是系统消息，直接渲染居中灰色小字
         if (isSystemMsg) {
+            const sysContainer = document.createElement('div');
+            sysContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; width: 100%; margin: 10px 0;';
+
             const sysEl = document.createElement('div');
-            sysEl.style.cssText = 'text-align: center; font-size: 11px; color: #aaa; margin: 10px 0; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 10px; align-self: center; max-width: 80%;';
+            sysEl.style.cssText = 'text-align: center; font-size: 11px; color: #aaa; background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 10px; max-width: 80%;';
             sysEl.innerText = safeContent;
-            fragment.appendChild(sysEl);
+            
+            if (msg.originalContent) {
+                sysEl.style.cursor = 'pointer';
+                sysEl.title = '点击查看撤回内容';
+                sysEl.onclick = () => {
+                    const detailEl = sysContainer.querySelector('.recall-detail');
+                    if (detailEl) {
+                        detailEl.style.display = detailEl.style.display === 'none' ? 'block' : 'none';
+                    }
+                };
+                
+                const detailEl = document.createElement('div');
+                detailEl.className = 'recall-detail';
+                detailEl.style.cssText = 'display: none; margin-top: 6px; font-size: 12px; color: #888; background: #f4f4f4; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-break: break-all; border: 1px dashed #ccc;';
+                
+                // 过滤掉图片标签等，只显示纯文本或提示
+                let cleanOriginal = msg.originalContent.replace(/<img[^>]*>/g, '[图片/表情包]').replace(/<[^>]+>/g, '');
+                if (msg.originalContent.includes('chat-desc-img-120')) cleanOriginal = '[图片]';
+                if (msg.originalContent.includes('cr-voice-bubble')) cleanOriginal = '[语音]';
+                
+                detailEl.innerText = `撤回内容：${cleanOriginal}`;
+                
+                sysContainer.appendChild(sysEl);
+                sysContainer.appendChild(detailEl);
+            } else {
+                sysContainer.appendChild(sysEl);
+            }
+            
+            fragment.appendChild(sysContainer);
             return; // 跳过后续普通气泡渲染
         }
 
@@ -3128,6 +3562,10 @@ function sendChatMessage() {
         
         // 新增：更新互动数据
         updateInteractionStats(currentChatRoomCharId, true);
+
+        // --- 新增：触发 Char 感知系统 ---
+        injectCharPerception('send_msg', content, currentChatRoomCharId);
+        // -------------------------------
     }, 10);
 }
 
@@ -3141,11 +3579,11 @@ function openChatRoom(charId) {
         if (typeof renderChatList === 'function') renderChatList(); // 刷新列表消除红点
     }
     
-    let chars = getAllEntities();
-    const char = chars.find(c => c.id === charId);
+    let allEntities = getAllEntities();
+    const char = allEntities.find(c => c.id === charId);
     
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const me = accounts.find(a => a.id === currentLoginId);
+    // 核心修改：统一从所有实体中获取“我”，完美兼容 User 和 Char 登录
+    const me = allEntities.find(a => a.id === currentLoginId);
     
     if (char) {
         let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
@@ -3299,10 +3737,14 @@ function deleteContactChar() {
     if (!currentLoginId) return alert('请先登录！');
 
     if (confirm('确定要将该角色从通讯录中删除吗？（删除后可通过搜索账号重新添加）')) {
-        // 1. 从通讯录中移除
+        // 1. 从通讯录中移除 (双向移除)
         let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
         contacts = contacts.filter(id => id !== currentProfileCharId);
         ChatDB.setItem(`contacts_${currentLoginId}`, JSON.stringify(contacts));
+        
+        let targetContacts = JSON.parse(ChatDB.getItem(`contacts_${currentProfileCharId}`) || '[]');
+        targetContacts = targetContacts.filter(id => id !== currentLoginId);
+        ChatDB.setItem(`contacts_${currentProfileCharId}`, JSON.stringify(targetContacts));
         
         // 2. 从会话列表中一并移除
         let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
@@ -3316,6 +3758,17 @@ function deleteContactChar() {
             ChatDB.setItem(`interaction_stats_${currentLoginId}`, JSON.stringify(stats));
         }
         
+        // 核心修改：双向清除对方的互动标识统计数据
+        let targetStats = JSON.parse(ChatDB.getItem(`interaction_stats_${currentProfileCharId}`) || '{}');
+        if (targetStats[currentLoginId]) {
+            delete targetStats[currentLoginId];
+            ChatDB.setItem(`interaction_stats_${currentProfileCharId}`, JSON.stringify(targetStats));
+        }
+        
+        // --- 新增：触发 Char 感知系统 ---
+        injectCharPerception('delete_friend', '', currentProfileCharId);
+        // -------------------------------
+
         alert('已删除好友！');
         closeCharProfilePanel();
         
@@ -3662,6 +4115,14 @@ function toggleChatPanel(type) {
     const emojiPanel = document.getElementById('crEmojiPanel');
     
     if (type === 'more') {
+        // 核心修改：判断是否为 Char 登录，如果是则隐藏查手机按钮
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        const isChar = !getAllEntities().find(e => e.id === currentLoginId)?.isAccount;
+        const phoneCheckBtn = document.getElementById('more-btn-phone-check');
+        if (phoneCheckBtn) {
+            phoneCheckBtn.style.display = isChar ? 'none' : 'flex';
+        }
+
         if (morePanel.classList.contains('show')) {
             morePanel.classList.remove('show');
         } else {
@@ -3713,17 +4174,27 @@ function confirmSendVoice() {
     if (text) {
         const currentLoginId = ChatDB.getItem('current_login_account');
         if (!currentLoginId || !currentChatRoomCharId) return;
+        
+        let newMsg = { role: 'user', type: 'voice', content: text, timestamp: Date.now() };
         let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-        
-        // 存入语音类型的消息
-        history.push({ 
-            role: 'user', 
-            type: 'voice', 
-            content: text, 
-            timestamp: Date.now() 
-        });
-        
+        history.push(newMsg);
         ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+        
+        // --- 新增：双向同步给对方 ---
+        let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+        let targetMsg = { ...newMsg, role: 'char' };
+        targetHistory.push(targetMsg);
+        ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+
+        let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+        targetSessions = targetSessions.filter(id => id !== currentLoginId);
+        targetSessions.unshift(currentLoginId);
+        ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+
+        let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+        ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+        // ---------------------------
+        
         renderChatHistory(currentChatRoomCharId);
         closeSendVoiceModal();
     } else {
@@ -3874,9 +4345,27 @@ function triggerDescImageUpload() {
 function saveAndRenderUserMessage(content) {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId || !currentChatRoomCharId) return;
+    
+    let newMsg = { role: 'user', content: content, timestamp: Date.now() };
     let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-    history.push({ role: 'user', content: content, timestamp: Date.now() });
+    history.push(newMsg);
     ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+    
+    // --- 新增：双向同步给对方 ---
+    let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+    let targetMsg = { ...newMsg, role: 'char' };
+    targetHistory.push(targetMsg);
+    ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+
+    let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+    targetSessions = targetSessions.filter(id => id !== currentLoginId);
+    targetSessions.unshift(currentLoginId);
+    ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+
+    let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+    ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+    // ---------------------------
+    
     renderChatHistory(currentChatRoomCharId);
 }
 
@@ -3932,27 +4421,43 @@ function renderChatRoomEmojis() {
     });
 }
 
-// 发送表情包消息
 function sendEmojiMessage(url, desc) {
     if (!currentChatRoomCharId) return;
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
-    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-    const content = `<img src="${url}" alt="${desc || '表情包'}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block;">`;
+    const content = `<img src="${url}" alt="${desc || '表情包'}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block; margin: 5px 0;">`;
+    let newMsg = { role: 'user', content: content, timestamp: Date.now() };
     
-    history.push({ role: 'user', content: content, timestamp: Date.now() });
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    history.push(newMsg);
     ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
     
     let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
     sessions = sessions.filter(id => id !== currentChatRoomCharId);
     sessions.unshift(currentChatRoomCharId);
     ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
-    if (typeof renderChatList === 'function') renderChatList();
+    
+    // --- 新增：双向同步给对方 ---
+    let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+    let targetMsg = { ...newMsg, role: 'char' };
+    targetHistory.push(targetMsg);
+    ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
 
+    let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+    targetSessions = targetSessions.filter(id => id !== currentLoginId);
+    targetSessions.unshift(currentLoginId);
+    ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+
+    let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+    ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+    // ---------------------------
+    
+    if (typeof renderChatList === 'function') renderChatList();
     renderChatHistory(currentChatRoomCharId);
     closeChatPanels();
 }
+
 // ==========================================
 // 聊天室设置与美化逻辑 (背景 & CSS)
 // ==========================================
@@ -3967,9 +4472,8 @@ function openChatSettingsPanel() {
     document.getElementById('chatCustomCssInput').value = currentCss;
 
     const currentLoginId = ChatDB.getItem('current_login_account');
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const me = accounts.find(a => a.id === currentLoginId);
     let allEntities = getAllEntities();
+    const me = allEntities.find(a => a.id === currentLoginId);
     const char = allEntities.find(c => c.id === currentChatRoomCharId);
 
     document.getElementById('csUserAvatar').style.backgroundImage = "url('" + (me ? me.avatarUrl : '') + "')";
@@ -3978,9 +4482,9 @@ function openChatSettingsPanel() {
     const charAvatarWrap = document.getElementById('csCharAvatarWrap') || document.getElementById('csCharAvatar').parentElement;
     charAvatarWrap.onclick = () => {
         if (char && char.isAccount) {
-            const targetAccount = accounts.find(a => a.id === char.id);
-            if (targetAccount && targetAccount.personaId) {
-                editPersonaById(targetAccount.personaId);
+            // 核心修复：char 本身就已经包含了账号的所有信息，直接读取 personaId 即可
+            if (char.personaId) {
+                editPersonaById(char.personaId);
             }
         } else {
             openCharEditPanel(currentChatRoomCharId);
@@ -4620,6 +5124,7 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
     systemPrompt += `图片消息格式: {"type":"image", "content":"图片画面的详细文字描述"}\n`; 
     systemPrompt += `转账消息格式: {"type":"transfer", "amount":"转账金额(纯数字)", "note":"转账说明"}\n`; 
     systemPrompt += `处理收款格式: {"type":"transfer_action", "action":"received" 或 "rejected", "content":"收款/拒收时的回复"}\n`; 
+    systemPrompt += `撤回你自己的上一条消息: {"type":"recall", "content":"撤回后你想补发的话(可选)"}\n`; 
     if (charEmojis.length > 0) {
         systemPrompt += `表情包格式: {"type":"sticker", "content":"表情包描述名称"}\n`;
         systemPrompt += `可用的表情包描述有：${charEmojis.map(e => e.desc).join(', ')}。请自然地穿插在对话中，不要滥用。\n`;
@@ -4644,6 +5149,11 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
         if (msg.type === 'forward_record') {
             const recordText = msg.forwardData.map(d => `${d.name}: ${d.content}`).join('\n');
             content = `*${senderName} 转发了一段聊天记录*:\n${recordText}`;
+        } else if (content.includes('chat-desc-img-120')) {
+            // 核心修复：识别文字描述的图片，并翻译给大模型
+            const match = content.match(/<div class="img-text">([\s\S]*?)<\/div>/);
+            const desc = match ? match[1] : "未知图片";
+            content = `*${senderName} 发送了一张图片，画面是：[${desc}]*`;
         } else if (content.includes('<img')) {
             if (content.includes('chat-img-120')) {
                 // 真实图片：提取 Base64 并转换为大模型 Vision 格式
@@ -4675,6 +5185,8 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
         } else if (msg.type === 'family_card') {
             if (msg.subType === 'gift') content = `*${senderName} 赠送了一张亲属卡*`;
             else content = `*${senderName} 索要亲属卡*`;
+        } else if (msg.type === 'hidden_system') {
+            content = msg.content;
         } else {
             // 清理可能存在的 HTML 标签，防止干扰模型 JSON 输出
             content = content.replace(/<[^>]+>/g, '');
@@ -4778,7 +5290,27 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                 let msgObj = messagesArray[i];
                 let newMsg = { role: 'char', timestamp: Date.now() };
 
-                if (msgObj.type === 'sticker') {
+                if (msgObj.type === 'recall') {
+                    // Char 主动撤回自己的上一条消息
+                    let updatedHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${targetCharId}`) || '[]');
+                    for (let j = updatedHistory.length - 1; j >= 0; j--) {
+                        if (updatedHistory[j].role === 'char' && updatedHistory[j].type !== 'system' && updatedHistory[j].type !== 'hidden_system') {
+                            updatedHistory[j].originalContent = updatedHistory[j].content;
+                            updatedHistory[j].type = 'system';
+                            updatedHistory[j].content = '对方撤回了一条消息';
+                            break;
+                        }
+                    }
+                    ChatDB.setItem(`chat_history_${currentLoginId}_${targetCharId}`, JSON.stringify(updatedHistory));
+                    renderChatHistory(targetCharId);
+                    
+                    // 如果有补发的话，继续走下面的流程发出来
+                    if (msgObj.content) {
+                        newMsg.content = msgObj.content;
+                    } else {
+                        continue;
+                    }
+                } else if (msgObj.type === 'sticker') {
                     const url = charEmojiMap[msgObj.content];
                     if (url) {
                         newMsg.content = `<img src="${url}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; display: block; margin: 5px 0;">`;
@@ -4825,6 +5357,9 @@ async function generateApiReply(isProactive = false, proactiveCharId = null) {
                 let updatedHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${targetCharId}`) || '[]');
                 updatedHistory.push(newMsg);
                 ChatDB.setItem(`chat_history_${currentLoginId}_${targetCharId}`, JSON.stringify(updatedHistory));
+                
+                // 新增：更新互动数据 (AI回复)
+                updateInteractionStats(targetCharId, false);
                 
                 // 如果当前正在该聊天室，则直接渲染；否则弹出通知、增加未读并刷新列表
                 const chatRoomPanel = document.getElementById('chatRoomPanel');
@@ -4910,6 +5445,20 @@ function handleBubbleTouchEnd() {
 function showChatBubbleMenu(x, y) {
     const overlay = document.getElementById('chatBubbleMenuOverlay');
     const menu = document.getElementById('chatBubbleMenu');
+    
+    // 控制撤回按钮只对用户自己的消息显示
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    const msg = history[currentActionMsgIndex];
+    const recallBtn = document.getElementById('menuRecallBtn');
+    if (recallBtn) {
+        if (msg && msg.role === 'user') {
+            recallBtn.style.display = 'flex';
+        } else {
+            recallBtn.style.display = 'none';
+        }
+    }
+
     overlay.classList.add('show');
     
     // 动态计算位置防止溢出
@@ -5157,6 +5706,40 @@ function actionDeleteMessage() {
         history.splice(currentActionMsgIndex, 1);
         ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
         renderChatHistory(currentChatRoomCharId);
+    }
+}
+
+function actionRecallMessage() {
+    closeChatBubbleMenu();
+    if (confirm('确定撤回这条消息吗？')) {
+        const currentLoginId = ChatDB.getItem('current_login_account');
+        let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+        const msg = history[currentActionMsgIndex];
+        
+        if (msg) {
+            const isUser = msg.role === 'user';
+            const originalContent = msg.content;
+            
+            // 将原消息改为系统撤回提示，并保存原内容
+            msg.type = 'system';
+            msg.content = isUser ? '你撤回了一条消息' : '对方撤回了一条消息';
+            msg.originalContent = originalContent; // 保存原内容用于点击查看
+            
+            history[currentActionMsgIndex] = msg;
+            
+            // 30% 概率触发 Char 感知 (仅限用户撤回自己的消息)，但不再自动回复！
+            if (isUser && Math.random() < 0.3) {
+                history.push({
+                    role: 'user',
+                    type: 'hidden_system',
+                    content: `[User刚刚撤回了一条消息：“${originalContent}”。请根据你的人设，在接下来的对话中做出反应。]`,
+                    timestamp: Date.now()
+                });
+            }
+            
+            ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+            renderChatHistory(currentChatRoomCharId);
+        }
     }
 }
 
@@ -5488,16 +6071,23 @@ function processTransferAction(action) {
         const charName = char ? (char.netName || char.name) : '对方';
 
         if (msg.role === 'user' && action === 'rejected') {
-            // 我发出的转账，对方退还了 -> 钱回到我的钱包
             addWalletRecord(currentLoginId, 'refund', `转账退还 - ${charName}`, msg.amount);
         } else if (msg.role === 'char' && action === 'received') {
-            // 对方发出的转账，我确认收款了 -> 钱进入我的钱包
             addWalletRecord(currentLoginId, 'in', `收到转账 - ${charName}`, msg.amount);
         }
-        // 注意：我发出的转账对方收款，或者对方发出的转账我退还，都不需要动我的余额
         // ------------------------------
 
         ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+        
+        // --- 新增：双向同步状态给对方 ---
+        let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+        let targetMsgIndex = targetHistory.findIndex(m => m.type === 'transfer' && m.timestamp === msg.timestamp);
+        if (targetMsgIndex !== -1) {
+            targetHistory[targetMsgIndex].status = action;
+            ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+        }
+        // ---------------------------
+        
         renderChatHistory(currentChatRoomCharId);
     }
     closeTransferActionModal();
@@ -5532,8 +6122,9 @@ function renderWallet() {
     slider.appendChild(bankCard);
     dotsContainer.innerHTML = '<div class="slider-dot active"></div>';
 
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    chars.forEach(char => {
+    // 核心修改：遍历所有实体（排除自己），这样 Char 登录时就能遍历到 User，从而显示 User 送的卡
+    let allEntities = getAllEntities().filter(e => e.id !== currentLoginId);
+    allEntities.forEach(char => {
         const receivedCard = JSON.parse(ChatDB.getItem(`family_card_received_${currentLoginId}_${char.id}`) || 'null');
         if (receivedCard) {
             const charName = char.netName || char.name;
@@ -5741,9 +6332,9 @@ function executePayment(isFreePay = false) {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId || !currentChatRoomCharId) return;
 
-    // 1. 获取当前账号信息校验支付密码
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
+    // 1. 获取当前账号信息校验支付密码 (兼容 Char)
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === currentLoginId);
     if (!account) return;
 
     if (!isFreePay) {
@@ -5790,12 +6381,28 @@ function executePayment(isFreePay = false) {
     }
 
     // 支付成功，发送转账消息
-    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-    history.push({
+    let newMsg = {
         role: 'user', type: 'transfer', amount: pendingTransferAmount,
         note: currentTransferNote || '转账给对方', status: 'pending', content: '[转账]', timestamp: Date.now()
-    });
+    };
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
+    history.push(newMsg);
     ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+    
+    // --- 新增：双向同步给对方 ---
+    let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+    let targetMsg = { ...newMsg, role: 'char' };
+    targetHistory.push(targetMsg);
+    ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+
+    let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+    targetSessions = targetSessions.filter(id => id !== currentLoginId);
+    targetSessions.unshift(currentLoginId);
+    ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+
+    let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+    ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+    // ---------------------------
     
     closePaymentPanel();
     closeTransferPanel();
@@ -5834,21 +6441,40 @@ function confirmSendFamilyCard() {
 
     let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
     
+    let newMsg = {
+        role: 'user', type: 'family_card',
+        status: 'pending', timestamp: Date.now()
+    };
+
     if (currentFcTab === 'gift') {
         const limit = document.getElementById('familyCardLimitInput').value;
         if (!limit || parseFloat(limit) <= 0) return alert('请输入正确的额度！');
-        history.push({
-            role: 'user', type: 'family_card', subType: 'gift', limit: parseFloat(limit).toFixed(2),
-            status: 'pending', content: '[赠送亲属卡]', timestamp: Date.now()
-        });
+        newMsg.subType = 'gift';
+        newMsg.limit = parseFloat(limit).toFixed(2);
+        newMsg.content = '[赠送亲属卡]';
     } else {
-        history.push({
-            role: 'user', type: 'family_card', subType: 'request',
-            status: 'pending', content: '[索要亲属卡]', timestamp: Date.now()
-        });
+        newMsg.subType = 'request';
+        newMsg.content = '[索要亲属卡]';
     }
     
+    history.push(newMsg);
     ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+
+    // --- 新增：双向同步给对方 ---
+    let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+    let targetMsg = { ...newMsg, role: 'char' }; // 对方视角里，是我(char)发的
+    targetHistory.push(targetMsg);
+    ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+
+    let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+    targetSessions = targetSessions.filter(id => id !== currentLoginId);
+    targetSessions.unshift(currentLoginId);
+    ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+
+    let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+    ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+    // ---------------------------
+
     closeSendFamilyCardModal();
     renderChatHistory(currentChatRoomCharId);
 }
@@ -5870,6 +6496,16 @@ function handleFamilyCardClick(index) {
             if (confirm(`是否领取对方赠送的亲属卡？\n额度：¥${msg.limit}`)) {
                 msg.status = 'received';
                 ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+                
+                // --- 新增：双向同步状态给对方 ---
+                let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+                let targetMsgIndex = targetHistory.findIndex(m => m.type === 'family_card' && m.timestamp === msg.timestamp);
+                if (targetMsgIndex !== -1) {
+                    targetHistory[targetMsgIndex].status = 'received';
+                    ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+                }
+                // ---------------------------
+                
                 // 存入我收到的亲属卡库
                 ChatDB.setItem(`family_card_received_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify({ limit: parseFloat(msg.limit) }));
                 renderChatHistory(currentChatRoomCharId);
@@ -5880,12 +6516,38 @@ function handleFamilyCardClick(index) {
             const limit = prompt('对方请求开通亲属卡，请输入你愿意给的每月额度：');
             if (limit && parseFloat(limit) > 0) {
                 msg.status = 'received'; // 标记索要请求已处理
+                
+                // --- 新增：双向同步索要状态给对方 ---
+                let targetHistory = JSON.parse(ChatDB.getItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`) || '[]');
+                let targetMsgIndex = targetHistory.findIndex(m => m.type === 'family_card' && m.timestamp === msg.timestamp);
+                if (targetMsgIndex !== -1) {
+                    targetHistory[targetMsgIndex].status = 'received';
+                    ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+                }
+                // ---------------------------
+                
                 // 发送一张赠送卡
-                history.push({
+                let newGiftMsg = {
                     role: 'user', type: 'family_card', subType: 'gift', limit: parseFloat(limit).toFixed(2),
                     status: 'pending', content: '[赠送亲属卡]', timestamp: Date.now()
-                });
+                };
+                history.push(newGiftMsg);
                 ChatDB.setItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`, JSON.stringify(history));
+                
+                // --- 新增：双向同步赠送卡给对方 ---
+                let targetMsg = { ...newGiftMsg, role: 'char' };
+                targetHistory.push(targetMsg);
+                ChatDB.setItem(`chat_history_${currentChatRoomCharId}_${currentLoginId}`, JSON.stringify(targetHistory));
+
+                let targetSessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentChatRoomCharId}`) || '[]');
+                targetSessions = targetSessions.filter(id => id !== currentLoginId);
+                targetSessions.unshift(currentLoginId);
+                ChatDB.setItem(`chat_sessions_${currentChatRoomCharId}`, JSON.stringify(targetSessions));
+
+                let unreadCount = parseInt(ChatDB.getItem(`unread_${currentChatRoomCharId}_${currentLoginId}`) || '0');
+                ChatDB.setItem(`unread_${currentChatRoomCharId}_${currentLoginId}`, (unreadCount + 1).toString());
+                // ---------------------------
+                
                 renderChatHistory(currentChatRoomCharId);
             }
         }
@@ -5904,9 +6566,10 @@ renderWallet = function() {
     
     if (!slider || !dotsContainer) return;
 
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    // 核心修改：遍历所有实体（排除自己），这样 Char 登录时就能看到自己送给 User 的卡
+    let allEntities = getAllEntities().filter(e => e.id !== currentLoginId);
     
-    chars.forEach(char => {
+    allEntities.forEach(char => {
         // 渲染我赠出的卡 (我给别人的)，将其添加到滑动容器中
         const giftedCard = JSON.parse(ChatDB.getItem(`family_card_gifted_${currentLoginId}_${char.id}`) || 'null');
         if (giftedCard) {
@@ -6056,6 +6719,12 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
                 sysMsg.content += `  {"action": "like", "momentId": "动态ID"},\n`;
                 sysMsg.content += `  {"action": "comment", "momentId": "动态ID", "content": "评论内容"}\n`;
                 sysMsg.content += `]\n`;
+
+                // 【新增】：账号信息修改规则
+                sysMsg.content += `\n【账号信息修改规则】\n`;
+                sysMsg.content += `如果你想修改自己的网名、个性签名或登录密码，可以在 JSON 根节点添加 "update_profile" 字段：\n`;
+                sysMsg.content += `"update_profile": {"netName": "新网名", "signature": "新签名", "password": "新密码"}\n`;
+                sysMsg.content += `(不需要修改的字段可以不写)\n`;
             }
             options.body = JSON.stringify(bodyObj);
         }
@@ -6073,6 +6742,36 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
                     const jsonStr = jsonMatch ? jsonMatch[0] : replyRaw;
                     const parsedData = JSON.parse(jsonStr);
                     
+                    // 【新增】：处理 char 自主修改个人信息
+                    if (parsedData.update_profile) {
+                        let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+                        let charIndex = allChars.findIndex(c => c.id === targetCharId);
+                        if (charIndex !== -1) {
+                            let updated = false;
+                            if (parsedData.update_profile.netName) {
+                                allChars[charIndex].netName = parsedData.update_profile.netName;
+                                updated = true;
+                            }
+                            if (parsedData.update_profile.signature) {
+                                allChars[charIndex].signature = parsedData.update_profile.signature;
+                                updated = true;
+                            }
+                            if (parsedData.update_profile.password) {
+                                allChars[charIndex].password = parsedData.update_profile.password;
+                                updated = true;
+                            }
+                            if (updated) {
+                                ChatDB.setItem('chat_chars', JSON.stringify(allChars));
+                                // 刷新相关 UI
+                                if (typeof renderChatList === 'function') renderChatList();
+                                if (typeof renderContactList === 'function') renderContactList();
+                                if (targetCharId === currentChatRoomCharId) {
+                                    updateChatRoomTitleBadge(targetCharId);
+                                }
+                            }
+                        }
+                    }
+
                     let momentsUpdated = false;
                     let allMoments = JSON.parse(ChatDB.getItem(`moments_${currentLoginId}`) || '[]');
 
@@ -6267,8 +6966,11 @@ generateApiReply = async function(isProactive = false, proactiveCharId = null) {
 function openChatAppSettingsPanel() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return alert('请先登录！');
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
+    
+    // 核心修改：从所有实体中查找，兼容 Char 登录
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === currentLoginId);
+    
     if (account) {
         document.getElementById('payPassStatusText').innerText = account.payPassword ? '已设置' : '未设置';
         document.getElementById('freePayToggle').checked = account.freePay === true;
@@ -6327,19 +7029,38 @@ function closeModifyPasswordPanel() { document.getElementById('chatModifyPasswor
 
 function executeModifyPassword() {
     const currentLoginId = ChatDB.getItem('current_login_account');
+    let isUser = true;
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const idx = accounts.findIndex(a => a.id === currentLoginId);
+    let idx = accounts.findIndex(a => a.id === currentLoginId);
+    
+    // 核心修改：如果在用户库找不到，去角色库找
+    if (idx === -1) {
+        isUser = false;
+        accounts = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+        idx = accounts.findIndex(a => a.id === currentLoginId);
+    }
+    
+    if (idx === -1) return alert('账号不存在！');
+    const account = accounts[idx];
+
     const oldP = document.getElementById('oldPassInput').value.trim();
     const n1 = document.getElementById('newPassInput1').value.trim();
     const n2 = document.getElementById('newPassInput2').value.trim();
 
     if (!oldP || !n1 || !n2) return alert('请填写完整！');
-    if (oldP !== accounts[idx].password) return alert('旧密码错误！');
+    if (oldP !== account.password) return alert('旧密码错误！');
     if (oldP === n1) return alert('旧密码不能和新密码一样！');
     if (n1 !== n2) return alert('两次输入的新密码不一致！');
 
     accounts[idx].password = n1;
-    ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    
+    // 根据身份存入对应的数据库
+    if (isUser) {
+        ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    } else {
+        ChatDB.setItem('chat_chars', JSON.stringify(accounts));
+    }
+    
     alert('登录密码修改成功！');
     closeModifyPasswordPanel();
 }
@@ -6347,8 +7068,8 @@ function executeModifyPassword() {
 // 3. 支付密码管理逻辑 (首次设置 vs 修改)
 function openModifyPayPasswordPanel() {
     const currentLoginId = ChatDB.getItem('current_login_account');
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === currentLoginId);
 
     const isFirstTime = !account.payPassword;
     document.getElementById('payPassTitle').innerText = isFirstTime ? '设置支付密码' : '修改支付密码';
@@ -6364,8 +7085,15 @@ function closeModifyPayPasswordPanel() { document.getElementById('chatModifyPayP
 
 function executeModifyPayPassword() {
     const currentLoginId = ChatDB.getItem('current_login_account');
+    let isUser = true;
     let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const idx = accounts.findIndex(a => a.id === currentLoginId);
+    let idx = accounts.findIndex(a => a.id === currentLoginId);
+    
+    if (idx === -1) {
+        isUser = false;
+        accounts = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+        idx = accounts.findIndex(a => a.id === currentLoginId);
+    }
     const account = accounts[idx];
 
     const oldP = document.getElementById('oldPayPassInput').value.trim();
@@ -6384,7 +7112,11 @@ function executeModifyPayPassword() {
     if (n1 !== n2) return alert('两次输入不一致！');
 
     accounts[idx].payPassword = n1;
-    ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    if (isUser) {
+        ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
+    } else {
+        ChatDB.setItem('chat_chars', JSON.stringify(accounts));
+    }
     alert('支付密码设置成功！');
     document.getElementById('payPassStatusText').innerText = '已设置';
     closeModifyPayPasswordPanel();
@@ -6393,10 +7125,14 @@ function executeModifyPayPassword() {
 // 忘记密码找回
 function showOldPasswordHint(type) {
     const currentLoginId = ChatDB.getItem('current_login_account');
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
-    if (type === 'login') alert(`您的登录密码是：${account.password}`);
-    else alert(`您的支付密码是：${account.payPassword}`);
+    // 核心修改：从所有实体中查找，防止 Char 登录时 account 为 undefined
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === currentLoginId);
+    
+    if (!account) return alert('未找到账号信息！');
+    
+    if (type === 'login') alert(`您的登录密码是：${account.password || '未设置'}`);
+    else alert(`您的支付密码是：${account.payPassword || '未设置'}`);
 }
 
 // 4. 个性化主题逻辑
@@ -7099,13 +7835,14 @@ function handleMomentCoverUpload(event) {
     event.target.value = '';
 }
 
-// 2. 渲染朋友圈主页 (增强持久化与同步)
+// 渲染朋友圈主页 (增强持久化与同步)
 function renderMoments() {
     const currentLoginId = ChatDB.getItem('current_login_account');
     if (!currentLoginId) return;
 
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const me = accounts.find(a => a.id === currentLoginId);
+    // 核心修改：兼容 Char 视角
+    let allEntities = getAllEntities();
+    const me = allEntities.find(a => a.id === currentLoginId);
     if (!me) return;
 
     // 【同步头像与名字】：确保跟随用户最新资料
@@ -7348,6 +8085,11 @@ function submitMomentComment() {
             content: content
         });
         ChatDB.setItem(`moments_${currentLoginId}`, JSON.stringify(moments));
+        
+        // --- 新增：触发 Char 感知系统 ---
+        injectCharPerception('comment_moment', content);
+        // -------------------------------
+
         document.getElementById('momentCommentModalOverlay').classList.remove('show');
         renderMoments();
     }
@@ -7359,6 +8101,11 @@ function deleteMoment(momentId) {
         let moments = JSON.parse(ChatDB.getItem(`moments_${currentLoginId}`) || '[]');
         moments = moments.filter(m => m.id !== momentId);
         ChatDB.setItem(`moments_${currentLoginId}`, JSON.stringify(moments));
+        
+        // --- 新增：触发 Char 感知系统 ---
+        injectCharPerception('delete_moment', '');
+        // -------------------------------
+
         renderMoments();
     }
 }
@@ -7485,6 +8232,10 @@ function publishMoment() {
     let moments = JSON.parse(ChatDB.getItem(`moments_${currentLoginId}`) || '[]');
     moments.push(newMoment);
     ChatDB.setItem(`moments_${currentLoginId}`, JSON.stringify(moments));
+
+    // --- 新增：触发 Char 感知系统 ---
+    injectCharPerception('post_moment', text || '图片');
+    // -------------------------------
 
     closeMomentPostPanel();
     renderMoments();
@@ -7764,8 +8515,9 @@ function openGlobalPrompt(title, desc, placeholder, callback, defaultValue = '')
     
     document.getElementById('globalPromptConfirmBtn').onclick = () => {
         const val = inputEl.value;
-        closeGlobalPrompt();
-        if (globalPromptCallback) globalPromptCallback(val);
+        const cb = globalPromptCallback; // 核心修复：先将回调函数保存下来
+        closeGlobalPrompt();             // 关闭弹窗（这步会清空 globalPromptCallback）
+        if (cb) cb(val);                 // 执行刚刚保存的回调函数，完成数据储存
     };
     
     document.getElementById('globalPromptModalOverlay').classList.add('show');
@@ -7830,196 +8582,26 @@ function closeLinkedAccountManager() {
     document.getElementById('linkedAccountManagerPanel').style.display = 'none';
 }
 
-function renderLinkedAccounts() {
-    const topListEl = document.getElementById('linkedAccTopList');
-    const msgListEl = document.getElementById('linkedAccMsgList');
-    const otherListEl = document.getElementById('linkedAccOtherList');
-    
-    topListEl.innerHTML = '';
-    msgListEl.innerHTML = '';
-    otherListEl.innerHTML = '';
-
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    if (!currentLoginId) return;
-
-    let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
-    let allEntities = getAllEntities();
-    let remarks = JSON.parse(ChatDB.getItem(`char_remarks_${currentLoginId}`) || '{}');
-
-    // 1. 渲染顶部已关联账号头像
-    if (linkedAccounts.length === 0) {
-        topListEl.innerHTML = '<div style="font-size: 13px; color: #aaa; padding: 10px 0;">暂无关联账号</div>';
-        msgListEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; padding: 40px 0;">暂无消息</div>';
-    } else {
-        let allMsgItems = []; // 收集所有未读消息项
-
-        linkedAccounts.forEach(accId => {
-            const accEntity = allEntities.find(e => e.id === accId);
-            if (!accEntity) return;
-            const accName = accEntity.netName || accEntity.name;
-
-            // 计算该账号的总未读数 (用于顶部头像红点)
-            let totalUnreadCount = 0;
-
-            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
-            sessions.forEach(targetId => {
-                let unread = parseInt(ChatDB.getItem(`unread_${accId}_${targetId}`) || '0');
-                if (unread > 0) {
-                    totalUnreadCount += unread;
-                    
-                    let history = JSON.parse(ChatDB.getItem(`chat_history_${accId}_${targetId}`) || '[]');
-                    if (history.length > 0) {
-                        let lastMsg = history[history.length - 1];
-                        let safeContent = lastMsg.content || '';
-                        let contentText = safeContent.replace(/<[^>]+>/g, '');
-                        if (lastMsg.type === 'image' || safeContent.includes('<img')) contentText = '[图片]';
-                        else if (lastMsg.type === 'voice') contentText = '[语音]';
-                        else if (lastMsg.type === 'forward_record') contentText = '[聊天记录]';
-                        
-                        const targetEntity = allEntities.find(e => e.id === targetId);
-                        
-                        allMsgItems.push({
-                            accId: accId,
-                            accName: accName,
-                            targetId: targetId,
-                            targetEntity: targetEntity,
-                            unread: unread,
-                            text: contentText,
-                            timestamp: lastMsg.timestamp
-                        });
-                    }
-                }
-            });
-
-            // 判断当前头像是否被选中
-            const isSelected = currentSelectedLinkedAccId === accId;
-            const isDimmed = currentSelectedLinkedAccId !== 'all' && !isSelected;
-
-            // 渲染顶部头像
-            const avatarItem = document.createElement('div');
-            avatarItem.className = `linked-avatar-item ${isLinkedAccManaging ? 'is-deleting' : ''}`;
-            avatarItem.style.opacity = isDimmed ? '0.4' : '1';
-            avatarItem.style.transition = 'opacity 0.2s';
-            
-            const unreadBadge = totalUnreadCount > 0 ? `<div class="wechat-unread-badge" style="top: -4px; right: -4px;">${totalUnreadCount > 99 ? '99+' : totalUnreadCount}</div>` : '';
-            const deleteBtn = isLinkedAccManaging ? `<div class="linked-delete-btn" onclick="event.stopPropagation(); removeLinkedAccount('${accId}')">×</div>` : '';
-            const borderStyle = isSelected ? 'border: 2px solid #007AFF;' : 'border: 2px solid #fff;';
-
-            avatarItem.innerHTML = `
-                <div class="linked-avatar-img" style="background-image: url('${accEntity.avatarUrl || ''}'); ${borderStyle}">
-                    ${deleteBtn}
-                    ${!isLinkedAccManaging ? `
-                    <div class="linked-avatar-badge">
-                        <svg viewBox="0 0 24 24"><path d="M18.6 6.62c-1.44 0-2.8.56-3.77 1.53L12 10.66 9.16 8.16a5.38 5.38 0 0 0-3.77-1.54C2.42 6.62 0 9.04 0 12s2.42 5.38 5.39 5.38c1.44 0 2.8-.56 3.77-1.53L12 13.34l2.84 2.5c.97.97 2.33 1.53 3.77 1.53 2.97 0 5.39-2.42 5.39-5.38s-2.42-5.38-5.39-5.38zm0 8.76c-.9 0-1.75-.35-2.36-.99l-4.24-3.73 4.24-3.73c.61-.64 1.46-.99 2.36-.99 1.87 0 3.39 1.52 3.39 3.38s-1.52 3.38-3.39 3.38zM5.39 15.38c-.9 0-1.75-.35-2.36-.99C2.42 13.75 2 12.9 2 12s.42-1.75 1.03-2.39c.61-.64 1.46-.99 2.36-.99 1.87 0 3.39 1.52 3.39 3.38s-1.52 3.38-3.39 3.38z"/></svg>
-                    </div>
-                    ` : ''}
-                    ${unreadBadge}
-                </div>
-                <div class="linked-avatar-name" style="color: ${isSelected ? '#007AFF' : '#333'};">${accName}</div>
-            `;
-            
-            avatarItem.onclick = () => {
-                if (!isLinkedAccManaging) {
-                    currentSelectedLinkedAccId = (currentSelectedLinkedAccId === accId) ? 'all' : accId;
-                    renderLinkedAccounts();
-                }
-            };
-            topListEl.appendChild(avatarItem);
-        });
-
-        // 渲染消息列表 (按时间倒序)
-        allMsgItems.sort((a, b) => b.timestamp - a.timestamp);
-        
-        // 过滤
-        if (currentSelectedLinkedAccId !== 'all') {
-            allMsgItems = allMsgItems.filter(item => item.accId === currentSelectedLinkedAccId);
-        }
-
-        if (allMsgItems.length === 0) {
-            msgListEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; padding: 40px 0;">暂无新消息</div>';
-        } else {
-            allMsgItems.forEach(item => {
-                const targetName = item.targetEntity ? (remarks[item.targetId] || item.targetEntity.netName || item.targetEntity.name) : '未知';
-                const targetAvatar = item.targetEntity ? item.targetEntity.avatarUrl : '';
-                
-                const date = new Date(item.timestamp);
-                const now = new Date();
-                const timeStr = date.toDateString() === now.toDateString() 
-                    ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-                    : `${date.getMonth() + 1}/${date.getDate()}`;
-
-                const msgItem = document.createElement('div');
-                msgItem.className = 'linked-msg-item';
-                msgItem.onclick = () => showToast('仅代收消息，如需回复请在设置中切换账号', 'text', 2000);
-                
-                const msgUnreadBadge = `<div class="wechat-unread-badge" style="position: relative; top: 0; right: 0;">${item.unread > 99 ? '99+' : item.unread}</div>`;
-
-                msgItem.innerHTML = `
-                    <div class="linked-msg-avatar" style="background-image: url('${targetAvatar}');"></div>
-                    <div class="linked-msg-info">
-                        <div class="linked-msg-name">${targetName}</div>
-                        <div class="linked-msg-preview">${item.accName}: ${item.text}</div>
-                    </div>
-                    <div class="linked-msg-right">
-                        <div class="linked-msg-time">${timeStr}</div>
-                        ${msgUnreadBadge}
-                    </div>
-                `;
-                msgListEl.appendChild(msgItem);
-            });
-        }
-    }
-
-    // 2. 渲染底部未关联账号
-    const availableEntities = allEntities.filter(e => e.id !== currentLoginId && !linkedAccounts.includes(e.id));
-    
-    if (availableEntities.length === 0) {
-        otherListEl.innerHTML = '<div style="font-size: 12px; color: #ccc;">没有可关联的其他账号</div>';
-    } else {
-        availableEntities.forEach(entity => {
-            const otherItem = document.createElement('div');
-            otherItem.className = 'linked-avatar-item';
-            otherItem.onclick = () => addLinkedAccount(entity.id);
-            otherItem.innerHTML = `
-                <div class="linked-avatar-img" style="background-image: url('${entity.avatarUrl || ''}'); opacity: 0.6;">
-                    <div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #ccc; border-radius: 50%; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px; font-weight: bold;">+</div>
-                </div>
-                <div class="linked-avatar-name" style="color: #888;">${entity.netName || entity.name}</div>
-            `;
-            otherListEl.appendChild(otherItem);
-        });
-    }
-}
-
-function clearLinkedUnread() {
-    if (confirm('确定要清空所有关联账号的未读消息提醒吗？')) {
-        const currentLoginId = ChatDB.getItem('current_login_account');
-        if (!currentLoginId) return;
-        let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
-        
-        linkedAccounts.forEach(accId => {
-            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${accId}`) || '[]');
-            sessions.forEach(targetId => {
-                ChatDB.setItem(`unread_${accId}_${targetId}`, '0');
-            });
-        });
-        
-        renderLinkedAccounts();
-        if (typeof renderChatList === 'function') renderChatList();
-        showToast('未读消息已清空', 'success', 1500);
-    }
-}
-
 function addLinkedAccount(id) {
     const currentLoginId = ChatDB.getItem('current_login_account');
+    
     let linkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${currentLoginId}`) || '[]');
+    let targetLinkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${id}`) || '[]');
+
+    // 核心修改：限制最多只能关联 3 个账号
+    if (!linkedAccounts.includes(id) && linkedAccounts.length >= 3) {
+        return alert('您最多只能关联 3 个账号！');
+    }
+    if (!targetLinkedAccounts.includes(currentLoginId) && targetLinkedAccounts.length >= 3) {
+        return alert('对方关联的账号数量已达上限（3个），无法关联！');
+    }
+
     if (!linkedAccounts.includes(id)) {
         linkedAccounts.push(id);
         ChatDB.setItem(`linked_accounts_${currentLoginId}`, JSON.stringify(linkedAccounts));
     }
     
-    // 【新增】：双向关联，把当前账号也加到目标账号的关联列表里
-    let targetLinkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${id}`) || '[]');
+    // 核心修改：双向关联，把当前账号也加到目标账号的关联列表里
     if (!targetLinkedAccounts.includes(currentLoginId)) {
         targetLinkedAccounts.push(currentLoginId);
         ChatDB.setItem(`linked_accounts_${id}`, JSON.stringify(targetLinkedAccounts));
@@ -8036,7 +8618,7 @@ function removeLinkedAccount(id) {
         linkedAccounts = linkedAccounts.filter(accId => accId !== id);
         ChatDB.setItem(`linked_accounts_${currentLoginId}`, JSON.stringify(linkedAccounts));
         
-        // 【新增】：双向解除关联，把当前账号从目标账号的关联列表中移除
+        // 核心修改：双向解除关联，把当前账号从目标账号的关联列表中移除
         let targetLinkedAccounts = JSON.parse(ChatDB.getItem(`linked_accounts_${id}`) || '[]');
         targetLinkedAccounts = targetLinkedAccounts.filter(accId => accId !== currentLoginId);
         ChatDB.setItem(`linked_accounts_${id}`, JSON.stringify(targetLinkedAccounts));
@@ -8052,26 +8634,7 @@ function switchToLinkedAccount(id) {
     
     if (!targetEntity) return alert('目标账号不存在！');
 
-    // 如果目标是 Char，需要确保它在 chat_accounts 中有一个对应的虚拟账号记录，否则无法作为主体登录
-    if (!targetEntity.isAccount) {
-        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-        let virtualAcc = accounts.find(a => a.id === id);
-        if (!virtualAcc) {
-            // 为 Char 创建一个虚拟登录账号
-            virtualAcc = {
-                id: id,
-                personaId: id, // 虚拟绑定自己
-                netName: targetEntity.name,
-                account: 'virtual_' + id,
-                password: '',
-                avatarUrl: targetEntity.avatarUrl,
-                isVirtual: true
-            };
-            accounts.push(virtualAcc);
-            ChatDB.setItem('chat_accounts', JSON.stringify(accounts));
-        }
-    }
-
+    // 核心修改：直接允许 Char 登录，不再创建冗余的虚拟账号
     ChatDB.setItem('current_login_account', id);
     closeLinkedAccountManager();
     
@@ -8088,3 +8651,144 @@ function switchToLinkedAccount(id) {
 window.addEventListener('ChatDBReady', () => {
     initLinkedAccountToggle();
 });
+
+// ==========================================
+// Char 账号专属：生成真实社交聊天记录
+// ==========================================
+async function generateCharSocialChatAPI() {
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    if (!currentLoginId) return;
+
+    let allEntities = getAllEntities();
+    const char = allEntities.find(c => c.id === currentLoginId);
+    if (!char || char.isAccount) return;
+
+    const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) return alert('请先配置 API！');
+
+    // 获取世界书
+    let activeWbs = [];
+    let wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || { entries: [] };
+    let entries = wbData.entries.filter(e => (char.wbEntries && char.wbEntries.includes(e.id)) || e.constant);
+    entries.forEach(entry => {
+        activeWbs.push(entry.content);
+    });
+
+    // 获取当前 Char 的通讯录好友 (排除真实 User 账号)
+    let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
+    let existingFriends = contacts.map(id => allEntities.find(e => e.id === id))
+                                  .filter(e => e && !e.isAccount)
+                                  .map(e => e.netName || e.name);
+    let friendsContext = existingFriends.length > 0 
+        ? `你当前的通讯录里有这些好友：${existingFriends.join(', ')}。你可以优先选择和他们聊天。` 
+        : `你当前通讯录为空，请自由生成新的好友或群聊。`;
+
+    let prompt = `你现在正在扮演角色：${char.name}。\n`;
+    prompt += `【你的设定】：${char.description || '无'}\n`;
+    if (activeWbs.length > 0) {
+        prompt += `【世界书背景】：\n${activeWbs.join('\n')}\n`;
+    }
+    prompt += `【通讯录情报】：${friendsContext}\n`;
+
+    prompt += `\n请基于你的人设和当前生活状态，生成你的微信聊天列表和聊天记录（包含 3-5 个会话）。\n`;
+    prompt += `⚠️【极其重要的要求】：\n`;
+    prompt += `1. 【绝对禁止】：绝对不要生成与玩家/用户(User)的聊天记录！只生成你和你的亲戚、朋友、同事、同学等 NPC 的日常社交！\n`;
+    prompt += `2. 聊天内容必须是真实的社交日常！例如：吐槽奇葩老板、聊游戏开黑、拼单点外卖、借钱、分享搞笑视频等。\n`;
+    prompt += `3. 每个会话的聊天记录必须不少于 10 条消息！请充分展开对话细节，展现人物性格和关系。\n`;
+    prompt += `4. 聊天记录 history 中的 role 字段，只能是 "me"（代表你发出的消息）或 "other"（代表对方发出的消息）。\n`;
+    prompt += `5. 你可以生成单人聊天，也可以生成【群聊】。如果是群聊，请将 isGroup 设为 true，并且在 other 发送的消息中带上名字前缀（如 "张三: 吃饭没"）。\n`;
+    
+    prompt += `\n必须返回合法的 JSON 格式，结构如下：\n`;
+    prompt += `[\n`;
+    prompt += `  {\n`;
+    prompt += `    "name": "NPC名字(如: 老妈, 张三)", "isGroup": false, "signature": "NPC的个性签名",\n`;
+    prompt += `    "history": [\n`;
+    prompt += `      {"role": "other", "content": "在干嘛？"},\n`;
+    prompt += `      {"role": "me", "content": "刚吃完饭"}\n`;
+    prompt += `    ]\n`;
+    prompt += `  },\n`;
+    prompt += `  {\n`;
+    prompt += `    "name": "工作群/家族群", "isGroup": true, "signature": "群聊简介",\n`;
+    prompt += `    "history": [\n`;
+    prompt += `      {"role": "other", "content": "老板: 收到请回复"},\n`;
+    prompt += `      {"role": "me", "content": "收到"}\n`;
+    prompt += `    ]\n`;
+    prompt += `  }\n`;
+    prompt += `]`;
+
+    showToast('正在生成社交聊天记录...', 'loading');
+
+    try {
+        const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+            body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.8 })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            let replyRaw = data.choices[0].message.content.trim();
+            replyRaw = replyRaw.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+            
+            const parsed = JSON.parse(replyRaw);
+            
+            let npcs = JSON.parse(ChatDB.getItem('chat_npcs') || '[]');
+            let sessions = JSON.parse(ChatDB.getItem(`chat_sessions_${currentLoginId}`) || '[]');
+            let contacts = JSON.parse(ChatDB.getItem(`contacts_${currentLoginId}`) || '[]');
+
+            parsed.forEach(session => {
+                // 查找或创建 NPC/群聊
+                let npc = npcs.find(n => n.name === session.name);
+                let npcId;
+                if (npc) {
+                    npcId = npc.id;
+                    // 如果大模型把它当成了群聊，更新一下属性
+                    if (session.isGroup) npc.isGroup = true;
+                } else {
+                    npcId = 'npc_' + Date.now() + Math.random().toString(36).substr(2, 5);
+                    npcs.push({
+                        id: npcId,
+                        name: session.name,
+                        netName: session.name,
+                        signature: session.signature || (session.isGroup ? '群聊' : '这个人很懒，什么都没写~'),
+                        description: session.isGroup ? `这是 ${char.name} 的一个群聊。` : `这是 ${char.name} 的通讯录好友。`,
+                        group: session.isGroup ? '群聊' : 'NPC',
+                        isNPC: true,
+                        isGroup: session.isGroup || false,
+                        avatarUrl: ''
+                    });
+                }
+
+                // 加入通讯录和会话列表
+                if (!contacts.includes(npcId)) contacts.push(npcId);
+                if (!sessions.includes(npcId)) sessions.unshift(npcId);
+
+                // 转换并保存真实的聊天记录
+                let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${npcId}`) || '[]');
+                let baseTime = Date.now() - session.history.length * 60000; // 模拟过去的时间
+                
+                session.history.forEach((msg, idx) => {
+                    history.push({
+                        role: msg.role === 'me' ? 'user' : 'char', // 在当前账号视角，me就是user(自己)，other就是char(对方)
+                        content: msg.content,
+                        timestamp: baseTime + idx * 60000
+                    });
+                });
+                ChatDB.setItem(`chat_history_${currentLoginId}_${npcId}`, JSON.stringify(history));
+            });
+
+            ChatDB.setItem('chat_npcs', JSON.stringify(npcs));
+            ChatDB.setItem(`chat_sessions_${currentLoginId}`, JSON.stringify(sessions));
+            ChatDB.setItem(`contacts_${currentLoginId}`, JSON.stringify(contacts));
+
+            renderChatList();
+            hideToast();
+            alert('社交聊天记录生成成功！');
+        } else {
+            throw new Error('API 请求失败');
+        }
+    } catch (e) {
+        hideToast();
+        alert('生成失败，请检查 API 配置或重试。');
+    }
+}

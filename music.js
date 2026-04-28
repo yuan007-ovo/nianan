@@ -95,8 +95,9 @@ function getMusicPlayApiUrl() {
 function openMusicApp() {
     const musicLoginId = ChatDB.getItem('music_current_login_account');
     if (musicLoginId) {
-        let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-        if (accounts.some(a => a.id === musicLoginId)) {
+        // 核心修复：从所有实体中检查登录状态，防止 Char 刷新后被踢出
+        let allEntities = getAllEntities();
+        if (allEntities.some(a => a.id === musicLoginId)) {
             enterMusicMain();
             return;
         } else {
@@ -149,12 +150,26 @@ function handleMusicMeBgUpload(event) {
 function renderMusicAccountList() {
     const listEl = document.getElementById('musicAccountSelectList');
     listEl.innerHTML = '';
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    if (accounts.length === 0) {
-        listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 20px;">暂无可用账号，请先在 Chat 中注册</div>';
+    
+    let allEntities = getAllEntities();
+    let displayList = [];
+
+    // 核心修改：只要是真实用户，或者是有账号密码的角色，都可以登录
+    allEntities.forEach(entity => {
+        if (entity.isAccount || (entity.account && entity.password)) {
+            displayList.push(entity);
+        }
+    });
+
+    if (displayList.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 13px; margin-top: 20px;">暂无可用账号，请先在 Chat 中注册或为角色生成私密账号</div>';
         return;
     }
-    accounts.forEach(acc => {
+    
+    displayList.forEach(acc => {
+        const isChar = !acc.isAccount;
+        const typeTag = isChar ? '<span style="font-size:10px; background:#eee; color:#888; padding:2px 4px; border-radius:4px; margin-left:6px;">角色</span>' : '';
+        
         const card = document.createElement('div');
         card.className = 'music-account-card';
         card.onclick = () => {
@@ -165,8 +180,8 @@ function renderMusicAccountList() {
         card.innerHTML = `
             <div class="music-account-avatar" style="background-image: url('${acc.avatarUrl || ''}')"></div>
             <div class="music-account-info">
-                <div class="music-account-name">${acc.netName || '未命名'}</div>
-                <div class="music-account-id">Account: ${acc.account}</div>
+                <div class="music-account-name">${acc.netName || acc.name || '未命名'}${typeTag}</div>
+                <div class="music-account-id">${isChar ? 'Char Account: ' + acc.account : 'Account: ' + acc.account}</div>
             </div>
         `;
         listEl.appendChild(card);
@@ -223,11 +238,13 @@ function switchMusicTab(tabName) {
 function renderMusicMePage() {
     const musicLoginId = ChatDB.getItem('music_current_login_account');
     if (!musicLoginId) return;
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === musicLoginId);
+    
+    // 核心修复：从所有实体中查找，这样 Char 登录时也能正确找到数据
+    let allEntities = getAllEntities();
+    const account = allEntities.find(a => a.id === musicLoginId);
     if (!account) return;
 
-    document.getElementById('musicMeName').innerText = account.netName || '未命名';
+    document.getElementById('musicMeName').innerText = account.netName || account.name || '未命名';
     document.getElementById('musicMeAvatar').style.backgroundImage = account.avatarUrl ? `url(${account.avatarUrl})` : 'none';
     
     // 【修复】：读取并设置背景，防止刷新丢失
@@ -266,6 +283,17 @@ function renderMusicMePage() {
             <div>Lv.${level}</div>
             <div><span>${listenTime}</span> 小时</div>
         `;
+    }
+    
+    const localBtn = document.getElementById('musicMeLocalBtn');
+    if (localBtn) {
+        if (account.isAccount) {
+            localBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> 本地`;
+            localBtn.onclick = openLocalImportModal;
+        } else {
+            localBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 最近`;
+            localBtn.onclick = () => openCharRecentMusic(musicLoginId);
+        }
     }
     
     renderMyPlaylists();
@@ -944,23 +972,26 @@ function renderMusicFriends() {
     listContainer.innerHTML = '';
 
     let friends = JSON.parse(ChatDB.getItem(`music_friends_${musicLoginId}`) || '[]');
-    let allChars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
+    // 核心修复：使用 getAllEntities 包含所有用户和角色，防止 Char 登录时找不到 User 好友
+    let allEntities = getAllEntities();
 
     if (friends.length === 0) {
         listContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #aaa; font-size: 13px;">暂无好友，快去添加吧</div>';
         return;
     }
 
-// 修改后 (music.js 约 415 行)
     friends.forEach(charId => {
-        const char = allChars.find(c => c.id === charId);
+        const char = allEntities.find(c => c.id === charId);
         if (!char) return;
 
         const item = document.createElement('div');
-        // 改用类似搜索结果的独立卡片样式
         item.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px 15px; background: #fff; border-radius: 16px; border: 1px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.02); cursor: pointer;';
-        // 点击卡片进入角色音乐主页
-        item.onclick = () => openMusicCharProfile(char.id);
+        
+        // 如果对方是角色，点击进入角色音乐主页
+        if (!char.isAccount) {
+            item.onclick = () => openMusicCharProfile(char.id);
+        }
+        
         item.innerHTML = `
             <div style="width: 44px; height: 44px; border-radius: 12px; background-image: url('${char.avatarUrl || ''}'); background-size: cover; background-position: center; background-color: #f4f4f4; border: 1px solid #eee;"></div>
             <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
@@ -989,8 +1020,12 @@ function searchMusicFriend() {
     
     if (!keyword) { resultContainer.innerHTML = ''; return; }
 
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const matchedChars = chars.filter(c => c.account && c.account.includes(keyword));
+    // 核心修复：从所有实体中搜索，让 Char 也能搜到 User 账号
+    let allEntities = getAllEntities();
+    const currentLoginId = ChatDB.getItem('music_current_login_account');
+    
+    // 过滤掉自己，并且匹配账号
+    const matchedChars = allEntities.filter(c => c.id !== currentLoginId && c.account && c.account.includes(keyword));
 
     if (matchedChars.length === 0) {
         resultContainer.innerHTML = '<div style="text-align: center; color: #aaa; font-size: 12px; padding: 20px;">未找到该账号</div>';
@@ -1017,11 +1052,19 @@ function addMusicFriend(charId) {
     const musicLoginId = ChatDB.getItem('music_current_login_account');
     if (!musicLoginId) return;
 
+    // 1. 添加到自己的好友列表
     let friends = JSON.parse(ChatDB.getItem(`music_friends_${musicLoginId}`) || '[]');
     if (friends.includes(charId)) { alert('该角色已经是您的音乐好友了！'); return; }
 
     friends.push(charId);
     ChatDB.setItem(`music_friends_${musicLoginId}`, JSON.stringify(friends));
+    
+    // 2. 核心修改：双向同步，把当前账号也加到对方的好友列表里
+    let targetFriends = JSON.parse(ChatDB.getItem(`music_friends_${charId}`) || '[]');
+    if (!targetFriends.includes(musicLoginId)) {
+        targetFriends.push(musicLoginId);
+        ChatDB.setItem(`music_friends_${charId}`, JSON.stringify(targetFriends));
+    }
     
     alert('添加成功！');
     closeMusicAddFriendModal();
@@ -1677,13 +1720,19 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
                     musicPlaySong(song.id, song.title, song.artist, song.cover);
                 }
             };
+            let innerVoiceHtml = '';
+            if (song.innerVoice) {
+                innerVoiceHtml = `<div style="font-size: 11px; color: #ff5000; margin-top: 4px; font-style: italic; background: rgba(255,80,0,0.05); padding: 4px 8px; border-radius: 6px; display: inline-block;">"${song.innerVoice}"</div>`;
+            }
+
             item.innerHTML = `
                 <div style="width: 20px; text-align: center; color: #999; font-size: 15px; font-weight: bold;">${index + 1}</div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden;">
                     <div style="font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.title}</div>
                     <div style="font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.artist}</div>
+                    ${innerVoiceHtml}
                 </div>
-                <div onclick="event.stopPropagation(); removeSongFromPlaylist('${pl.id}', '${song.id}', ${isCharPlaylist}, '${charId}')" style="padding: 5px; color: #ccc;">
+                <div onclick="event.stopPropagation(); removeSongFromPlaylist('${pl.id}', '${song.id}', ${isCharPlaylist}, '${charId}')" style="padding: 5px; color: #ccc; display: ${id === 'recent' ? 'none' : 'block'};">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
             `;
@@ -1691,12 +1740,16 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
             tracksContainer.appendChild(item);
         });
     } else {
-        tracksContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#888; font-size:13px;">歌单为空，快去添加歌曲吧</div>';
+        if (id === 'recent') {
+            tracksContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#888; font-size:13px;">暂无最近播放记录，点击右上角按钮生成</div>';
+        } else {
+            tracksContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#888; font-size:13px;">歌单为空，快去添加歌曲吧</div>';
+        }
     }
 
     // 处理加载更多按钮
     const loadMoreBtn = document.getElementById('playlistLoadMoreBtn');
-    if (isCharPlaylist && pl.tracks && pl.tracks.length < (pl.trackCount || 50)) {
+    if (isCharPlaylist && pl.tracks && pl.tracks.length < (pl.trackCount || 50) && id !== 'recent') {
         loadMoreBtn.style.display = 'block';
         loadMoreBtn.onclick = () => loadMoreCharSongsAPI(charId, pl.id);
     } else {
@@ -1718,6 +1771,14 @@ function openPlaylistDetail(id, isCharPlaylist = false, charId = null) {
             }
         }
     };
+
+    const regenBtn = document.getElementById('playlistRegenerateBtn');
+    if (id === 'recent') {
+        regenBtn.style.display = 'flex';
+        regenBtn.onclick = () => generateCharRecentMusicAPI(charId || musicLoginId);
+    } else {
+        regenBtn.style.display = 'none';
+    }
 
     document.getElementById('musicPlaylistDetailPanel').style.display = 'flex';
 }
@@ -2721,3 +2782,118 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, 1000); // 延迟等待 DOM 和数据就绪
 });
+// ==========================================
+// 【新增】：角色最近播放与心声逻辑
+// ==========================================
+function openCharRecentMusic(charId) {
+    let recentPlaylist = JSON.parse(ChatDB.getItem(`music_recent_${charId}`) || 'null');
+    
+    // 如果没有数据，构造一个空的占位歌单，而不是自动生成
+    if (!recentPlaylist || !recentPlaylist.tracks) {
+        let allEntities = getAllEntities();
+        const char = allEntities.find(c => c.id === charId);
+        recentPlaylist = {
+            id: 'recent',
+            name: '最近播放',
+            cover: char ? (char.avatarUrl || 'https://p2.music.126.net/6y-7YvS_G8V8.jpg') : 'https://p2.music.126.net/6y-7YvS_G8V8.jpg',
+            trackCount: 0,
+            tracks: []
+        };
+    }
+    
+    // 伪装成一个普通的歌单对象，传给 openPlaylistDetail 渲染
+    let tempPlaylists = JSON.parse(ChatDB.getItem(`music_playlists_${charId}`) || '[]');
+    // 临时把 recent 塞进去供渲染读取，渲染完再删掉
+    tempPlaylists.push(recentPlaylist);
+    ChatDB.setItem(`music_playlists_${charId}`, JSON.stringify(tempPlaylists));
+    
+    openPlaylistDetail('recent', true, charId);
+    
+    // 渲染完后清理掉临时的
+    tempPlaylists = tempPlaylists.filter(p => p.id !== 'recent');
+    ChatDB.setItem(`music_playlists_${charId}`, JSON.stringify(tempPlaylists));
+}
+
+async function generateCharRecentMusicAPI(charId) {
+    const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) {
+        return alert('请先在 Chat 设置中配置 API 信息！');
+    }
+
+    let allEntities = getAllEntities();
+    const char = allEntities.find(c => c.id === charId);
+    if (!char) return;
+
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${charId}`) || '[]');
+    let recentHistory = history.slice(-15).map(m => `${m.role === 'user' ? 'User' : 'Char'}: ${m.content}`).join('\n');
+
+    const prompt = `你是一个情感细腻的音乐分析师。请根据角色【${char.name}】的设定以及TA最近的聊天记录，推测TA最近的心境，并生成一份TA最近单曲循环最多的 10 首真实存在的歌曲。
+【角色设定】：${char.description || '无'}
+【最近聊天记录】：
+${recentHistory || '暂无聊天记录'}
+
+要求：
+1. 必须返回合法的 JSON 对象。
+2. 包含 songs 数组，每首歌包含 title(歌名)、artist(歌手) 和 innerVoice(心声)。
+3. innerVoice(心声) 是角色听这首歌时的内心独白，解释TA为什么听这首歌，心情如何（第一人称，简短感性，10-30字）。
+4. 歌曲必须是现实中真实存在的知名歌曲。
+
+JSON 格式示例：
+{
+  "songs": [
+    {"title": "夜曲", "artist": "周杰伦", "innerVoice": "最近总是想起以前的事，这旋律太适合现在的雨夜了。"},
+    {"title": "Creep", "artist": "Radiohead", "innerVoice": "感觉自己像个局外人，只有这首歌懂我。"}
+  ]
+}`;
+
+    if (typeof showToast === 'function') showToast('正在窥探TA的最近听歌心境...', 'loading');
+
+    try {
+        const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+            body: JSON.stringify({
+                model: apiConfig.model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.8
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            let replyRaw = data.choices[0].message.content.trim();
+            replyRaw = replyRaw.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+            
+            const parsed = JSON.parse(replyRaw);
+            if (!parsed.songs) throw new Error("JSON 格式不正确");
+
+            const recentPlaylist = {
+                id: 'recent',
+                name: '最近播放',
+                cover: char.avatarUrl || 'https://p2.music.126.net/6y-7YvS_G8V8.jpg',
+                trackCount: parsed.songs.length,
+                tracks: parsed.songs.map(s => ({
+                    id: 'gen_recent_' + Date.now() + Math.random(),
+                    title: s.title,
+                    artist: s.artist,
+                    innerVoice: s.innerVoice,
+                    isGenerated: true,
+                    cover: char.avatarUrl || 'https://p2.music.126.net/6y-7YvS_G8V8.jpg'
+                }))
+            };
+
+            ChatDB.setItem(`music_recent_${charId}`, JSON.stringify(recentPlaylist));
+
+            if (typeof hideToast === 'function') hideToast();
+            
+            openCharRecentMusic(charId);
+            
+        } else {
+            throw new Error("API 请求失败");
+        }
+    } catch (e) {
+        if (typeof hideToast === 'function') hideToast();
+        alert('生成失败，请检查 API 配置或重试。\n' + e.message);
+    }
+}

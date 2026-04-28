@@ -12,6 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 打开查手机全屏遮罩
 function openPhoneCheck() {
+    // 核心修改：拦截 Char 账号使用查手机功能
+    const currentLoginId = ChatDB.getItem('current_login_account');
+    let allEntities = typeof getAllEntities === 'function' ? getAllEntities() : [];
+    const me = allEntities.find(a => a.id === currentLoginId);
+    if (me && !me.isAccount) {
+        alert('角色账号无法使用查手机功能！');
+        return;
+    }
+
+    // 新增：拦截查看其他真实用户账号的手机
+    if (typeof currentChatRoomCharId !== 'undefined' && currentChatRoomCharId) {
+        const target = allEntities.find(a => a.id === currentChatRoomCharId);
+        if (target && target.isAccount) {
+            alert('无法查看其他真实用户的手机！');
+            return;
+        }
+    }
+
     // 关闭可能存在的更多面板
     const morePanel = document.getElementById('crMorePanel');
     if (morePanel) morePanel.classList.remove('show');
@@ -286,294 +304,6 @@ function saveIconChanges() {
     }
     closeIconModal();
 }
-// ==========================================
-// 微信登录与主界面逻辑
-// ==========================================
-
-function openPhoneWechatLogin() {
-    if (!currentChatRoomCharId) return alert('请先进入聊天室！');
-
-    // 检查是否已经登录过
-    const isLogged = ChatDB.getItem(`phone_wechat_logged_${currentChatRoomCharId}`);
-    if (isLogged === 'true') {
-        openPhoneWechatApp();
-        return;
-    }
-
-    // 未登录，加载头像并显示登录页
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === currentChatRoomCharId);
-    if (char) {
-        const avatarEl = document.getElementById('pwlAvatar');
-        if (avatarEl) avatarEl.style.backgroundImage = `url('${char.avatarUrl || ''}')`;
-    }
-    
-    document.getElementById('pwlAccount').value = '';
-    document.getElementById('pwlPassword').value = '';
-    document.getElementById('phoneWechatLogin').classList.add('show');
-}
-
-function closePhoneWechatLogin() {
-    document.getElementById('phoneWechatLogin').classList.remove('show');
-}
-
-function doPhoneWechatLogin() {
-    const acc = document.getElementById('pwlAccount').value.trim();
-    const pwd = document.getElementById('pwlPassword').value.trim();
-
-    if (!acc || !pwd) return alert('请输入账号和密码！');
-
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === currentChatRoomCharId);
-    
-    if (char) {
-        if (acc === char.account && pwd === char.password) {
-            // 记录登录状态
-            ChatDB.setItem(`phone_wechat_logged_${currentChatRoomCharId}`, 'true');
-            closePhoneWechatLogin();
-            openPhoneWechatApp();
-        } else {
-            alert('账号或密码错误！');
-        }
-    }
-}
-
-// ==========================================
-// 微信主界面交互逻辑
-// ==========================================
-let currentPwaTab = 'chat';
-
-function openPhoneWechatApp() {
-    document.getElementById('phoneWechatApp').classList.add('show');
-    
-    // 强制只显示聊天列表页面
-    document.querySelectorAll('.pwa-tab-page').forEach(el => el.classList.remove('active'));
-    const chatTab = document.getElementById('pwaTabChat');
-    if (chatTab) chatTab.classList.add('active');
-    
-    // 隐藏底部导航栏（如果 HTML 中存在的话）
-    const bottomNav = document.querySelector('.pwa-bottom-nav');
-    if (bottomNav) bottomNav.style.display = 'none';
-    
-    // 确保右上角生成按钮可见
-    const actionBtn = document.getElementById('pwaActionBtn');
-    if (actionBtn) actionBtn.style.visibility = 'visible';
-
-    renderPwaChatList();
-}
-
-function closePhoneWechatApp() {
-    document.getElementById('phoneWechatApp').classList.remove('show');
-}
-
-// ==========================================
-// API 生成逻辑
-// ==========================================
-function handlePwaAction() {
-    generatePwaChatListAPI();
-}
-
-// 1. 生成会话列表与聊天记录 (直接生成，不再依赖通讯录)
-async function generatePwaChatListAPI() {
-    const apiConfig = JSON.parse(ChatDB.getItem('current_api_config') || '{}');
-    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) return alert('请先配置 API！');
-
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-    const char = chars.find(c => c.id === currentChatRoomCharId);
-    if (!char) return;
-
-    // 获取当前登录用户的面具 (Persona)
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
-    let personas = JSON.parse(ChatDB.getItem('chat_personas') || '[]');
-    const persona = personas.find(p => p.id === (account ? account.personaId : null));
-    const userDesc = persona ? persona.persona : '普通用户';
-
-    // 获取世界书
-    let activeWbs = [];
-    let wbData = JSON.parse(ChatDB.getItem('worldbook_data')) || { entries: [] };
-    let entries = wbData.entries.filter(e => (char.wbEntries && char.wbEntries.includes(e.id)) || e.constant);
-    entries.forEach(entry => {
-        activeWbs.push(entry.content);
-    });
-
-    // 获取最近真实的聊天记录
-    let history = JSON.parse(ChatDB.getItem(`chat_history_${currentLoginId}_${currentChatRoomCharId}`) || '[]');
-    let recentHistory = history.slice(-20).map(m => `${m.role === 'user' ? 'User' : 'Char'}: ${m.content}`).join('\n');
-
-    const userName = account ? (account.netName || 'User') : 'User';
-
-    // 采用逐步拼接的方式构建 Prompt
-    let prompt = `你现在正在扮演角色：${char.name}。\n`;
-    prompt += `【你的设定】：${char.description || '无'}\n`;
-    prompt += `【重要：用户身份】\n用户(User)的名字是：${userName}。\n用户在你的生活中的角色/人设是：${userDesc}。\n`;
-    
-    if (activeWbs.length > 0) {
-        prompt += `【世界书背景】：\n${activeWbs.join('\n')}\n`;
-    }
-    
-    if (recentHistory) {
-        prompt += `【最近的真实聊天记录参考】：\n${recentHistory}\n`;
-    }
-
-    prompt += `\n请基于你的人设、当前生活状态，以及我们最近的聊天上下文，以你的视角，生成你的微信聊天列表（包含 5-8 个会话）。\n`;
-    prompt += `⚠️【极其重要的要求（极具活人感与独立社交）】：\n`;
-    prompt += `1. 必须包含一个与用户(${userName})的会话，isUser 设为 true。\n`;
-    prompt += `2. 请自由发挥，生成符合你人设的联系人或群聊。\n`;
-    prompt += `3. 【最重要：独立社交指令】：你和 NPC 的聊天内容必须是真实的社交日常！例如：吐槽奇葩老板、聊游戏开黑、拼单点外卖、借钱、分享搞笑视频等。**绝对不要在每个群里都聊 ${userName}！你的世界不是只有 ${userName}！**同时要确保 ${userName} 可以隐秘体现在你的社交圈和你的生活里面！\n`;
-    prompt += `4. 每个会话的聊天记录**必须不少于 20 条消息**！请充分展开对话细节，展现人物性格和关系，不要敷衍。\n`;
-    prompt += `5. 如果是群聊，"other" 角色的消息内容中可以适当带上群成员的名字，例如 "张三: 吃饭了吗？"。\n`;
-    prompt += `6. **极其重要：聊天记录 history 中的 role 字段，只能是 "me"（代表你发出的消息）或 "other"（代表对方发出的消息），绝对不能是其他值！**\n`;
-    
-    prompt += `\n必须返回合法的 JSON 格式，结构如下：\n`;
-    prompt += `[\n`;
-    prompt += `  {\n`;
-    prompt += `    "name": "${userName}的备注名", "isUser": true, "type": "friend", "lastMsg": "最近的一条消息",\n`;
-    prompt += `    "history": [\n`;
-    prompt += `      {"role": "other", "content": "在干嘛？"},\n`;
-    prompt += `      {"role": "me", "content": "刚吃完饭"}\n`;
-    prompt += `    ]\n`;
-    prompt += `  },\n`;
-    prompt += `  {\n`;
-    prompt += `    "name": "工作群", "isUser": false, "type": "group", "lastMsg": "收到",\n`;
-    prompt += `    "history": [\n`;
-    prompt += `      {"role": "other", "content": "老板: 这份文件看一下"},\n`;
-    prompt += `      {"role": "me", "content": "收到"}\n`;
-    prompt += `    ]\n`;
-    prompt += `  }\n`;
-    prompt += `]`;
-
-    showToast('正在生成聊天列表(数据量较大，请耐心等待)...', 'loading');
-
-    try {
-        const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
-            body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.8 })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            let replyRaw = data.choices[0].message.content.trim();
-            replyRaw = replyRaw.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
-            
-            const parsed = JSON.parse(replyRaw);
-            ChatDB.setItem(`pwa_chat_list_${currentChatRoomCharId}`, JSON.stringify(parsed));
-            renderPwaChatList();
-            hideToast();
-        } else {
-            throw new Error('API 请求失败');
-        }
-    } catch (e) {
-        hideToast();
-        alert('生成失败，请检查 API 配置或重试。\n注意：要求生成大量数据可能导致模型超时或输出被截断。');
-    }
-}
-
-function renderPwaChatList() {
-    const listEl = document.getElementById('pwaChatList');
-    const data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || 'null');
-    
-    if (!data) return;
-    
-    let chars = JSON.parse(ChatDB.getItem('chat_chars') || '[]');
-
-    // 获取当前账号头像
-    const currentLoginId = ChatDB.getItem('current_login_account');
-    let accounts = JSON.parse(ChatDB.getItem('chat_accounts') || '[]');
-    const account = accounts.find(a => a.id === currentLoginId);
-    const userAvatarUrl = account ? account.avatarUrl : '';
-
-    listEl.innerHTML = '';
-    data.forEach((item, index) => {
-        const el = document.createElement('div');
-        el.className = 'pwa-list-item';
-        
-        let avatarHtml = '';
-        
-        if (item.isUser && userAvatarUrl) {
-            avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${userAvatarUrl}'); background-size: cover; background-position: center;"></div>`;
-        } else {
-            // 尝试在真实角色中查找同名角色显示头像
-            const realChar = chars.find(c => (c.netName || c.name) === item.name);
-            if (realChar && realChar.avatarUrl) {
-                avatarHtml = `<div class="wechat-avatar" style="width: 44px; height: 44px; border-radius: 50%; background-image: url('${realChar.avatarUrl}'); background-size: cover; background-position: center;"></div>`;
-            }
-        }
-
-        if (!avatarHtml) {
-            const initial = item.name ? item.name.charAt(0).toUpperCase() : '?';
-            const avatarClass = item.type === 'group' ? 'group' : 'friend';
-            avatarHtml = `<div class="ios-msg-avatar ${avatarClass}" style="width: 44px; height: 44px; font-size: 20px;">${initial}</div>`;
-        }
-
-        el.innerHTML = `
-            ${avatarHtml}
-            <div class="pwa-list-info">
-                <div class="pwa-list-name">${item.name}</div>
-                <div class="pwa-list-desc">${item.lastMsg}</div>
-            </div>
-        `;
-        el.onclick = () => openPwaChatRoom(index);
-        listEl.appendChild(el);
-    });
-}
-
-// ==========================================
-// 聊天详情页逻辑 (带交互)
-// ==========================================
-let currentPwaChatIndex = null;
-
-function openPwaChatRoom(index) {
-    currentPwaChatIndex = index;
-    const data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || '[]');
-    const chatData = data[index];
-    if (!chatData) return;
-
-    document.getElementById('pwaChatRoomTitle').innerText = chatData.name;
-    renderPwaChatRoomHistory();
-
-    document.getElementById('pwaChatRoom').classList.add('show');
-}
-
-function closePwaChatRoom() {
-    document.getElementById('pwaChatRoom').classList.remove('show');
-}
-
-function renderPwaChatRoomHistory() {
-    const data = JSON.parse(ChatDB.getItem(`pwa_chat_list_${currentChatRoomCharId}`) || '[]');
-    const chatData = data[currentPwaChatIndex];
-    if (!chatData) return;
-
-    const historyEl = document.getElementById('pwaChatRoomHistory');
-    historyEl.innerHTML = '';
-
-    chatData.history.forEach((msg, idx) => {
-        const wrap = document.createElement('div');
-        wrap.className = 'pwa-chat-bubble-wrap';
-        
-        wrap.style.display = 'flex';
-        wrap.style.width = '100%';
-        wrap.style.alignItems = 'center';
-        
-        const bubble = document.createElement('div');
-        bubble.className = `pwa-chat-bubble ${msg.role === 'me' ? 'pwa-chat-right' : 'pwa-chat-left'}`;
-        bubble.innerText = msg.content;
-        
-        if (msg.role === 'me') {
-            wrap.style.justifyContent = 'flex-end';
-        } else {
-            wrap.style.justifyContent = 'flex-start';
-        }
-        
-        wrap.appendChild(bubble);
-        historyEl.appendChild(wrap);
-    });
-
-    setTimeout(() => { historyEl.scrollTop = historyEl.scrollHeight; }, 100);
-}
-
 // ==========================================
 // 查手机 - TikTok 交互逻辑
 // ==========================================
@@ -1964,7 +1694,15 @@ function browserGoForward() {
 function browserGoHome() {
     let tab = browserTabs.find(t => t.id === browserActiveTabId);
     if (tab.history[tab.currentIndex] !== 'home') {
-        browserNavigateTo('home');
+        // 核心修改：不覆盖当前标签页，而是寻找已有的主页标签页或新建一个
+        let homeTab = browserTabs.find(t => t.history[t.currentIndex] === 'home');
+        if (homeTab) {
+            browserActiveTabId = homeTab.id;
+            ChatDB.setItem(`browser_tabs_${currentChatRoomCharId}`, JSON.stringify(browserTabs));
+            browserRenderCurrentTab();
+        } else {
+            browserCreateNewTab();
+        }
     } else {
         browserSwitchView('home');
     }
@@ -2397,22 +2135,18 @@ async function generateAllPhoneDataAPI() {
 
     prompt += `\n请基于你的人设、当前生活状态，以及我们最近的聊天上下文，一次性生成你手机里所有 APP 的数据。
 为了防止数据过大，请严格控制生成数量：
-1. WeChat: 3个会话，每个会话3-5条消息。
-2. TikTok: 
+1. TikTok: 
    - foryou(推荐): 2条路人发布的视频(包含videoContent画面描述)。
    - profile(个人主页): 2条你自己发布的视频，画面(videoContent)和文案必须与 User(${userName}) 相关，表达你的真实情绪。
    - inbox(私信): 2条私信，内容必须是别人对你主页视频的搭讪或反应。
-3. Notes(备忘录): 2篇日记/备忘。
-4. Shop(商城): 2个首页推荐，1个购物车商品。
-5. Gallery(相册): 2个相册，1条录音。
-6. Browser(浏览器): 3条搜索记录，1个论坛帖子。
-7. icity(私密日记): 1篇短日记。
+2. Notes(备忘录): 2篇日记/备忘。
+3. Shop(商城): 2个首页推荐，1个购物车商品。
+4. Gallery(相册): 2个相册，1条录音。
+5. Browser(浏览器): 3条搜索记录，1个论坛帖子。
+6. icity(私密日记): 1篇短日记。
 
 必须返回合法的 JSON 对象，结构必须严格如下：
 {
-  "wechat": [
-    { "name": "联系人名", "isUser": false, "type": "friend", "lastMsg": "最后消息", "history": [{"role": "other", "content": "消息"}, {"role": "me", "content": "回复"}] }
-  ],
   "tiktok": {
     "foryou": [{"author": "路人", "videoContent": "画面描述", "desc": "文案", "likes": "10K", "commentsCount": "100", "music": "音乐", "comments": [{"user": "A", "content": "评论"}]}],
     "profile": [{"videoContent": "画面描述(与User相关)", "desc": "文案", "likes": "10K", "commentsCount": "100", "comments": [{"user": "A", "content": "评论"}]}],
@@ -2457,7 +2191,6 @@ async function generateAllPhoneDataAPI() {
             const parsed = JSON.parse(replyRaw);
             
             // 分发数据到各个 APP 的存储中
-            if (parsed.wechat) ChatDB.setItem(`pwa_chat_list_${currentChatRoomCharId}`, JSON.stringify(parsed.wechat));
             if (parsed.tiktok) ChatDB.setItem(`tiktok_data_${currentChatRoomCharId}`, JSON.stringify(parsed.tiktok));
             if (parsed.notes) ChatDB.setItem(`phone_notes_${currentChatRoomCharId}`, JSON.stringify(parsed.notes));
             if (parsed.shop) ChatDB.setItem(`phone_shop_${currentChatRoomCharId}`, JSON.stringify(parsed.shop));
