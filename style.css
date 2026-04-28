@@ -1482,6 +1482,7 @@ body.ios-standalone .status-bar {
     background-color: #e0e0e0;
     background-size: cover !important;
     background-position: center !important;
+    background-repeat: no-repeat !important;
     margin-right: 10px;
     flex-shrink: 0;
     border: 1px solid rgba(0,0,0,0.03);
@@ -2304,7 +2305,7 @@ body.ios-standalone .status-bar {
 .cr-avatar {
     width: 42px; height: 42px; border-radius: 50%; background-color: #f8f8f8;
     border: 1px solid #d0d0d0; flex-shrink: 0; display: flex; justify-content: center;
-    align-items: center; margin-bottom: 2px; background-size: cover; background-position: center;
+    align-items: center; margin-bottom: 2px; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important;
 }
 .cr-avatar svg { width: 26px; height: 26px; fill: #c8c8c8; margin-top: 6px; }
 
@@ -5114,7 +5115,7 @@ body.ios-standalone .status-bar {
 .tk-comments-panel {
     position: absolute; bottom: 0; left: 0; width: 100%; height: 70%;
     background: #fff; color: #000; border-radius: 20px 20px 0 0;
-    z-index: 2000; display: none; flex-direction: column;
+    z-index: 2600; display: none; flex-direction: column;
     transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .tk-comments-panel.show { display: flex; transform: translateY(0); }
@@ -5141,6 +5142,19 @@ body.ios-standalone .status-bar {
 .tk-chat-bubble { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
 .tk-chat-left { align-self: flex-start; background: #333; color: #fff; border-bottom-left-radius: 4px; }
 .tk-chat-right { align-self: flex-end; background: #fe2c55; color: #fff; border-bottom-right-radius: 4px; }
+
+/* 个人作品详情弹窗 */
+.tk-profile-video-modal {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 2500; display: none; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tk-profile-video-modal.show { display: flex; transform: translateX(0); }
+.tk-pvm-header {
+    position: absolute; top: 40px; left: 15px; z-index: 10;
+}
+.tk-pvm-back { cursor: pointer; }
+.tk-pvm-content { flex: 1; position: relative; }
 
 /* 草稿箱弹窗 */
 .tk-drafts-panel {
